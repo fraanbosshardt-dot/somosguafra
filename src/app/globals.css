@@ -1342,3 +1342,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,select:focu
 input[list]::-webkit-calendar-picker-indicator{display:none!important;opacity:0}
 input[list]{appearance:none;-webkit-appearance:none}
 .email-confirm-address{overflow-wrap:anywhere}
+
+.subscription-summary{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;min-width:0}
+.subscription-summary h3,.subscription-summary p{margin:0}
+.subscription-summary p{font-size:14px;line-height:1.5;color:var(--muted)}
+.pa-note .subscription-summary{margin:0;text-align:left}

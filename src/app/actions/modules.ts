@@ -676,8 +676,16 @@ export async function checkoutAction(fd: FormData) {
   // Para pagar, el correo tiene que estar confirmado: ahí llegan los comprobantes y los avisos de cobro.
   const { needsVerifiedEmail } = await import("@/server/email-verify");
   if (needsVerifiedEmail(user)) redirect("/app/configuracion?tab=plan&verificar=pro");
-  const { startCheckout } = await import("@/server/billing");
   const { appUrl } = await import("@/lib/email");
+  const { startCheckout, resumeCheckout } = await import("@/server/billing");
+  if (fd.get("intent") === "resume") {
+    let resumeLink: string | null;
+    try { resumeLink = await resumeCheckout(getDb(), workspace.id, `${appUrl()}/pagos/volver?espacio=${encodeURIComponent(workspace.id)}`); }
+    catch (error) { redirect(`/app/configuracion?tab=plan&pagoerror=${encodeURIComponent(error instanceof UserError ? error.message : "No pudimos verificar la solicitud. Probá de nuevo desde Tu plan.")}`); }
+    if (!resumeLink) { revalidatePath("/app", "layout"); redirect("/app/configuracion?tab=plan"); }
+    redirect(resumeLink);
+  }
+  if (fd.get("cycle") !== "monthly" && fd.get("cycle") !== "yearly") redirect("/app/configuracion?tab=plan&pagoerror=Elegí%20un%20ciclo%20mensual%20o%20anual.");
   const cycle = fd.get("cycle") === "yearly" ? "yearly" : "monthly";
   const rawCoupon = String(fd.get("coupon") ?? "").trim();
   let discount: { code: string; percentOff: number } | undefined;
@@ -689,11 +697,14 @@ export async function checkoutAction(fd: FormData) {
   }
   const sub = await getDb().subscription.findUnique({ where: { workspaceId: workspace.id } });
   const now = new Date();
-  const paid = sub?.provider === "mercadopago" && sub.status === "ACTIVE" && sub.plan === "PRO" && !!sub.providerRef;
-  // Con Pro pago solo se puede pasar de mensual a anual (no se compra dos veces lo mismo).
-  if (paid && !(sub!.billingCycle === "monthly" && cycle === "yearly")) redirect("/app/configuracion?tab=plan&yatenes=1");
-  const trialEnd = sub?.status === "TRIALING" && sub.trialEndsAt && sub.trialEndsAt > now ? sub.trialEndsAt : null;
-  const startDate = paid ? (sub!.currentPeriodEnd && sub!.currentPeriodEnd > now ? sub!.currentPeriodEnd : null) : trialEnd;
+  const { publicPlan } = await import("@/server/public-plan");
+  const [agreement, lastPayment] = await Promise.all([
+    getDb().billingAgreement.findFirst({ where: { workspaceId: workspace.id, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } }),
+    getDb().invoice.findFirst({ where: { workspaceId: workspace.id }, orderBy: [{ periodStart: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }], select: { status: true } }),
+  ]);
+  const offer = publicPlan(sub, true, now, { agreement, lastPaymentStatus: lastPayment?.status });
+  if (!offer.canSubscribe && !(cycle === "yearly" && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
+  const startDate = offer.purchaseStartsAt ? new Date(offer.purchaseStartsAt) : null;
   let link: string;
   try { link = await startCheckout(getDb(), workspace.id, user.email, cycle, `${appUrl()}/pagos/volver?espacio=${encodeURIComponent(workspace.id)}`, discount, startDate); }
   catch (e) { redirect(`/app/configuracion?tab=plan&pagoerror=${encodeURIComponent(e instanceof UserError ? e.message : "No pudimos verificar el estado con Mercado Pago. Reintentá desde esta pantalla; no inicies otro pago por fuera.")}`); }

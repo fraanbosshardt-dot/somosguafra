@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb } from "./helpers/testdb";
 import { createWorkspaceForUser } from "@/server/workspace";
-import { applyNotification, cancelSubscription, startCheckout, setManualPlan } from "@/server/billing";
+import { applyNotification, cancelSubscription, startCheckout, resumeCheckout, setManualPlan } from "@/server/billing";
+import { publicPlan } from "@/server/public-plan";
 import { effectivePlan, paidUntil, savePlanSettings, startFreeTrial, PRICES_DEFAULT } from "@/server/plans";
 import { deleteAccount } from "@/server/admin-accounts";
 
@@ -66,6 +67,43 @@ async function pay(id: string, agreement: string, status = "approved", start = n
 const sub = () => t.db.subscription.findUniqueOrThrow({ where: { workspaceId: ws } });
 
 describe("ciclo completo de suscripción", () => {
+  // Integration fixtures use an isolated in-memory PostgreSQL and mocked provider responses.
+  it.each(["monthly", "yearly"] as const)("un período gratuito ACTIVE permite contratar %s sin perder días", async (cycle) => {
+    const end = new Date(Date.now() + 7 * DAY);
+    await t.db.subscription.update({ where: { workspaceId: ws }, data: { provider: "manual", plan: "PRO", status: "ACTIVE", trialEndsAt: end } });
+    const id = await checkout(cycle);
+    expect(agreements.get(id)!.auto_recurring.start_date).toBe(end.toISOString());
+    await authorize(id);
+    expect((await sub()).trialEndsAt).toEqual(end);
+    expect(publicPlan(await sub(), true)).toMatchObject({ access: "trial", billing: "scheduled", canSubscribe: false, billingCycle: cycle });
+  });
+  it("cambiar un mensual programado durante el trial a anual conserva el inicio y detiene el mensual", async () => {
+    await startFreeTrial(t.db, ws);
+    const end = (await sub()).trialEndsAt!;
+    const monthly = await checkout(); await authorize(monthly);
+    const yearly = await checkout("yearly");
+    expect(agreements.get(yearly)!.auto_recurring.start_date).toBe(end.toISOString());
+    await authorize(yearly);
+    expect(agreements.get(monthly)!.status).toBe("cancelled");
+    expect((await sub()).trialEndsAt).toEqual(end);
+    expect((await sub()).providerRef).toBe(yearly);
+    expect(publicPlan(await sub(), true)).toMatchObject({ access: "trial", billing: "scheduled", billingCycle: "yearly", canSubscribe: false, canUpgradeAnnual: false });
+  });
+  it("retomar una solicitud conserva importe y cupón sin crear otro acuerdo", async () => {
+    const url = await startCheckout(t.db, ws, "test@test.com", "yearly", "https://somosguafra.com/app", { code: "LOCAL-CUPON", percentOff: 10 });
+    expect(await resumeCheckout(t.db, ws)).toBe(url);
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+    const row = await t.db.billingAgreement.findFirstOrThrow({ where: { workspaceId: ws } });
+    expect(row.couponCode).toBe("LOCAL-CUPON");
+    expect(Number(row.amount)).toBe(67491);
+  });
+  it("retomar un checkout ya autorizado actualiza el estado y no repite la compra", async () => {
+    const id = await checkout(); agreements.get(id)!.status = "authorized";
+    expect(await resumeCheckout(t.db, ws)).toBeNull();
+    expect((await sub()).providerRef).toBe(id);
+    expect(effectivePlan(await sub())).toBe("FREE");
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+  });
   it("recibir el pago antes del webhook de autorización habilita el período correcto", async () => {
     const id = await checkout(); agreements.get(id)!.status = "authorized";
     await pay("out-of-order", id);

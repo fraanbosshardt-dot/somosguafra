@@ -68,7 +68,7 @@ export function effectivePlan(sub: { plan: string; status: string; trialEndsAt: 
   if (sub.status === "TRIALING") return sub.trialEndsAt && sub.trialEndsAt > now ? "PRO" : "FREE";
   if (sub.plan !== "PRO") return "FREE";
   if (sub.trialEndsAt && sub.trialEndsAt > now) return "PRO";
-  if (sub.status === "ACTIVE" && sub.provider !== "mercadopago") return "PRO";
+  if (sub.status === "ACTIVE" && sub.provider !== "mercadopago" && !sub.trialEndsAt && !sub.currentPeriodEnd) return "PRO";
   return sub.currentPeriodEnd && sub.currentPeriodEnd > now ? "PRO" : "FREE";
 }
 

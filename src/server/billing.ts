@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import type { Db } from "./ledger";
 import { UserError } from "./ledger";
+import { publicPlan } from "./public-plan";
 import { effectivePlan, paidUntil, planSettings } from "./plans";
 import { queueBillingNotice, drainEmailOutbox } from "./billing-mail";
 
@@ -65,8 +66,8 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
     const workspace = await tx.workspace.findUniqueOrThrow({ where: { id: ws } });
     if (workspace.billingDisabledAt) throw new UserError("La cuenta está en proceso de baja. No se pueden iniciar nuevos cobros.");
     const sub = await tx.subscription.findUnique({ where: { workspaceId: ws } });
-    if (sub?.provider === "manual" && sub.status === "ACTIVE" && effectivePlan(sub) === "PRO") throw new UserError("Ya tenés Pro activado. Revisá tu plan antes de suscribirte.");
-    if (sub?.provider === "mercadopago" && sub.status === "ACTIVE" && !(sub.billingCycle === "monthly" && cycle === "yearly" && effectivePlan(sub) === "PRO")) throw new UserError("Ya tenés una suscripción. Administrala desde Tu plan.");
+    const offer = publicPlan(sub, true);
+    if (!offer.canSubscribe && !(cycle === "yearly" && offer.canUpgradeAnnual)) throw new UserError("Ya tenés una suscripción o Pro permanente. Administrá tu plan para evitar otro cobro.");
     const pending = await tx.billingAgreement.findFirst({ where: { workspaceId: ws, status: { in: ["creating", "uncertain", "pending"] } }, orderBy: { createdAt: "desc" } });
     if (pending) {
       if (pending.status !== "pending") throw new UserError("Estamos verificando una solicitud anterior. No se iniciará otro cobro mientras esté pendiente.");
@@ -103,6 +104,21 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
     await db.billingAgreement.updateMany({ where: { id: reservation.id, status: "creating" }, data: { status: "uncertain" } });
     throw e;
   }
+}
+
+// Retomar conserva el importe y el cupón originales; no genera otro acuerdo.
+export async function resumeCheckout(db: Db, ws: string, backUrl?: string) {
+  if ((await db.workspace.findUniqueOrThrow({ where: { id: ws } })).billingDisabledAt) throw new UserError("La cuenta está en proceso de baja.");
+  const pending = await db.billingAgreement.findFirst({ where: { workspaceId: ws, status: "pending", providerRef: { not: null } }, orderBy: { createdAt: "desc" } });
+  if (!pending?.providerRef || !pending.checkoutUrl) throw new UserError("La solicitud todavía está en verificación. No inicies otro pago.");
+  const remote = await mp<Preapproval>(`/preapproval/${identifier(pending.providerRef)}`);
+  if (remote.id !== pending.providerRef || remote.external_reference !== `${ws}|${pending.couponCode ?? ""}|${pending.id}`) throw new UserError("La solicitud no coincide con este espacio.");
+  if (remote.status !== "pending") {
+    await applyPreapproval(db, pending.providerRef);
+    return null;
+  }
+  if (backUrl && remote.back_url !== backUrl) await mp(`/preapproval/${identifier(pending.providerRef)}`, { method: "PUT", body: JSON.stringify({ back_url: backUrl }) });
+  return checkoutUrl(pending.checkoutUrl);
 }
 
 // Un timeout no autoriza a repetir un POST de dinero. Buscar primero el acuerdo por pagador

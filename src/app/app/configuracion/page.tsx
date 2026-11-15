@@ -5,9 +5,9 @@ import { getDb } from "@/lib/db";
 import { Icon } from "@/components/icons";
 import { MODULES, PLAN_FEATURES } from "@/lib/modules";
 import { formatMoney } from "@/lib/money";
+import { PlanSubscriptionCard } from "@/components/plan-subscription-card";
+import { publicPlan } from "@/server/public-plan";
 import { billingConfig } from "@/server/billing";
-import { planSettings } from "@/server/plans";
-import { cancelPlanAction, checkoutAction, startTrialAction } from "@/app/actions/modules";
 import { fmtDate } from "@/lib/dates";
 import { COUNTRIES, CURRENCIES } from "@/lib/countries";
 import { PageHead, SettingsTabs } from "@/components/page";
@@ -33,7 +33,6 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   const t = TABS.some(([k]) => k === asked) ? asked! : "general";
   const tabs = <SettingsTabs current={t} rules={modules.reglas} />;
   const now = new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "full", timeStyle: "short" }).format(new Date());
-  const billDate = (d: Date) => new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "medium", timeStyle: "short" }).format(d);
 
   const push = pushConfig();
   let body: React.ReactNode = null;
@@ -173,70 +172,21 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   if (t === "plan") {
     const sub = workspace.subscription;
     const bill = await billingConfig(getDb());
-    const ps = await planSettings(getDb());
-    const { priceLabel } = await import("@/server/plans");
     const invoices = await getDb().invoice.findMany({ where: { workspaceId: workspace.id }, orderBy: { createdAt: "desc" }, take: 24 });
-    const paidPro = sub?.plan === "PRO" && sub.status === "ACTIVE" && sub.provider === "mercadopago";
+    const agreement = await getDb().billingAgreement.findFirst({ where: { workspaceId: workspace.id, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } });
+    const lastPayment = await getDb().invoice.findFirst({ where: { workspaceId: workspace.id }, orderBy: [{ periodStart: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }], select: { status: true } });
+    const view = publicPlan(sub, membership.role === "OWNER", new Date(), { agreement, lastPaymentStatus: lastPayment?.status });
     const { ensureReferralCode, referralStats, REFERRAL_DAYS } = await import("@/server/referrals");
     const { SITE } = await import("@/lib/seo");
     const [refCode, refStats] = await Promise.all([ensureReferralCode(getDb(), user.id), referralStats(getDb(), user.id)]);
-    const trial = sub?.trialEndsAt && sub.trialEndsAt > new Date();
-    const trialLeft = trial ? Math.max(1, Math.ceil((sub!.trialEndsAt!.getTime() - Date.now()) / 864e5)) : 0;
-    const savePct = bill.monthly > 0 ? Math.round((1 - bill.yearly / (bill.monthly * 12)) * 100) : 0;
-    // Cancelada o con el pago pendiente: Pro sigue hasta el fin de lo ya pagado.
-    const endsAt = plan === "PRO" && sub && sub.status !== "ACTIVE" && sub.status !== "TRIALING" ? sub.currentPeriodEnd : null;
-    const showUpgrade = !paidPro && bill.enabled && (plan !== "PRO" || !!trial);
-    const planHeader = (<div className="chead"><div><h3>Tu plan: {plan === "PRO" ? "Pro" : "Gratis"}</h3><p className="sub">{trial ? `Prueba gratis hasta el ${billDate(sub!.trialEndsAt!)}.` : endsAt ? `${sub!.status === "CANCELED" ? "Cancelado" : "Pago pendiente en Mercado Pago"}: tenés Pro hasta el ${billDate(endsAt)}.` : paidPro ? `Pagás con Mercado Pago, ${sub!.billingCycle === "yearly" ? "por año" : "por mes"}.` : plan === "PRO" ? "Pro activado por Somos Guafra." : "Tenés casi todo incluido, sin costo."}</p></div></div>);
     body = (
       <>
         {sp.pagoerror && <p className="notice r" role="alert">{sp.pagoerror.slice(0, 300)}</p>}
         {sp.prueba === "usada" && <p className="notice">La prueba ya se usó o tenés una suscripción en curso. Revisá el estado de tu plan.</p>}
-        {sp.pago && <div className="notice g">Gracias. En cuanto Mercado Pago confirme el pago, tu plan pasa a Pro.</div>}
-        {sp.yatenes && <div className="notice g">Ya tenés Pro activo, no hace falta pagarlo de nuevo.</div>}
-        {sp.cancelado && <div className="notice">{endsAt ? `Cancelaste Pro. No se te cobra más y lo seguís usando hasta el ${billDate(endsAt)}; después pasás a Gratis con todos tus datos.` : "Cancelaste Pro. Seguís con todo lo de Gratis y tus datos quedan."}</div>}
-        <div className="card">
-          {!showUpgrade && planHeader}
-          {paidPro ? (
-            <div className="plan-paid">
-              {sub!.billingCycle === "monthly" && bill.enabled && plan === "PRO" ? (
-                <form action={checkoutAction} className="plan-upg">
-                  <input type="hidden" name="cycle" value="yearly" />
-                  <div><b>Pasate al plan anual{savePct > 0 ? ` y ahorrá ${savePct} %` : ""}</b><p>{formatMoney(String(bill.yearly), bill.currency)} por año (equivale a {formatMoney(String(Math.round(Number(bill.yearly) / 12)), bill.currency)} por mes). Empieza cuando termina el mes que ya pagaste{sub!.currentPeriodEnd ? `, el ${billDate(sub!.currentPeriodEnd)}` : ""}: sin cobro doble.</p></div>
-                  <button className="btn pri" type="submit">Pasarme al anual</button>
-                </form>
-              ) : null}
-              <p className="sub">{sub!.nextPaymentAt ? `Próximo cobro programado: ${billDate(sub!.nextPaymentAt)}.` : "La fecha del próximo cobro se confirma en Mercado Pago."} {sub!.currentPeriodEnd ? `Acceso cubierto hasta el ${billDate(sub!.currentPeriodEnd)}.` : "Esperando un pago aprobado para habilitar el período de Pro."}</p>
-            <form action={cancelPlanAction}><ConfirmSubmit className="btn" question={sub!.currentPeriodEnd ? `¿Cancelar Pro? No se te cobra más y lo seguís usando hasta el ${billDate(sub!.currentPeriodEnd)}.` : "¿Cancelar Pro? Dejás de pagar y volvés al plan Gratis."} yes="Sí, cancelar">Cancelar Pro</ConfirmSubmit></form>
-            </div>
-          ) : bill.enabled && (plan !== "PRO" || trial) ? (
-            // En Gratis: a la izquierda qué suma Pro; a la derecha el precio (por mes o por año) y los botones.
-            <div className="plan-up">
-              <div className="plan-why">
-                {planHeader}
-                <h4>{trial ? "Seguí con Pro cuando termine la prueba" : "Pasate a Pro"}</h4>
-                {trial && <div className="plan-trialbar"><span>Te {trialLeft === 1 ? "queda 1 día" : `quedan ${trialLeft} días`} de prueba</span><i><i style={{ width: `${Math.min(100, (trialLeft / 14) * 100)}%` }} /></i></div>}
-                {trial && <p className="plan-note">Si te suscribís, no perdés nada de esto:</p>}
-                <ul>{PLAN_FEATURES.filter((f) => f.plan === "pro").slice(0, 5).map((f) => <li key={f.name}><Icon name="check" />{f.name}</li>)}</ul>
-              </div>
-              <div className="plan-box" id="pagar-pro">
-                <form action={checkoutAction} className="plan-buy">
-                  <div className="plan-cycle" role="radiogroup" aria-label="Cómo querés pagar">
-                    <label><input type="radio" name="cycle" value="monthly" defaultChecked={sp.ciclo !== "anual"} /><span>Por mes</span></label>
-                    <label><input type="radio" name="cycle" value="yearly" defaultChecked={sp.ciclo === "anual"} /><span>Por año{savePct > 0 && <em>−{savePct} %</em>}</span></label>
-                  </div>
-                  <div className="plan-price m"><b>{formatMoney(String(bill.monthly), bill.currency)}</b><span>ARS por mes</span></div>
-                  <div className="plan-price y"><b>{formatMoney(String(bill.yearly), bill.currency)}</b><span>ARS por año</span><small>Equivale a {formatMoney(String(Math.round(Number(bill.yearly) / 12)), bill.currency)} por mes</small></div>
-                  <button className="btn pri plan-cta" type="submit">{trial ? "Suscribirme a Pro" : "Pasar a Pro"}</button>
-                </form>
-                {!sub?.trialEndsAt && <form action={startTrialAction}><button className="btn plan-trial" type="submit">Probar 14 días gratis</button></form>}
-                <p className="plan-fine">{trial ? `No te cobramos nada hasta el ${billDate(sub!.trialEndsAt!)}.` : "Cancelás cuando quieras · Pagás con Mercado Pago"}</p>
-              </div>
-            </div>
-          ) : plan !== "PRO" ? (
-            <p className="sub">Pro cuesta {priceLabel(ps, "monthly").text} por mes o {priceLabel(ps, "yearly").text} por año. El cobro con Mercado Pago se activa pronto; mientras tanto podés usar la prueba gratis.</p>
-          ) : null}
-          {!paidPro && !bill.enabled && !sub?.trialEndsAt && plan !== "PRO" && <form action={startTrialAction} style={{ marginTop: 12 }}><button className="btn ghost" type="submit">Probar Pro gratis 14 días</button></form>}
-        </div>
+        {sp.pago && <div className="notice">Recibimos tu regreso de Mercado Pago. El estado de abajo refleja la confirmación recibida; volver no confirma un pago por sí solo.</div>}
+        {sp.yatenes && <div className="notice">Revisá tu suscripción actual antes de iniciar otro pago.</div>}
+        {sp.cancelado && view.billing === "canceled" && <div className="notice">La cancelación fue confirmada. Conservás el acceso que ya tengas cubierto; tus datos quedan guardados.</div>}
+        <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual"} />
         <div className="card">
           <div className="chead"><div><h3>Invitá y ganá Pro</h3><p className="sub">Cuando alguien se registra con tu link y termina la bienvenida, ustedes dos reciben {REFERRAL_DAYS} días de Pro.</p></div>{refStats.rewarded > 0 && <span className="pill g">{refStats.rewarded} {refStats.rewarded === 1 ? "invitación" : "invitaciones"}</span>}</div>
           <ShareLink url={`${SITE.url}/?ref=${refCode}`} text="Yo uso Somos Guafra para ordenar mi plata. Probalo gratis:" />
@@ -245,9 +195,9 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         </div>
         <div className="card"><div className="chead"><h3>Qué suma Pro</h3></div><div className="list">{PLAN_FEATURES.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></div>
         {invoices.length > 0 && (
-          <div className="card"><div className="chead"><h3>Facturas</h3></div><div className="tw"><table>
+          <div className="card"><div className="chead"><h3>Historial de pagos</h3></div><div className="tw"><table>
             <thead><tr><th>Fecha</th><th>Detalle</th><th>Estado</th><th className="n">Importe</th></tr></thead>
-            <tbody>{invoices.map((i) => <tr key={i.id}><td>{fmtDate(i.paidAt ?? i.createdAt)}</td><td>Somos Guafra Pro</td><td>{i.status === "approved" ? <span className="pill g">Pagada</span> : i.status === "rejected" ? <span className="pill r">Rechazada</span> : <span className="pill">{i.status}</span>}</td><td className="n">{formatMoney(i.amount, i.currency)}</td></tr>)}</tbody>
+            <tbody>{invoices.map((i) => <tr key={i.id}><td>{new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "medium" }).format(i.paidAt ?? i.createdAt)}</td><td>somosguafra Pro</td><td><span className={`pill ${i.status === "approved" ? "g" : i.status === "rejected" ? "r" : ""}`}>{i.status === "approved" ? Number(i.refundedAmount) > 0 ? "Pagado · devolución parcial" : "Pagado" : i.status === "rejected" ? "Rechazado" : i.status === "refunded" ? "Reembolsado" : i.status === "charged_back" ? "Contracargo" : i.status === "cancelled" ? "Cancelado" : "En verificación"}</span></td><td className="n">{formatMoney(i.amount, i.currency)}{Number(i.refundedAmount) > 0 && <div className="sub">Devuelto: {formatMoney(i.refundedAmount, i.currency)}</div>}</td></tr>)}</tbody>
           </table></div></div>
         )}
       </>

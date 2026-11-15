@@ -6,6 +6,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db";
 import { publicPlan } from "@/server/public-plan";
 import { pickMembership } from "@/server/sharing";
 
@@ -26,8 +27,9 @@ export async function GET(req: Request) {
   if (m.role !== "OWNER") redirect("/app/configuracion?soloduenio=1");
   const sub = m.workspace.subscription;
   // El mensual puede cambiar a anual. Los demás Pro activos no se compran dos veces.
-  const offer = publicPlan(sub, true);
-  if (sub?.plan === "PRO" && sub.status === "ACTIVE" && !(anual && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
+  const agreement = await getDb().billingAgreement.findFirst({ where: { workspaceId: m.workspaceId, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } });
+  const offer = publicPlan(sub, true, new Date(), { agreement });
+  if (!offer.canSubscribe && !(anual && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
   const { needsVerifiedEmail } = await import("@/server/email-verify");
   if (needsVerifiedEmail(s.user)) redirect("/app/configuracion?tab=plan&verificar=pro");
   // Un enlace GET solo muestra el plan; crear una autorización requiere confirmación POST.
