@@ -11,6 +11,7 @@ const agreements = new Map<string, Record<string, any>>(), payments = new Map<st
 const calls: { method: string; path: string; body?: any }[] = [];
 let failCancel = "", sequence = 0;
 const DAY = 864e5;
+let authorizeDuringReplacement = false;
 const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
   const path = url.replace("https://api.mercadopago.com", ""), method = init.method ?? "GET";
   const body = init.body ? JSON.parse(String(init.body)) : undefined;
@@ -28,6 +29,7 @@ const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
   }
   if (path.startsWith("/authorized_payments/search")) {
     const q = new URL(url).searchParams;
+    if (authorizeDuringReplacement && q.has("preapproval_id")) { agreements.get(q.get("preapproval_id")!)!.status = "authorized"; authorizeDuringReplacement = false; }
     return Response.json({ results: [...payments.values()].filter(p => q.has("payment_id") ? String(p.payment?.id) === q.get("payment_id") : p.preapproval_id === q.get("preapproval_id")) });
   }
   if (path.startsWith("/authorized_payments/")) return Response.json(payments.get(path.split("/")[2]) ?? {});
@@ -47,7 +49,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   const user = await t.db.user.create({ data: { email: `billing-${++sequence}@test.com`, name: "Test", passwordHash: "" } });
   userId = user.id; ws = (await createWorkspaceForUser(t.db, user.id)).id;
-  calls.length = 0; failCancel = "";
+  calls.length = 0; failCancel = ""; authorizeDuringReplacement = false;
 });
 afterAll(async () => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); await t.stop(); });
 
@@ -67,6 +69,14 @@ async function pay(id: string, agreement: string, status = "approved", start = n
 const sub = () => t.db.subscription.findUniqueOrThrow({ where: { workspaceId: ws } });
 
 describe("ciclo completo de suscripción", () => {
+  it("una autorización ocurrida durante la comprobación final impide cancelar y reemplazar el contrato", async () => {
+    const id = await checkout(); const pending = await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } });
+    authorizeDuringReplacement = true;
+    await expect(startCheckout(t.db, ws, "test@test.com", "yearly", "https://somosguafra.com/app", undefined, undefined, pending.id)).rejects.toThrow("ya fue autorizada");
+    expect(agreements.get(id)!.status).toBe("authorized");
+    expect(calls.some(c => c.method === "PUT" && c.body?.status === "cancelled")).toBe(false);
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+  });
   it("un cambio de precio posterior al resumen exige revisar otra vez antes de crear un contrato", async () => {
     await expect(startCheckout(t.db, ws, "test@test.com", "monthly", "https://somosguafra.com/app", undefined, undefined, undefined, 7000)).rejects.toThrow("El precio cambió");
     expect(calls.filter(c => c.method === "POST")).toHaveLength(0);

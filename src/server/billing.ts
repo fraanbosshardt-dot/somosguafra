@@ -42,9 +42,10 @@ async function locked<T>(db: Db, ws: string, run: (tx: Tx) => Promise<T>) {
 
 export const splitRef = (ref: string | undefined) => { const [ws, coupon, checkout] = (ref ?? "").split("|"); return { ws: ws || null, coupon: coupon || null, checkout: checkout || null }; };
 
-async function stopAgreement(id: string) {
+async function stopAgreement(id: string, pendingOnly = false) {
   const p = await mp<Preapproval>(`/preapproval/${identifier(id)}`);
   if (p.id !== id) throw new UserError("Suscripción inválida.");
+  if (pendingOnly && p.status !== "pending" && p.status !== "cancelled") throw new UserError("La solicitud ya fue autorizada mientras elegías el ciclo. No se canceló el contrato; actualizá Mi plan antes de continuar.");
   if (p.status !== "cancelled") {
     const stopped = await mp<Preapproval>(`/preapproval/${identifier(id)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
     if (stopped.id !== id || stopped.status !== "cancelled") throw new UserError("Mercado Pago todavía no confirmó la cancelación. Reintentá desde Tu plan.");
@@ -87,7 +88,7 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
       const payments = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
       if (!Array.isArray(payments.results) || payments.results.length || payments.paging?.total) throw new UserError("La solicitud ya tiene actividad de cobro. No se reemplazará automáticamente; revisá Mi plan.");
       // Reemplazo expresamente confirmado en la pantalla de compra, nunca desde un GET.
-      await stopAgreement(pending.providerRef!);
+      await stopAgreement(pending.providerRef!, true);
       const after = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
       await tx.billingAgreement.update({ where: { id: pending.id }, data: { status: "cancelled" } });
       if (!Array.isArray(after.results) || after.results.length || after.paging?.total) return { changedDuringReplacement: true as const };
