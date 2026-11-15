@@ -5,12 +5,19 @@ import { overview, revenueByMonth } from "@/server/admin-metrics";
 import { paymentFinancialFields, recordPaymentEvents } from "@/server/payment-finance";
 import { financeReport } from "@/server/company-finance";
 import { queueAccessNotices, validAccessNotice } from "@/server/access-notices";
+import { recordProductActivity } from "@/server/product-activity";
 let t: Awaited<ReturnType<typeof startTestDb>>;
 const now = new Date("2026-11-15T12:00:00Z"), day = 864e5;
 let seq = 0;
 beforeAll(async () => { t = await startTestDb(); });
 afterAll(async () => { await t?.stop(); });
 async function space() { const u = await t.db.user.create({ data: { email: `biz${++seq}@audit.invalid`, name: "Fixture", passwordHash: "", emailVerified: now } }); return createWorkspaceForUser(t.db, u.id); }
+it("concurrent activity tracking never rejects duplicate days and uses the Argentina calendar", async () => {
+  await Promise.all(Array.from({ length: 12 }, () => recordProductActivity(t.db, "fixture-tracking", new Date("2026-11-15T01:00Z"))));
+  const rows = await t.db.productActivity.findMany({ where: { userId: "fixture-tracking" } });
+  expect(rows).toHaveLength(1);
+  expect(rows[0].day.toISOString()).toBe("2026-11-14T00:00:00.000Z");
+});
 it("abandoned attempts are not churn and a trial with ACTIVE status is still a trial", async () => {
   const w = await space();
   await t.db.subscription.update({ where: { workspaceId: w.id }, data: { plan: "PRO", status: "ACTIVE", provider: "manual", trialEndsAt: new Date(now.getTime() + day) } });
