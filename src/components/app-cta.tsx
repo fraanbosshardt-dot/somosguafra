@@ -12,7 +12,7 @@ export function useHasSession() {
   return on;
 }
 
-export type PublicPlan = { logged: boolean; plan?: "FREE" | "PRO"; trial?: string | null; paid?: boolean; owner?: boolean };
+export type PublicPlan = { logged: boolean; plan?: "FREE" | "PRO"; trial?: string | null; paid?: boolean; owner?: boolean; billingCycle?: "monthly" | "yearly" | null; canUpgradeAnnual?: boolean };
 
 export function usePublicPlan() {
   const [plan, setPlan] = useState<PublicPlan | null>(null);
@@ -40,15 +40,19 @@ export function AppCta({ className, label, href = "/registro", logged = false }:
 }
 
 function CheckoutButton({ className, cycle, children }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode }) {
-  return <form action={checkoutAction} className="checkout-cta" data-plan-cta="">
+  return <form action={checkoutAction} className="checkout-cta" data-plan-cta="" data-billing-cycle={cycle}>
     <input type="hidden" name="cycle" value={cycle} />
     <OnceButton className={className} pending="Abriendo Mercado Pago…">{children}</OnceButton>
   </form>;
 }
 
-export function SubscribeCta({ className, cycle, children }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode }) {
+export function SubscribeCta({ className, cycle, children, upgradeLabel = "Pasar a anual" }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode; upgradeLabel?: string }) {
   const logged = useHasSession();
   const plan = usePublicPlan();
+  if (plan?.logged && plan.plan === "PRO" && !plan.trial) {
+    if (cycle === "yearly" && plan.canUpgradeAnnual) return <CheckoutButton className={className} cycle="yearly">{upgradeLabel}</CheckoutButton>;
+    return null;
+  }
   if (plan?.logged || (!plan && logged)) return <CheckoutButton className={className} cycle={cycle}>{children}</CheckoutButton>;
-  return <Link className={className} href={`/suscribirme?ciclo=${cycle === "yearly" ? "anual" : "mensual"}`} data-plan-cta="">{children}</Link>;
+  return <Link className={className} href={`/suscribirme?ciclo=${cycle === "yearly" ? "anual" : "mensual"}`} data-plan-cta="" data-billing-cycle={cycle}>{children}</Link>;
 }
