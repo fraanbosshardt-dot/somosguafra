@@ -26,7 +26,7 @@ export const metadata: Metadata = { title: "Configuración" };
 
 const TABS = [["general", "General"], ["funciones", "Funciones"], ["compartir", "Compartir"], ["seguridad", "Seguridad"], ["plan", "Plan"], ["datos", "Tus datos"]] as const;
 
-export default async function Settings({ searchParams }: { searchParams: Promise<{ tab?: string; pago?: string; pagoerror?: string; prueba?: string; ciclo?: string; cancelado?: string; cupon?: string; soloduenio?: string; yatenes?: string; verificar?: string }> }) {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ tab?: string; pago?: string; pagoerror?: string; prueba?: string; ciclo?: string; cancelado?: string; cupon?: string; soloduenio?: string; yatenes?: string; verificar?: string; solicituddescartada?: string }> }) {
   const { user, workspace, modules, plan, session, membership } = await requireWorkspace();
   const sp = await searchParams;
   const asked = sp.tab;
@@ -186,6 +186,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         {sp.pago && <div className="notice">Recibimos tu regreso de Mercado Pago. El estado de abajo refleja la confirmación recibida; volver no confirma un pago por sí solo.</div>}
         {sp.yatenes && <div className="notice">Revisá tu suscripción actual antes de iniciar otro pago.</div>}
         {sp.cancelado && view.billing === "canceled" && <div className="notice">La cancelación fue confirmada. Conservás el acceso que ya tengas cubierto; tus datos quedan guardados.</div>}
+        {sp.solicituddescartada && view.billing !== "pending" && <div className="notice">La solicitud pendiente ya no está activa. Descartarla no elimina tu trial ni da de baja otra suscripción.</div>}
         <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual"} />
         <div className="card">
           <div className="chead"><div><h3>Invitá y ganá Pro</h3><p className="sub">Cuando alguien se registra con tu link y termina la bienvenida, ustedes dos reciben {REFERRAL_DAYS} días de Pro.</p></div>{refStats.rewarded > 0 && <span className="pill g">{refStats.rewarded} {refStats.rewarded === 1 ? "invitación" : "invitaciones"}</span>}</div>

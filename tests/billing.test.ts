@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb } from "./helpers/testdb";
 import { createWorkspaceForUser } from "@/server/workspace";
-import { applyNotification, cancelSubscription, startCheckout, resumeCheckout, setManualPlan } from "@/server/billing";
+import { applyNotification, cancelSubscription, startCheckout, resumeCheckout, discardPendingCheckout, setManualPlan } from "@/server/billing";
 import { publicPlan } from "@/server/public-plan";
 import { effectivePlan, paidUntil, savePlanSettings, startFreeTrial, PRICES_DEFAULT } from "@/server/plans";
 import { deleteAccount } from "@/server/admin-accounts";
@@ -67,6 +67,76 @@ async function pay(id: string, agreement: string, status = "approved", start = n
 const sub = () => t.db.subscription.findUniqueOrThrow({ where: { workspaceId: ws } });
 
 describe("ciclo completo de suscripción", () => {
+  it("pedir otro ciclo no cancela automáticamente el checkout abierto", async () => {
+    const id = await checkout();
+    await expect(checkout("yearly")).rejects.toThrow("otras condiciones");
+    expect(agreements.get(id)!.status).toBe("pending");
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+    expect(calls.some(c => c.method === "PUT" && c.body?.status === "cancelled")).toBe(false);
+  });
+  it("cambiar un cupón tampoco descarta una solicitud automáticamente", async () => {
+    const id = await checkout();
+    await expect(startCheckout(t.db, ws, "test@test.com", "monthly", "https://somosguafra.com/app", { code: "LOCAL-NEW", percentOff: 10 })).rejects.toThrow("otras condiciones");
+    expect(agreements.get(id)!.status).toBe("pending");
+    expect(calls.some(c => c.method === "PUT" && c.body?.status === "cancelled")).toBe(false);
+  });
+  it("un checkout sin autorizar cancelado por el proveedor no da de baja el trial ni envía una baja de la app", async () => {
+    await startFreeTrial(t.db, ws);
+    const before = await sub();
+    const id = await checkout(); agreements.get(id)!.status = "cancelled";
+    await applyNotification(t.db, "subscription_preapproval", id);
+    expect(await sub()).toEqual(before);
+    expect(effectivePlan(await sub())).toBe("PRO");
+    expect(await t.db.emailOutbox.count({ where: { workspaceId: ws } })).toBe(0);
+  });
+  it("descartar expresamente un checkout conserva el trial y es idempotente", async () => {
+    await startFreeTrial(t.db, ws);
+    const before = await sub(); const id = await checkout();
+    expect(await discardPendingCheckout(t.db, ws)).toBe(true);
+    expect(agreements.get(id)!.status).toBe("cancelled");
+    expect(await sub()).toEqual(before);
+    expect(await discardPendingCheckout(t.db, ws)).toBe(false);
+    expect(calls.filter(c => c.method === "PUT" && c.body?.status === "cancelled")).toHaveLength(1);
+    await applyNotification(t.db, "subscription_preapproval", id);
+    expect(await sub()).toEqual(before);
+    expect(await t.db.emailOutbox.count({ where: { workspaceId: ws } })).toBe(0);
+  });
+  it("descartar el anual pendiente no cancela el mensual que ya está activo", async () => {
+    const monthly = await checkout(); await authorize(monthly); await pay("keep-monthly-discard", monthly);
+    const before = await sub(); const annual = await checkout("yearly");
+    expect(await discardPendingCheckout(t.db, ws)).toBe(true);
+    expect(agreements.get(annual)!.status).toBe("cancelled");
+    expect(agreements.get(monthly)!.status).toBe("authorized");
+    expect(await sub()).toEqual(before);
+    await applyNotification(t.db, "subscription_preapproval", annual);
+    expect(await sub()).toEqual(before);
+  });
+  it("descartar no cancela una solicitud que ya pasó a autorizada en Mercado Pago", async () => {
+    const id = await checkout(); agreements.get(id)!.status = "authorized";
+    await expect(discardPendingCheckout(t.db, ws)).rejects.toThrow("ya cambió el estado");
+    expect(agreements.get(id)!.status).toBe("authorized");
+    expect(calls.some(c => c.method === "PUT" && c.body?.status === "cancelled")).toBe(false);
+  });
+  it("un fallo del proveedor al descartar conserva la solicitud y el trial", async () => {
+    await startFreeTrial(t.db, ws);
+    const before = await sub(); const id = await checkout(); failCancel = id;
+    await expect(discardPendingCheckout(t.db, ws)).rejects.toThrow("Mercado Pago");
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } })).status).toBe("pending");
+    expect(agreements.get(id)!.status).toBe("pending");
+    expect(await sub()).toEqual(before);
+  });
+  it("un pago real notificado después de cancelar el checkout conserva su cobertura sin renovar", async () => {
+    await startFreeTrial(t.db, ws);
+    const trialEnd = (await sub()).trialEndsAt!;
+    const id = await checkout(); agreements.get(id)!.status = "cancelled";
+    await applyNotification(t.db, "subscription_preapproval", id);
+    await pay("settled-after-cancel", id);
+    const current = await sub();
+    expect(current.status).toBe("CANCELED");
+    expect(current.nextPaymentAt).toBeNull();
+    expect(current.trialEndsAt).toEqual(trialEnd);
+    expect(effectivePlan(current, trialEnd)).toBe("PRO");
+  });
   // Integration fixtures use an isolated in-memory PostgreSQL and mocked provider responses.
   it.each(["monthly", "yearly"] as const)("un período gratuito ACTIVE permite contratar %s sin perder días", async (cycle) => {
     const end = new Date(Date.now() + 7 * DAY);

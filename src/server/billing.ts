@@ -78,8 +78,9 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
         if (remote.back_url !== backUrl) await mp(`/preapproval/${identifier(pending.providerRef!)}`, { method: "PUT", body: JSON.stringify({ back_url: backUrl }) });
         return pending;
       }
-      if (pending.providerRef) await stopAgreement(pending.providerRef);
-      await tx.billingAgreement.update({ where: { id: pending.id }, data: { status: "cancelled" } });
+      // Una solicitud distinta no autoriza a cancelar la anterior ni a enviar una baja al proveedor.
+      // El usuario debe retomarla o descartarla expresamente desde Tu plan.
+      throw new UserError("Ya hay una solicitud pendiente con otras condiciones. Retomala o descartala explícitamente desde Tu plan antes de elegir otra.");
     }
     // Nunca adelantar un cobro por perder la prueba o el período ya pagado al cambiar de ciclo.
     const coveredUntil = latest(startDate, sub?.trialEndsAt, sub?.currentPeriodEnd);
@@ -119,6 +120,27 @@ export async function resumeCheckout(db: Db, ws: string, backUrl?: string) {
   }
   if (backUrl && remote.back_url !== backUrl) await mp(`/preapproval/${identifier(pending.providerRef)}`, { method: "PUT", body: JSON.stringify({ back_url: backUrl }) });
   return checkoutUrl(pending.checkoutUrl);
+}
+
+// Descartar un checkout es una acción explícita distinta de cancelar una suscripción.
+export async function discardPendingCheckout(db: Db, ws: string) {
+  return locked(db, ws, async (tx) => {
+    const pending = await tx.billingAgreement.findFirst({ where: { workspaceId: ws, status: { in: ["creating", "uncertain", "pending"] } }, orderBy: { createdAt: "desc" } });
+    if (!pending) return false;
+    if (pending.status !== "pending" || !pending.providerRef) throw new UserError("La solicitud todavía está en verificación. No se puede descartar hasta conocer su estado.");
+    const sub = await tx.subscription.findUnique({ where: { workspaceId: ws } });
+    if (sub?.providerRef === pending.providerRef) throw new UserError("La solicitud ya está vinculada a una suscripción. Revisá su estado desde Tu plan.");
+    const remote = await mp<Preapproval>(`/preapproval/${identifier(pending.providerRef)}`);
+    if (remote.id !== pending.providerRef || remote.external_reference !== `${ws}|${pending.couponCode ?? ""}|${pending.id}`) throw new UserError("La solicitud no coincide con este espacio.");
+    if (remote.status !== "pending" && remote.status !== "cancelled") throw new UserError("Mercado Pago ya cambió el estado de la solicitud. Tocá Retomar para actualizarlo; no se canceló ninguna suscripción.");
+    if (remote.status === "pending") {
+      const stopped = await mp<Preapproval>(`/preapproval/${identifier(pending.providerRef)}`, { method: "PUT", body: JSON.stringify({ status: "cancelled" }) });
+      if (stopped.id !== pending.providerRef || stopped.status !== "cancelled") throw new UserError("Mercado Pago no confirmó que se descartó la solicitud. Reintentá desde Tu plan.");
+    }
+    await tx.billingAgreement.update({ where: { id: pending.id }, data: { status: "cancelled" } });
+    // El acceso, el trial y cualquier suscripción activa permanecen intactos.
+    return true;
+  });
 }
 
 // Un timeout no autoriza a repetir un POST de dinero. Buscar primero el acuerdo por pagador
@@ -230,6 +252,8 @@ async function applyPreapproval(db: Db, id: string) {
       if (!claimed.count) throw new UserError("El cupón se está usando en otra solicitud. Reintentá en un momento.");
     }
     await tx.billingAgreement.update({ where: { id: agreement.id }, data: { providerRef: id, status: p.status, providerUpdatedAt: stamp ?? undefined, couponCounted: agreement.couponCounted || p.status === "authorized", checkoutUrl: p.init_point ?? undefined } });
+    // Una solicitud que nunca estuvo autorizada no es la baja de una suscripción.
+    if (p.status === "cancelled" && sub?.providerRef !== id && !["authorized", "paused"].includes(agreement.status)) return;
     // Las notificaciones tardías de acuerdos cancelados no revocan una concesión manual.
     if (sub?.provider === "manual" && effectivePlan(sub) === "PRO" && p.status !== "authorized") return;
     // Un acuerdo viejo no puede reemplazar la suscripción actual al llegar tarde su webhook.
@@ -288,8 +312,8 @@ async function applyPayment(db: Db, id: string) {
       const sub = await tx.subscription.findUnique({ where: { workspaceId: ws } });
       if (sub?.legacyPaidUntil && sub.legacyPaidUntil <= end && sub.legacyPaidUntil > start) await tx.subscription.update({ where: { workspaceId: ws }, data: { legacyPaidUntil: null } });
     }
-    if (status === "approved" && current && current.provider !== "mercadopago" && effectivePlan(current) !== "PRO") {
-      await tx.subscription.update({ where: { workspaceId: ws }, data: { plan: "PRO", provider: "mercadopago", providerRef: pay.preapproval_id, billingCycle: agreement!.cycle, status: agreement!.status === "authorized" ? "ACTIVE" : "PAST_DUE" } });
+    if (status === "approved" && current && current.provider !== "mercadopago" && publicPlan(current, true).canSubscribe) {
+      await tx.subscription.update({ where: { workspaceId: ws }, data: { plan: "PRO", provider: "mercadopago", providerRef: pay.preapproval_id, billingCycle: agreement!.cycle, status: agreement!.status === "authorized" ? "ACTIVE" : agreement!.status === "cancelled" ? "CANCELED" : "PAST_DUE", nextPaymentAt: null, canceledAt: agreement!.status === "cancelled" ? new Date() : null } });
     }
     await recalculateAccess(tx, ws);
     if (["approved", "rejected", "refunded", "cancelled", "charged_back"].includes(status)) {

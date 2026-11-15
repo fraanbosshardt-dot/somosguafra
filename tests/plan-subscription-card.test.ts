@@ -5,7 +5,7 @@ import { publicPlan } from "@/server/public-plan";
 import { PlanSubscriptionCard } from "@/components/plan-subscription-card";
 
 // Render only. No action, provider, email or database can run in these fixtures.
-vi.mock("@/app/actions/modules", () => ({ checkoutAction: vi.fn(), cancelPlanAction: vi.fn(), startTrialAction: vi.fn() }));
+vi.mock("@/app/actions/modules", () => ({ checkoutAction: vi.fn(), cancelPlanAction: vi.fn(), discardCheckoutAction: vi.fn(), startTrialAction: vi.fn() }));
 vi.mock("@/components/billing-refresh", () => ({ BillingRefresh: () => null }));
 const now = new Date("2026-11-15T12:00:00Z"), end = new Date("2026-11-27T12:00:00Z");
 const trial = { plan: "PRO", provider: "manual", status: "ACTIVE", trialEndsAt: end, currentPeriodEnd: null };
@@ -35,6 +35,8 @@ it("a known pending checkout offers resume rather than a new monthly or annual p
   const html = render(publicPlan(trial, true, now, { agreement: { status: "pending", cycle: "yearly", providerRef: "pending", checkoutUrl: "saved", amount: 74990 } }));
   expect(html).toContain('name="intent" value="resume"');
   expect(html).toContain("Retomar solicitud anual");
+  expect(html).toContain("Descartar solicitud pendiente");
+  expect(html).not.toContain("Cancelar suscripción");
   expect(html).not.toContain('type="radio"');
 });
 

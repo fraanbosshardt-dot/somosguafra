@@ -712,6 +712,18 @@ export async function checkoutAction(fd: FormData) {
   redirect(link);
 }
 
+export async function discardCheckoutAction() {
+  const { user, workspace } = await requireOwner();
+  const { discardPendingCheckout } = await import("@/server/billing");
+  let discarded: boolean;
+  try { discarded = await discardPendingCheckout(getDb(), workspace.id); }
+  catch (error) { redirect(`/app/configuracion?tab=plan&pagoerror=${encodeURIComponent(error instanceof UserError ? error.message : "No pudimos verificar la solicitud. No se modificó tu suscripción.")}`); }
+  if (!discarded) { revalidatePath("/app", "layout"); redirect("/app/configuracion?tab=plan"); }
+  await audit("billing.checkout_discarded", { userId: user.id, workspaceId: workspace.id });
+  revalidatePath("/app", "layout");
+  redirect("/app/configuracion?tab=plan&solicituddescartada=1");
+}
+
 export async function cancelPlanAction() {
   const { user, workspace } = await requireOwner();
   const { cancelSubscription } = await import("@/server/billing");

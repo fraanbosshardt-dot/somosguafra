@@ -33,11 +33,12 @@ export function publicPlan(sub: Subscription | null, owner: boolean, now = new D
   const canSubscribe = owner && !contract && !pending && !permanentGrant;
   const canUpgradeAnnual = owner && contract && !pending && !paused && billingCycle === "monthly" && plan === "PRO" && !!coverageUntil;
   const canResumeCheckout = owner && pending && agreement?.status === "pending" && !!agreement.providerRef && !!agreement.checkoutUrl;
-  const canCancel = owner && (contract || pending) && !(pending && !agreement?.providerRef);
+  const canCancel = owner && contract && !(pending && !agreement?.providerRef);
+  const canDiscardCheckout = owner && pending && agreement?.status === "pending" && !!agreement.providerRef && agreement.providerRef !== sub?.providerRef;
   const paymentIssue = ["rejected", "refunded", "charged_back", "cancelled"].includes(context.lastPaymentStatus ?? "");
   const nextChargeAt = contract ? future(sub?.nextPaymentAt, now) ?? startsAt : null;
   return {
-    plan, access, billing, owner, paid, billingCycle, canSubscribe, canUpgradeAnnual, canResumeCheckout, canCancel,
+    plan, access, billing, owner, paid, billingCycle, canSubscribe, canUpgradeAnnual, canResumeCheckout, canCancel, canDiscardCheckout,
     canStartTrial: owner && canSubscribe && plan === "FREE" && sub?.plan === "FREE" && !sub.trialEndsAt && sub.provider !== "mercadopago",
     trial: freeUntil?.toISOString().slice(0, 10) ?? null,
     freeUntil: freeUntil?.toISOString() ?? null, coverageUntil: coverageUntil?.toISOString() ?? null,

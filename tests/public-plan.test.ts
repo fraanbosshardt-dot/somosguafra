@@ -59,7 +59,8 @@ it.each(["creating", "uncertain", "pending"])("a %s checkout blocks another cont
   const view = publicPlan(trial, true, now, { agreement });
   expect(view).toMatchObject({ access: "trial", billing: "pending", pendingCycle: "yearly", pendingAmount: "74990", canSubscribe: false, canUpgradeAnnual: false });
   expect(view.canResumeCheckout).toBe(status === "pending");
-  expect(view.canCancel).toBe(status === "pending");
+  expect(view.canCancel).toBe(false);
+  expect(view.canDiscardCheckout).toBe(status === "pending");
 });
 
 it("a pending annual change does not present its amount as the active monthly price", () => {

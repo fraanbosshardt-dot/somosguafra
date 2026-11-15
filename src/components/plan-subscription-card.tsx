@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { SubscriptionView } from "@/server/public-plan";
 import { SubscriptionSummary, planDate } from "./subscription-summary";
-import { checkoutAction, cancelPlanAction, startTrialAction } from "@/app/actions/modules";
+import { checkoutAction, cancelPlanAction, discardCheckoutAction, startTrialAction } from "@/app/actions/modules";
 import { OnceButton } from "./forms";
 import { ConfirmSubmit } from "./confirm-submit";
 import { PLAN_FEATURES } from "@/lib/modules";
@@ -39,6 +39,7 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false }: {
       </div>
     </div> : <>{summary}<div className="plan-paid">
       {bill.enabled && view.canResumeCheckout && <form action={checkoutAction}><input type="hidden" name="intent" value="resume" /><OnceButton pending="Verificando…">Retomar solicitud {view.pendingCycle === "yearly" ? "anual" : "mensual"}</OnceButton></form>}
+      {view.canDiscardCheckout && <form action={discardCheckoutAction}><ConfirmSubmit className="btn" question="¿Descartar esta solicitud sin completar? Tu trial y cualquier suscripción activa se conservan. Mercado Pago puede avisarte por correo que se canceló esta solicitud pendiente." yes="Sí, descartar solicitud">Descartar solicitud pendiente</ConfirmSubmit></form>}
       {bill.enabled && view.canUpgradeAnnual && <form action={checkoutAction} className="plan-upg">
         <input type="hidden" name="cycle" value="yearly" />
         <div><b>Pasate al anual{save > 0 ? ` y ahorrá ${save} %` : ""}</b><p>{formatMoney(String(bill.yearly), bill.currency)} por año. {view.purchaseStartsAt ? `Empieza el ${planDate(view.purchaseStartsAt, timeZone)}, al terminar tu período actual.` : "Respeta tu período actual."} Al autorizarlo se detiene la renovación mensual.</p></div>
