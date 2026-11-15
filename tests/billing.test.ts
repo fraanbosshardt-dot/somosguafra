@@ -67,6 +67,34 @@ async function pay(id: string, agreement: string, status = "approved", start = n
 const sub = () => t.db.subscription.findUniqueOrThrow({ where: { workspaceId: ws } });
 
 describe("ciclo completo de suscripción", () => {
+  it("un cambio de precio posterior al resumen exige revisar otra vez antes de crear un contrato", async () => {
+    await expect(startCheckout(t.db, ws, "test@test.com", "monthly", "https://somosguafra.com/app", undefined, undefined, undefined, 7000)).rejects.toThrow("El precio cambió");
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(0);
+    expect(await t.db.billingAgreement.count({ where: { workspaceId: ws } })).toBe(0);
+  });
+  it("un intento rechazado no crea un ingreso aunque venga una fecha en el resumen", async () => {
+    const id = await checkout(); await authorize(id); await pay("rejected-no-revenue", id, "rejected");
+    const invoice = await t.db.invoice.findUniqueOrThrow({ where: { providerRef: "rejected-no-revenue" } });
+    expect(invoice.paidAt).toBeNull();
+    expect(await t.db.paymentEvent.count({ where: { invoiceId: invoice.id } })).toBe(0);
+  });
+  it("confirmar el reemplazo de un intento sin pagar permite anual y conserva el trial", async () => {
+    await startFreeTrial(t.db, ws);
+    const before = await sub(); const id = await checkout();
+    const pending = await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } });
+    const url = await startCheckout(t.db, ws, "test@test.com", "yearly", "https://somosguafra.com/app", undefined, undefined, pending.id);
+    expect(url).not.toContain(`preapproval_id=${id}`);
+    expect(agreements.get(id)!.status).toBe("cancelled");
+    expect((await sub()).trialEndsAt).toEqual(before.trialEndsAt);
+    expect(await t.db.billingAgreement.count({ where: { workspaceId: ws, status: "pending" } })).toBe(1);
+  });
+  it("una solicitud ya autorizada no puede reemplazarse usando una confirmación vieja", async () => {
+    const id = await checkout(); const pending = await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } });
+    agreements.get(id)!.status = "authorized";
+    await expect(startCheckout(t.db, ws, "test@test.com", "yearly", "https://somosguafra.com/app", undefined, undefined, pending.id)).rejects.toThrow("ya autorizó");
+    expect(agreements.get(id)!.status).toBe("authorized");
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(1);
+  });
   it("pedir otro ciclo no cancela automáticamente el checkout abierto", async () => {
     const id = await checkout();
     await expect(checkout("yearly")).rejects.toThrow("otras condiciones");

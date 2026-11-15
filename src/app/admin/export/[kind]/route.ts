@@ -26,6 +26,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ kind: stri
       const ws = u.memberships[0]?.workspace;
       return [u.name, u.email, ws?.country, effectivePlan(ws?.subscription) === "PRO" ? "Pro" : "Gratis", u.createdAt, u.lastSeenAt, u.suspendedAt ? "Suspendida" : "Activa"];
     })]);
+  } else if (kind === "finanzas") {
+    const inv = await db.invoice.findMany({ where: { workspace: { excludeFromMetrics: false } }, orderBy: { createdAt: "asc" } });
+    body = csv([["Pago", "Contrato", "Fecha aprobación", "Estado", "Moneda", "Bruto", "Devuelto", "Cargos informados", "Neto informado", "Liberación prevista", "Estado liberación", "Última sincronización"], ...inv.map(i => [i.paymentId ?? i.providerRef, i.agreementRef, i.paidAt, i.status, i.currency, i.amount.toString(), i.refundedAmount.toString(), i.feeAmount?.toString(), i.netAmount?.toString(), i.releaseAt, i.releaseStatus, i.financialSyncedAt])]);
   } else if (kind === "pagos") {
     const inv = await db.invoice.findMany({ include: { workspace: { include: { members: { take: 1, include: { user: { select: { email: true, name: true } } } } } } }, orderBy: { createdAt: "asc" } });
     body = csv([["Fecha", "Cliente", "Correo", "Importe", "Moneda", "Estado", "Referencia"], ...inv.map((i) => [i.paidAt ?? i.createdAt, i.workspace.members[0]?.user.name, i.workspace.members[0]?.user.email, i.amount.toString().replace(".", ","), i.currency, i.status, i.providerRef])]);

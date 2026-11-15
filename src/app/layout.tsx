@@ -4,7 +4,7 @@ import { SITE } from "@/lib/seo";
 import { PwaRegister } from "@/components/pwa";
 import "./globals.css";
 import "./nx.css";
-import Script from "next/script";
+import { PREFERENCE_SCRIPT } from "@/lib/preference-script";
 
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-roboto", display: "swap" });
 // Letra del nombre "somosguafra" junto al logo (redondeada, como la del logo).
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning className={`${roboto.variable} ${brand.variable}`}>
       <body>
-        <Script id="somosguafra-big" strategy="beforeInteractive">{`try{var d=document.documentElement;if(localStorage.getItem("somosguafra-big")==="1")d.setAttribute("data-big","");var t=localStorage.getItem("somosguafra-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t)}catch(e){}`}</Script>
+        <script id="somosguafra-preferences" dangerouslySetInnerHTML={{ __html: PREFERENCE_SCRIPT }} />
         {children}
         <PwaRegister />
       </body>

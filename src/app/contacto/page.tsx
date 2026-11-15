@@ -1,3 +1,4 @@
+import { SupportGuide } from "@/components/support-guide";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicShell, Breadcrumbs } from "@/components/public-shell";
@@ -32,6 +33,7 @@ export default async function Contact({ searchParams }: { searchParams: Promise<
         <div className="ws-contact">
           <ContactForm cancellation={gestion === "baja"} area={gestion === "baja" ? "pagos" : area} email={session?.user.email ?? ""} name={session?.user.name ?? ""} />
           <aside className="ws-aside">
+            <SupportGuide />
             <div className="ws-card">
               <h3>Lo que tenés que saber</h3>
               <ul className="ws-list">

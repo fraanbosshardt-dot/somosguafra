@@ -97,6 +97,7 @@ model Workspace {
   housekeptAt     DateTime? // última vez que se generaron pendientes recurrentes y resúmenes cerrados
   referralCreditDays Int @default(0)
   billingDisabledAt DateTime? // cierra nuevas autorizaciones durante la eliminación
+  excludeFromMetrics Boolean @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -799,6 +800,8 @@ model SupportTicket {
   status    String   @default("OPEN") // OPEN | ANSWERED | CLOSED
   priority  String   @default("NORMAL") // LOW | NORMAL | HIGH
   reply     String?
+  assignedTo String?
+  messages SupportMessage[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -835,6 +838,13 @@ model Invoice {
   periodStart DateTime?
   periodEnd   DateTime?
   providerUpdatedAt DateTime?
+  netAmount Decimal? @db.Decimal(18, 2)
+  feeAmount Decimal? @db.Decimal(18, 2)
+  feeDetails Json?
+  releaseAt DateTime?
+  releaseStatus String?
+  financialSyncedAt DateTime?
+  financialEvents PaymentEvent[]
   createdAt   DateTime  @default(now())
 
   @@index([workspaceId, createdAt])
@@ -872,6 +882,7 @@ model EmailOutbox {
   nextAttemptAt DateTime @default(now())
   sentAt DateTime?
   providerId String?
+  replyTo String?
   lastError String?
   createdAt DateTime @default(now())
   @@index([sentAt, nextAttemptAt])
@@ -935,6 +946,7 @@ model CompanyCost {
   period    String   @default("monthly") // monthly | yearly
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
+  endedAt DateTime?
 }
 
 model ProductNews {
@@ -966,6 +978,9 @@ model ContactMessage {
   body      String
   status    String   @default("OPEN") // OPEN | ANSWERED | CLOSED
   reply     String?
+  assignedTo String?
+  priority String @default("NORMAL")
+  messages SupportMessage[]
   userId    String?
   ip        String?
   createdAt DateTime @default(now())
@@ -973,6 +988,56 @@ model ContactMessage {
 
   @@index([status, createdAt])
   @@index([area, createdAt])
+}
+
+// Hilo común para Ayuda, Contacto y respuestas por correo; las notas nunca salen al cliente.
+model SupportMessage {
+  id String @id @default(cuid())
+  ticketId String?
+  ticket SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact ContactMessage? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role String
+  body String
+  author String?
+  internal Boolean @default(false)
+  dedupeKey String @unique
+  createdAt DateTime @default(now())
+  @@index([ticketId, createdAt])
+  @@index([contactId, createdAt])
+}
+
+// Eventos económicos independientes: no reescribir ingresos anteriores al llegar una devolución.
+model PaymentEvent {
+  id String @id @default(cuid())
+  invoiceId String
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  key String @unique
+  kind String
+  amount Decimal @db.Decimal(18, 2)
+  currency String
+  occurredAt DateTime
+  estimatedDate Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([occurredAt])
+}
+
+// Actividad diaria mínima para cohortes, sin datos de las finanzas personales.
+model ProductActivity {
+  id String @id @default(cuid())
+  userId String
+  day DateTime @db.Date
+  createdAt DateTime @default(now())
+  @@unique([userId, day])
+}
+
+model CompanyExpense {
+  id String @id @default(cuid())
+  name String
+  amount Decimal @db.Decimal(18, 2)
+  currency String @default("ARS")
+  paidAt DateTime
+  createdAt DateTime @default(now())
 }
 
 // Última cotización conocida de cada especie (se comparte entre todos; se actualiza cada 15 minutos como mucho).

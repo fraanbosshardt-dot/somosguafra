@@ -4,7 +4,7 @@ export type { EmailPurpose } from "./email-template";
 
 // Envío de emails con Resend (https://resend.com). Sin RESEND_API_KEY no se envía nada:
 // en desarrollo el email se muestra en la consola del servidor para poder probar.
-export type Email = EmailContent & { idempotencyKey?: string; to: string };
+export type Email = EmailContent & { idempotencyKey?: string; to: string; replyTo?: string };
 
 export const emailEnabled = () => !!process.env.RESEND_API_KEY;
 
@@ -23,7 +23,7 @@ export async function sendEmail(e: Email): Promise<{ sent: boolean; reason?: str
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json", ...(e.idempotencyKey ? { "Idempotency-Key": e.idempotencyKey } : {}) },
-      body: JSON.stringify({ from: emailBrandText(from), to: [e.to], subject: e.subject, text: e.text, html: renderEmail(e, appUrl()) }),
+      body: JSON.stringify({ from: emailBrandText(from), to: [e.to], subject: e.subject, text: e.text, html: renderEmail(e, appUrl()), ...(e.replyTo ? { reply_to: e.replyTo } : {}) }),
       signal: AbortSignal.timeout(8000),
     });
     if (!r.ok) return { sent: false, reason: `http-${r.status}` };

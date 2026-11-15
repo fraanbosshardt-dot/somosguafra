@@ -1,3 +1,4 @@
+import { BusinessSegments, TransactionalMailStatus } from "@/components/business-insights";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
@@ -22,6 +23,8 @@ export default async function Comms() {
   return (
     <>
       <PageHead title="Comunicaciones" desc="Avisos dentro de la app y la página de novedades. Sin campañas por correo." />
+      <BusinessSegments />
+      <TransactionalMailStatus />
       {!owner && <p className="notice a">Tu rol solo puede mirar esta sección.</p>}
 
       <div className="card">

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
@@ -61,7 +62,7 @@ export default async function Team() {
       </div>
       <div className="card">
         <div className="chead"><h3>Qué puede hacer cada rol</h3></div>
-        <dl className="kv">{roles.map((r) => <><dt key={`t${r}`}>{ROLE_NAMES[r]}</dt><dd key={`d${r}`} style={{ textAlign: "left" }}>{ROLE_HELP[r]}</dd></>)}</dl>
+        <dl className="kv">{roles.map((r) => <Fragment key={r}><dt>{ROLE_NAMES[r]}</dt><dd style={{ textAlign: "left" }}>{ROLE_HELP[r]}</dd></Fragment>)}</dl>
       </div>
     </>
   );

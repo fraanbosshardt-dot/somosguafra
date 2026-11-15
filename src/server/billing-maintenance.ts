@@ -10,6 +10,8 @@ export async function runBillingMaintenance(db: Db) {
   if (!acquired.length) return { ok: true, skipped: true, billing: 0, delivered: 0, errors: 0 };
   try {
     const billing = await reconcileBilling(db, 40, 60_000);
+    const { queueAccessNotices } = await import("./access-notices");
+    await queueAccessNotices(db);
     const delivered = await drainEmailOutbox(db, 100, 30_000);
     const errors = await db.auditLog.count({ where: { action: "billing.reconcile_failed", createdAt: { gte: now } } });
     await db.auditLog.create({ data: { action: errors ? "cron.cobros_partial" : "cron.cobros", meta: { billing, delivered, errors, durationMs: Date.now() - now.getTime() } } });

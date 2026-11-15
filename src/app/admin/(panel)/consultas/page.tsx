@@ -1,3 +1,5 @@
+import { SupportThread } from "@/components/support-thread";
+import { CaseTools, SupportInboxSummary } from "@/components/support-inbox";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -29,7 +31,7 @@ export default async function Inquiries({ searchParams }: { searchParams: Promis
   };
   const weekAgo = new Date(Date.now() - 7 * 864e5);
   const [list, byStatus, byArea, week, replies] = await Promise.all([
-    db.contactMessage.findMany({ where, orderBy: { createdAt: ver === "abiertas" ? "asc" : "desc" }, take: 100 }),
+    db.contactMessage.findMany({ where, include: { messages: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: ver === "abiertas" ? "asc" : "desc" }, take: 100 }),
     db.contactMessage.groupBy({ by: ["status"], _count: { _all: true } }),
     db.contactMessage.groupBy({ by: ["area"], where: { status: "OPEN" }, _count: { _all: true } }),
     db.contactMessage.count({ where: { createdAt: { gt: weekAgo } } }),
@@ -45,6 +47,7 @@ export default async function Inquiries({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHead title="Consultas del sitio" desc="Lo que escriben desde el formulario de Contacto, por área. Clientes y personas sin cuenta." />
+      <SupportInboxSummary />
       {!emailEnabled() && <p className="notice a">Las respuestas se guardan, pero no salen por correo hasta cargar la clave de Resend. Mientras tanto, respondé a mano al correo de cada consulta.</p>}
       <p className="notice">Las consultas del formulario llegan a esta bandeja. Abrí una consulta y respondé desde acá; la persona recibe tu respuesta por correo.</p>
       <Stats items={[["Sin responder", c("OPEN")], ["Respondidas", c("ANSWERED")], ["Cerradas", c("CLOSED")], ["Últimos 7 días", week]]} />
@@ -69,8 +72,8 @@ export default async function Inquiries({ searchParams }: { searchParams: Promis
               <span style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}><span className="pill b">{areaName}</span><span className={`pill ${ST[m.status]?.[1] ?? ""}`}>{ST[m.status]?.[0] ?? m.status}</span><span className="pill">{m.code}</span></span>
             </div>
             {m.area === "arrepentimiento" && <p className="notice a" style={{ marginTop: 0 }}>Pedido de arrepentimiento: hay que cancelar y devolver el pago dentro de los plazos de la ley.</p>}
-            <p style={{ whiteSpace: "pre-wrap", margin: "0 0 12px" }}>{m.body}</p>
-            {m.reply && <div className="notice" style={{ marginBottom: 12 }}><span style={{ whiteSpace: "pre-wrap" }}><b>Respuesta:</b> {m.reply}</span></div>}
+            <SupportThread body={m.body} reply={m.reply} messages={m.messages} internal />
+            {support && <CaseTools kind="contact" id={m.id} assignedTo={m.assignedTo} />}
             {support && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {m.status !== "CLOSED" && (

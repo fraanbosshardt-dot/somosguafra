@@ -650,12 +650,20 @@ export async function supportTicketAction(_: FormState, fd: FormData): Promise<F
   const subject = str(fd, "subject"), body = str(fd, "body");
   if (!subject || !body) return { error: "Contanos el asunto y el detalle." };
   if (body.length > 4000) return { error: "El mensaje es demasiado largo." };
-  // Soporte prioritario: las consultas de Pro entran con prioridad alta.
-  const ticket = await getDb().supportTicket.create({ data: { userId: user.id, subject: subject.slice(0, 140), body, priority: plan === "PRO" ? "HIGH" : "NORMAL" } });
-  const { sendEmail, appUrl } = await import("@/lib/email");
-  await sendEmail({ purpose: "support", idempotencyKey: `support/${ticket.id}/received`, to: user.email,
-    subject: `Recibimos tu consulta: ${ticket.subject}`,
-    text: `Hola ${user.name.split(" ")[0]}:\n\nRecibimos tu consulta. Podés seguirla en ${appUrl()}/app/ayuda. Te avisaremos por correo cuando respondamos.\n\nSomos Guafra` });
+  const { appUrl } = await import("@/lib/email");
+  const { caseLinks } = await import("@/server/support-thread");
+  const { drainEmailOutbox } = await import("@/server/billing-mail");
+  const db = getDb();
+  const ticket = await db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id} FOR UPDATE`;
+    if (await tx.supportTicket.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3600e3) } } }) >= 5) return null;
+    const t = await tx.supportTicket.create({ data: { userId: user.id, subject: subject.slice(0, 140), body, priority: plan === "PRO" ? "HIGH" : "NORMAL" } });
+    const links = caseLinks("ticket", t.id, user.email, appUrl());
+    await tx.emailOutbox.create({ data: { dedupeKey: `support/${t.id}/received`, purpose: "support", to: user.email, replyTo: links.replyTo, subject: `Recibimos tu consulta: ${t.subject}`, text: `Hola ${user.name.split(" ")[0]}:\n\nRecibimos tu consulta. Podés seguirla en ${appUrl()}/app/ayuda o desde este enlace privado: ${links.url}\nTe avisaremos por correo cuando respondamos.\n\nsomosguafra` } });
+    return t;
+  });
+  if (!ticket) return { error: "Recibimos varias consultas. Esperá nuestra respuesta para continuar." };
+  await drainEmailOutbox(db).catch(e => console.error("[support receipt queued]", e));
   revalidatePath("/app/ayuda");
   return { ok: plan === "PRO" ? "Recibimos tu consulta. Con Pro va primero: te respondemos acá mismo dentro de 1 día hábil." : "Recibimos tu consulta. Te respondemos acá mismo." };
 }
@@ -694,10 +702,10 @@ export async function checkoutAction(fd: FormData) {
     getDb().invoice.findFirst({ where: { workspaceId: workspace.id }, orderBy: [{ periodStart: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }], select: { status: true } }),
   ]);
   const offer = publicPlan(sub, true, now, { agreement, lastPaymentStatus: lastPayment?.status });
-  if (!offer.canSubscribe && !(cycle === "yearly" && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
+  if (!offer.canChoosePlan && !(cycle === "yearly" && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
   const startDate = offer.purchaseStartsAt ? new Date(offer.purchaseStartsAt) : null;
   let link: string;
-  try { link = await startCheckout(getDb(), workspace.id, user.email, cycle, `${appUrl()}/pagos/volver?espacio=${encodeURIComponent(workspace.id)}`, discount, startDate); }
+  try { link = await startCheckout(getDb(), workspace.id, user.email, cycle, `${appUrl()}/pagos/volver?espacio=${encodeURIComponent(workspace.id)}`, discount, startDate, fd.get("replaceConfirmed") === "yes" ? String(fd.get("replacePendingId") ?? "") : undefined, fd.has("expectedAmount") ? Number(fd.get("expectedAmount")) : undefined); }
   catch (e) { redirect(`/app/configuracion?tab=plan&pagoerror=${encodeURIComponent(e instanceof UserError ? e.message : "No pudimos verificar el estado con Mercado Pago. Reintentá desde esta pantalla; no inicies otro pago por fuera.")}`); }
   await audit("billing.checkout_started", { userId: user.id, workspaceId: workspace.id, meta: { cycle, coupon: discount?.code } });
   redirect(link);

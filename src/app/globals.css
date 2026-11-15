@@ -1173,8 +1173,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,select:focu
 .plan-price b{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
 .plan-price span{font-size:13px;color:var(--muted)}
 .plan-price.y{display:none}
-.plan-buy:has(input[value=yearly]:checked) .plan-price.m{display:none}
-.plan-buy:has(input[value=yearly]:checked) .plan-price.y{display:flex}
+.plan-buy:has(input[value=anual]:checked) .plan-price.m{display:none}
+.plan-buy:has(input[value=anual]:checked) .plan-price.y{display:flex}
 .plan-cta,.plan-trial{width:100%;justify-content:center;min-height:44px}
 .plan-coupon summary{cursor:pointer;font-size:13.5px;color:var(--ink-txt);font-weight:500;list-style:none;text-align:center}
 .plan-coupon summary::-webkit-details-marker{display:none}
@@ -1354,3 +1354,9 @@ input[list]{appearance:none;-webkit-appearance:none}
 .recovery-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px;padding:0;list-style:none;margin:18px 0}
 .recovery-list code{display:block;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:15px;overflow-wrap:anywhere}
 @media(max-width:900px){.settings-mobile{display:flex;margin-bottom:18px}.settings-desktop{display:none}.help-filters{grid-template-columns:1fr}}
+
+.purchase-summary{max-width:640px;margin:0 auto;width:100%;padding:clamp(20px,4vw,36px);display:flex;flex-direction:column;gap:20px}.purchase-summary h2{font-size:32px;line-height:1.2;margin:0}.purchase-summary h2 small{font-size:15px;font-weight:400;color:var(--muted)}.purchase-dates{display:grid;grid-template-columns:1fr 1fr;gap:16px;border-block:1px solid var(--line);padding:20px 0}.purchase-dates div{display:grid;gap:6px}.purchase-dates span{font-size:13px;color:var(--muted)}.subscription-summary{display:grid;gap:10px}.subscription-summary h3,.subscription-summary p{margin:0}.support-thread{display:grid;gap:12px;margin:16px 0}.support-bubble{border:1px solid var(--line);border-radius:14px;padding:14px 16px;white-space:pre-wrap;overflow-wrap:anywhere}.support-bubble.staff{background:var(--green-soft)}.support-bubble.internal{border-style:dashed}.support-bubble small{display:block;margin-bottom:6px;color:var(--muted)}@media(max-width:540px){.purchase-dates{grid-template-columns:1fr}.purchase-summary h2{font-size:27px}}
+
+.purchase-summary>.pill{align-self:flex-start}
+
+.finance-stats .adm-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}@media(max-width:760px){.finance-stats .adm-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:420px){.finance-stats .adm-stats{grid-template-columns:1fr!important}}

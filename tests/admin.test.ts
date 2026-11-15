@@ -107,8 +107,9 @@ describe("números del negocio", () => {
     const o = await overview(db, { monthly: 5, yearly: 50 });
     expect(o.users).toBe(3);
     expect(o.dau).toBe(o.users);
-    expect(o.paid).toBe(1);
-    expect(o.mrr).toBe(5);
+    expect(o.paid).toBe(0); // Sin factura aprobada no hay un pagador demostrado.
+    expect(o.mrr).toBe(0);
+    expect(o.churn).toBeNull();
     const days = await signupsByDay(db, 30);
     expect(days).toHaveLength(30);
     expect(days[29].n).toBe(o.users);

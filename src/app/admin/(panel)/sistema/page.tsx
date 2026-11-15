@@ -45,6 +45,7 @@ export default async function SystemPage() {
   return (
     <>
       <PageHead title="Sistema y seguridad" desc="Si todo funciona y si alguien está intentando entrar donde no debe." />
+      <div className="notice"><span><b>Recepción de soporte por correo:</b> {process.env.SUPPORT_INBOUND_ENABLED === "true" && process.env.RESEND_WEBHOOK_SECRET && process.env.SUPPORT_RECEIVING_DOMAIN ? "Habilitada; verificar eventos recibidos en Resend." : "Pendiente. Las conversaciones de la web funcionan; falta conectar dominio de recepción y webhook en Resend."}</span></div>
       {sys.maintenance && <p className="notice a">La app está en modo mantenimiento: los clientes ven el aviso en lugar de sus pantallas. Se cambia en Ajustes.</p>}
       <div className="card"><div className="chead"><h3>Recuperación de cobros y comunicaciones</h3>{ok(operations.ok, operations.ok ? "Al día" : "Necesita atención")}</div>
         <p className="sub">Ejecución programada cada 15 minutos, con hasta 15 minutos de variación del alojamiento. Webhooks y regreso del pago actualizan el estado en el momento.</p>

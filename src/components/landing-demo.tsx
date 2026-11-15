@@ -47,16 +47,13 @@ export function CuotasDemo() {
 
 export function PriceSwitch({ monthly, yearly, saving = 0 }: { monthly: React.ReactNode; yearly: React.ReactNode; saving?: number }) {
   const [selectedYearly, setY] = useState(false);
-  const plan = usePublicPlan();
-  const continuing = !!plan?.logged && !!plan.canResumeCheckout && !!plan.pendingCycle;
-  const y = continuing ? plan.pendingCycle === "yearly" : selectedYearly;
+  const y = selectedYearly;
   return (
     <>
       <div className="lx-seg" role="group" aria-label="Forma de pago">
-        <button type="button" aria-pressed={!y} className={!y ? "on" : ""} disabled={continuing && y} onClick={() => setY(false)}>Por mes</button>
-        <button type="button" aria-pressed={y} className={y ? "on" : ""} disabled={continuing && !y} onClick={() => setY(true)}>Por año {saving > 0 && <em className="lx-seg-save">Ahorrás {saving}%</em>}</button>
+        <button type="button" aria-pressed={!y} className={!y ? "on" : ""} onClick={() => setY(false)}>Por mes</button>
+        <button type="button" aria-pressed={y} className={y ? "on" : ""} onClick={() => setY(true)}>Por año {saving > 0 && <em className="lx-seg-save">Ahorrás {saving}%</em>}</button>
       </div>
-      {continuing && <p className="ws-fine" style={{ textAlign: "center", marginBottom: 16 }}>Continuás con Pro {y ? "anual" : "mensual"}, al importe que elegiste. <a href="/app/configuracion?tab=plan">Cambiar el plan</a></p>}
       {y ? yearly : monthly}
     </>
   );

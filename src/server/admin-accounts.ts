@@ -85,6 +85,7 @@ export async function deleteAccount(db: PrismaClient, userId: string) {
       await tx.category.deleteMany({ where });
       await tx.workspace.delete({ where: { id: ws } });
     }
+    await tx.productActivity.deleteMany({ where: { userId } });
     await tx.user.delete({ where: { id: userId } });
     await tx.emailOutbox.deleteMany({ where: { to: account.email } });
   });

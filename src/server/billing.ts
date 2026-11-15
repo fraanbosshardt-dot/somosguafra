@@ -7,6 +7,8 @@ import { publicPlan } from "./public-plan";
 import { effectivePlan, paidUntil, planSettings } from "./plans";
 import { queueBillingNotice, drainEmailOutbox } from "./billing-mail";
 
+import { paymentFinancialFields, recordPaymentEvents, type ProviderPayment } from "./payment-finance";
+
 const API = "https://api.mercadopago.com";
 type Tx = Prisma.TransactionClient;
 type Cycle = "monthly" | "yearly";
@@ -55,13 +57,14 @@ function checkoutUrl(value: string) {
   return url.href;
 }
 
-export async function startCheckout(db: Db, ws: string, payerEmail: string, cycle: Cycle, backUrl: string, discount?: { code: string; percentOff: number }, startDate?: Date | null) {
+export async function startCheckout(db: Db, ws: string, payerEmail: string, cycle: Cycle, backUrl: string, discount?: { code: string; percentOff: number }, startDate?: Date | null, replacePendingId?: string, expectedAmount?: number) {
   const cfg = await billingConfig(db);
   if (!cfg.enabled) throw new UserError("Los cobros todavía no están activados.");
   await recoverPendingCheckout(db, ws, payerEmail);
   if (discount && (!Number.isFinite(discount.percentOff) || discount.percentOff <= 0 || discount.percentOff >= 100)) throw new UserError("El descuento no permite una suscripción recurrente. Consultá al equipo.");
   const amount = Math.round((cycle === "yearly" ? cfg.yearly : cfg.monthly) * (100 - (discount?.percentOff ?? 0))) / 100;
   if (!Number.isFinite(amount) || amount <= 0) throw new UserError("El importe de la suscripción no es válido.");
+  if (expectedAmount !== undefined && (!Number.isFinite(expectedAmount) || expectedAmount !== amount)) throw new UserError("El precio cambió desde que abriste la pantalla. Revisá el importe actualizado antes de continuar; no se creó un cobro.");
   const reservation = await locked(db, ws, async (tx) => {
     const workspace = await tx.workspace.findUniqueOrThrow({ where: { id: ws } });
     if (workspace.billingDisabledAt) throw new UserError("La cuenta está en proceso de baja. No se pueden iniciar nuevos cobros.");
@@ -72,20 +75,28 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
     if (pending) {
       if (pending.status !== "pending") throw new UserError("Estamos verificando una solicitud anterior. No se iniciará otro cobro mientras esté pendiente.");
       const remote = pending.providerRef ? await mp<Preapproval>(`/preapproval/${identifier(pending.providerRef)}`) : null;
+      if (!remote || remote.id !== pending.providerRef || remote.external_reference !== `${ws}|${pending.couponCode ?? ""}|${pending.id}`) throw new UserError("La referencia de la solicitud no coincide con este espacio.");
+      if (remote.status === "pending" && (!remote.auto_recurring || Number(remote.auto_recurring.transaction_amount) !== Number(pending.amount) || remote.auto_recurring.currency_id !== pending.currency || remote.auto_recurring.frequency !== (pending.cycle === "yearly" ? 12 : 1))) throw new UserError("Mercado Pago informa otras condiciones para la solicitud. No se inició otra suscripción; contactá al equipo para revisarla.");
       if (remote?.status === "authorized") throw new UserError("Mercado Pago ya autorizó la solicitud. Esperá su confirmación antes de iniciar otra.");
       if (remote?.status === "pending" && pending.cycle === cycle && Number(pending.amount) === amount && pending.couponCode === (discount?.code ?? null) && pending.checkoutUrl) {
         checkoutUrl(pending.checkoutUrl);
         if (remote.back_url !== backUrl) await mp(`/preapproval/${identifier(pending.providerRef!)}`, { method: "PUT", body: JSON.stringify({ back_url: backUrl }) });
         return pending;
       }
-      // Una solicitud distinta no autoriza a cancelar la anterior ni a enviar una baja al proveedor.
-      // El usuario debe retomarla o descartarla expresamente desde Tu plan.
-      throw new UserError("Ya hay una solicitud pendiente con otras condiciones. Retomala o descartala explícitamente desde Tu plan antes de elegir otra.");
+      if (pending.id !== replacePendingId || !remote || remote.id !== pending.providerRef || remote.status !== "pending" || remote.external_reference !== `${ws}|${pending.couponCode ?? ""}|${pending.id}` || sub?.providerRef === pending.providerRef) throw new UserError("Ya hay una solicitud pendiente con otras condiciones. Revisá y confirmá su reemplazo antes de continuar; no se creó otra suscripción.");
+      const payments = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
+      if (!Array.isArray(payments.results) || payments.results.length || payments.paging?.total) throw new UserError("La solicitud ya tiene actividad de cobro. No se reemplazará automáticamente; revisá Mi plan.");
+      // Reemplazo expresamente confirmado en la pantalla de compra, nunca desde un GET.
+      await stopAgreement(pending.providerRef!);
+      const after = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
+      await tx.billingAgreement.update({ where: { id: pending.id }, data: { status: "cancelled" } });
+      if (!Array.isArray(after.results) || after.results.length || after.paging?.total) return { changedDuringReplacement: true as const };
     }
     // Nunca adelantar un cobro por perder la prueba o el período ya pagado al cambiar de ciclo.
     const coveredUntil = latest(startDate, sub?.trialEndsAt, sub?.currentPeriodEnd);
     return tx.billingAgreement.create({ data: { workspaceId: ws, cycle, amount, couponCode: discount?.code, startsAt: coveredUntil && coveredUntil > new Date() ? coveredUntil : null } });
   });
+  if ("changedDuringReplacement" in reservation) { await reconcileWorkspaceBilling(db, ws); throw new UserError("Mercado Pago registró actividad durante el cambio. Actualizamos tu plan; no se inició otra suscripción."); }
   if (reservation.checkoutUrl) return checkoutUrl(reservation.checkoutUrl);
   try {
     const p = await mp<Preapproval>("/preapproval", { method: "POST", headers: { "X-Idempotency-Key": reservation.id }, body: JSON.stringify({
@@ -118,6 +129,7 @@ export async function resumeCheckout(db: Db, ws: string, backUrl?: string) {
     await applyPreapproval(db, pending.providerRef);
     return null;
   }
+  if (!remote.auto_recurring || Number(remote.auto_recurring.transaction_amount) !== Number(pending.amount) || remote.auto_recurring.currency_id !== pending.currency || remote.auto_recurring.frequency !== (pending.cycle === "yearly" ? 12 : 1)) throw new UserError("Las condiciones de Mercado Pago cambiaron. Revisá la solicitud con el equipo antes de continuar.");
   if (backUrl && remote.back_url !== backUrl) await mp(`/preapproval/${identifier(pending.providerRef)}`, { method: "PUT", body: JSON.stringify({ back_url: backUrl }) });
   return checkoutUrl(pending.checkoutUrl);
 }
@@ -158,9 +170,8 @@ async function recoverPendingCheckout(db: Db, ws: string, email: string) {
   }
   if (!complete) throw new UserError("La verificación de la solicitud anterior necesita revisión del equipo.");
   if (matches.length > 1) {
-    for (const p of matches) await stopAgreement(p.id);
-    await db.billingAgreement.update({ where: { id: pending.id }, data: { status: "cancelled" } });
-    return;
+    await db.auditLog.create({ data: { workspaceId: ws, action: "billing.duplicate_requires_review", entityId: pending.id } });
+    throw new UserError("Encontramos más de un acuerdo asociado. El equipo debe revisarlos; no se canceló ninguno automáticamente.");
   }
   if (matches.length === 1) {
     const p = matches[0];
@@ -277,7 +288,7 @@ async function applyPayment(db: Db, id: string) {
   const ws = agreement.workspaceId;
   // El estado del pago real es la autoridad para reembolsos/contracargos; el resumen puede quedar atrasado.
   const paymentId = pay.payment?.id ? String(pay.payment.id) : null;
-  const payment = paymentId ? await mp<{ id: number | string; status: string; transaction_amount: number; transaction_amount_refunded?: number; currency_id: string; date_approved?: string; date_last_updated?: string }>(`/v1/payments/${identifier(paymentId)}`) : null;
+  const payment = paymentId ? await mp<ProviderPayment>(`/v1/payments/${identifier(paymentId)}`) : null;
   if (payment && String(payment.id) !== paymentId) throw new UserError("Pago inválido.");
   let status = payment?.status ?? pay.payment?.status ?? pay.status;
   const amount = Number(pay.transaction_amount);
@@ -306,7 +317,9 @@ async function applyPayment(db: Db, id: string) {
     // No usar la fecha de otro ciclo al reenviar una factura meses después.
     const fixed = before?.periodEnd && ["approved", "refunded", "charged_back", "cancelled"].includes(before.status);
     const end = fixed ? before!.periodEnd! : validSpan ? providerEnd! : nominalEnd;
-    await tx.invoice.upsert({ where: { providerRef: id }, create: { workspaceId: ws, provider: "mercadopago", providerRef: id, agreementRef: pay.preapproval_id, paymentId, refundedAmount: refunded.toFixed(2), amount: amount.toFixed(2), currency: pay.currency_id, status, periodStart: start, periodEnd: end, paidAt: date(payment?.date_approved) ?? (status === "approved" ? start : null), providerUpdatedAt: stamp }, update: { status, refundedAmount: refunded.toFixed(2), agreementRef: pay.preapproval_id, paymentId, periodStart: start, periodEnd: end, providerUpdatedAt: stamp ?? undefined, paidAt: date(payment?.date_approved) ?? before?.paidAt ?? (status === "approved" ? start : null) } });
+    const paidAt = ["approved", "refunded", "charged_back"].includes(status) ? date(payment?.date_approved) ?? before?.paidAt ?? (status === "approved" ? start : null) : before?.paidAt ?? null;
+    const invoice = await tx.invoice.upsert({ where: { providerRef: id }, create: { ...paymentFinancialFields(payment), workspaceId: ws, provider: "mercadopago", providerRef: id, agreementRef: pay.preapproval_id, paymentId, refundedAmount: refunded.toFixed(2), amount: amount.toFixed(2), currency: pay.currency_id, status, periodStart: start, periodEnd: end, paidAt, providerUpdatedAt: stamp }, update: { ...paymentFinancialFields(payment), status, refundedAmount: refunded.toFixed(2), agreementRef: pay.preapproval_id, paymentId, periodStart: start, periodEnd: end, providerUpdatedAt: stamp ?? undefined, paidAt } });
+    await recordPaymentEvents(tx, invoice);
     if (["refunded", "charged_back", "cancelled"].includes(status)) {
       // Una devolución total revoca ese período, no otros pagos válidos.
       const sub = await tx.subscription.findUnique({ where: { workspaceId: ws } });

@@ -12,7 +12,9 @@ let unconfirmedCancellation = false;
 const calls: string[] = [];
 const start = new Date("2026-11-14T12:00:00Z"), end = new Date("2026-12-14T12:00:00Z");
 const patch = (target: any, data: any) => { for (const [k, value] of Object.entries(data)) if (value !== undefined) target[k] = value; return target; };
+const paymentEvents = new Map<string, any>();
 const memory: any = {
+  paymentEvent: { upsert: async ({ where, create }: any) => { if (!paymentEvents.has(where.key)) paymentEvents.set(where.key, create); return paymentEvents.get(where.key); }, findMany: async () => [...paymentEvents.values()].filter(e => e.kind !== "gross") },
   $transaction: async (run: any) => run(memory), $queryRaw: async () => [],
   workspace: { findUnique: async () => ({ id: "space" }), findUniqueOrThrow: async () => ({ id: "space", timezone: "UTC", billingDisabledAt: null }) },
   subscription: { findUnique: async () => local, upsert: async ({ update }: any) => patch(local, update), update: async ({ data }: any) => patch(local, data) },
@@ -23,12 +25,12 @@ const memory: any = {
   invoice: {
     findUnique: async () => invoice,
     findMany: async () => invoice?.status === "approved" ? [{ periodEnd: invoice.periodEnd }] : [],
-    upsert: async ({ create, update }: any) => invoice ? patch(invoice, update) : (invoice = create),
+    upsert: async ({ create, update }: any) => invoice ? patch(invoice, update) : (invoice = { id: "invoice-local", ...create }),
   },
 };
 
 beforeEach(() => {
-  calls.length = 0; pages = false; invoice = null; unconfirmedCancellation = false;
+  paymentEvents.clear(); calls.length = 0; pages = false; invoice = null; unconfirmedCancellation = false;
   local = { plan: "PRO", status: "ACTIVE", provider: "mercadopago", providerRef: "agreement", trialEndsAt: null, legacyPaidUntil: null, currentPeriodEnd: null, billingCycle: "monthly" };
   agreement = { id: "reservation", workspaceId: "space", providerRef: "agreement", amount: 7499, currency: "ARS", cycle: "monthly", status: "authorized", couponCode: null, couponCounted: false };
   remote = { id: "agreement", external_reference: "space||reservation", status: "authorized", next_payment_date: end.toISOString(), auto_recurring: { transaction_amount: 7499, currency_id: "ARS", frequency: 1, frequency_type: "months" } };

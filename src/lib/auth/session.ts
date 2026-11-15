@@ -66,6 +66,8 @@ export async function requireUser() {
   // Última actividad, para las métricas del panel (como mucho una escritura por hora).
   if (!s.user.lastSeenAt || Date.now() - s.user.lastSeenAt.getTime() > 3600_000) {
     await getDb().user.update({ where: { id: s.userId }, data: { lastSeenAt: new Date() } });
+    const day = new Date(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()) + "T00:00:00Z");
+    await getDb().productActivity.upsert({ where: { userId_day: { userId: s.userId, day } }, create: { userId: s.userId, day }, update: {} });
   }
   if (s.user.referredById && !s.user.referralRewardedAt && s.user.emailVerified) {
     const { rewardReferral } = await import("@/server/referrals");

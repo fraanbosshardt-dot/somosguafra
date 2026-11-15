@@ -1,3 +1,5 @@
+import { SupportThread } from "@/components/support-thread";
+import { CaseTools, SupportInboxSummary } from "@/components/support-inbox";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -21,7 +23,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
   const db = getDb();
   const status = ver === "cerradas" ? ["CLOSED"] : ver === "respondidas" ? ["ANSWERED"] : ver === "todas" ? ["OPEN", "ANSWERED", "CLOSED"] : ["OPEN"];
   const [tickets, replies, counts] = await Promise.all([
-    db.supportTicket.findMany({ where: { status: { in: status } }, include: { user: { select: { id: true, name: true, email: true } } }, take: 100 }),
+    db.supportTicket.findMany({ where: { status: { in: status } }, include: { messages: { orderBy: { createdAt: "asc" } }, user: { select: { id: true, name: true, email: true } } }, take: 100 }),
     savedReplies(db),
     db.supportTicket.groupBy({ by: ["status"], _count: { _all: true } }),
   ]);
@@ -31,6 +33,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
   return (
     <>
       <PageHead title="Soporte" desc="Consultas de los clientes, de la más urgente a la más vieja." />
+      <SupportInboxSummary />
       {!emailEnabled() && <p className="notice a">Las respuestas se guardan y el cliente las ve en Ayuda, pero no le llega un correo hasta cargar la clave de Resend.</p>}
       <div className="seg" style={{ alignSelf: "flex-start" }}>
         {[["abiertas", `Sin responder (${c("OPEN")})`], ["respondidas", `Respondidas (${c("ANSWERED")})`], ["cerradas", "Cerradas"], ["todas", "Todas"]].map(([k, l]) => <Link key={k} className={`segl ${ver === k ? "on" : ""}`} href={`/admin/soporte?ver=${k}`}>{l}</Link>)}
@@ -41,8 +44,8 @@ export default async function Support({ searchParams }: { searchParams: Promise<
             <div><h3>{t.subject}</h3><p className="sub"><Link className="lnk" href={`/admin/usuarios/${t.user.id}`}>{t.user.name}</Link> · {t.user.email} · {when(t.createdAt)}</p></div>
             <span className={`pill ${PRI[t.priority]?.[1] ?? ""}`}>Prioridad {PRI[t.priority]?.[0] ?? "Normal"}</span>
           </div>
-          <p style={{ whiteSpace: "pre-wrap", margin: "0 0 12px" }}>{t.body}</p>
-          {t.reply && <div className="notice" style={{ marginBottom: 12 }}><span><b>Respuesta:</b> {t.reply}</span></div>}
+          <SupportThread body={t.body} reply={t.reply} messages={t.messages} internal />
+          {support && <CaseTools kind="ticket" id={t.id} assignedTo={t.assignedTo} />}
           {support && t.status !== "CLOSED" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <ActionForm action={adminReplyTicketAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>

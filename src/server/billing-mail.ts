@@ -25,7 +25,11 @@ export async function drainEmailOutbox(db: Db, limit = 20, timeBudgetMs = 20_000
     const now = new Date();
     const lease = await db.emailOutbox.updateMany({ where: { id: row.id, sentAt: null, nextAttemptAt: { lte: now } }, data: { nextAttemptAt: new Date(now.getTime() + 60_000), attempts: { increment: 1 } } });
     if (!lease.count) continue;
-    const result = await sendEmail({ purpose: row.purpose as EmailPurpose, to: row.to, subject: row.subject, text: row.text, idempotencyKey: row.dedupeKey });
+    if (row.dedupeKey.startsWith("access/")) {
+      const { validAccessNotice } = await import("./access-notices");
+      if (!await validAccessNotice(db, row.dedupeKey, new Date(), row.to)) { await db.emailOutbox.update({ where: { id: row.id }, data: { sentAt: new Date(), lastError: "suppressed-state-changed" } }); continue; }
+    }
+    const result = await sendEmail({ purpose: row.purpose as EmailPurpose, to: row.to, subject: row.subject, text: row.text, idempotencyKey: row.dedupeKey, replyTo: row.replyTo ?? undefined });
     if (result.sent) {
       await db.emailOutbox.update({ where: { id: row.id }, data: { sentAt: new Date(), providerId: result.id ?? null, lastError: null } });
       delivered++;

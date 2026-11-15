@@ -1,3 +1,7 @@
+import { SupportGuide } from "@/components/support-guide";
+import { randomUUID } from "node:crypto";
+import { SupportThread } from "@/components/support-thread";
+import { supportFollowupAction } from "@/app/actions/support";
 import Link from "next/link";
 import { HelpFaq } from "@/components/help-faq";
 import type { Metadata } from "next";
@@ -28,15 +32,15 @@ const FAQ: [string, string][] = [
   ["¿Cómo confirmo mi correo?", "Tocá «Confirmar correo» en el aviso de la app. Se abre una pantalla aparte donde ingresás el código de 6 números o pedís uno nuevo. Revisá también spam. Confirmalo antes de pagar Pro o invitar a otra persona a tu espacio."],
   ["¿Cómo paso a Pro?", "Desde la web, con la sesión iniciada, elegí por mes o por año y tocá «Suscribirme a Pro»: te llevamos a Mercado Pago para autorizar el pago. También podés hacerlo desde Configuración → Plan. Solo el dueño del espacio puede contratarlo y el correo debe estar confirmado. Pro se habilita cuando Mercado Pago confirma un pago aprobado; volver a la app por sí solo no confirma el cobro."],
   ["¿La prueba de 14 días me cobra al terminar?", "La prueba es gratis, se activa una sola vez desde Configuración → Plan y no te pide tarjeta. Si no contratás Pro, al vencer volvés a Gratis. Si autorizás una suscripción durante la prueba, los cobros se programan para cuando termine; la fecha se informa antes de confirmar en Mercado Pago."],
-  ["Ya contraté Pro, ¿por qué sigo en período gratuito?", "Conservás los días que te quedaban. En la landing y en Configuración → Plan vas a ver tu acceso gratuito y, por separado, Pro mensual o anual programado con su primer cobro. Autorizar la suscripción no confirma un pago. Si programaste el mensual y querés anual, usá «Pasar a anual»: conserva la fecha de inicio y detiene el acuerdo mensual anterior."],
-  ["Cerré Mercado Pago sin pagar, ¿se cancela mi plan?", "Cerrar el checkout no pide una baja. La solicitud queda pendiente para retomarla sin repetir el alta. Para elegir otras condiciones, primero podés descartarla expresamente desde Tu plan. Mercado Pago puede llamar «suscripción cancelada» a esa solicitud descartada aunque no hayas pagado; eso no quita tus días gratuitos ni cancela otra suscripción activa."],
+  ["Ya contraté Pro, ¿por qué sigo en período gratuito?", "Conservás los días que te quedaban. En Configuración → Plan vas a ver tu acceso gratuito y, por separado, Pro mensual o anual programado con su primer cobro. Autorizar la suscripción no confirma un pago. Si programaste el mensual y querés anual, usá «Pasar a anual»: conserva la fecha de inicio y detiene el acuerdo mensual anterior."],
+  ["Cerré Mercado Pago sin pagar, ¿se cancela mi plan?", "Cerrar el checkout no pide una baja. La solicitud queda pendiente para retomarla sin repetir el alta. Podés elegir mensual o anual y confirmar el reemplazo de una solicitud sin completar en la pantalla de compra. Mercado Pago puede llamar «suscripción cancelada» a esa solicitud descartada aunque no hayas pagado; eso no quita tus días gratuitos ni cancela otra suscripción activa."],
   ["¿Qué hago si aparece una solicitud de pago pendiente?", "Usá «Retomar solicitud» para abrir el mismo checkout con su importe y cupón originales. No contrates otra suscripción. Si dice que se está verificando, esperá o escribinos desde Ayuda. Si Mercado Pago ya la autorizó, al retomar se actualiza el estado de Tu plan y no se crea otro cobro."],
   ["¿Cuándo se renueva Pro?", "Según lo que elijas, por mes o por año. En Configuración → Plan podés ver el próximo cobro programado y hasta cuándo tenés acceso cubierto por tus pagos. Si Mercado Pago rechaza un cobro, el intento no agrega un período pagado."],
   ["¿Cómo cancelo Pro?", "En Configuración → Plan, tocá «Cancelar Pro». La baja se confirma con Mercado Pago: si hay un error, reintentá o contactanos. Una vez cancelado no se programan nuevos cobros y conservás Pro hasta el final del período ya pagado. Cancelar la renovación no pide automáticamente un reembolso."],
   ["Pagué y todavía no aparece Pro", "Esperá la confirmación de Mercado Pago y revisá Configuración → Plan. No repitas el pago si ya figura aprobado: escribinos desde Ayuda o Contacto → Planes y pagos para que podamos revisarlo."],
   ["¿Cómo pido un reembolso?", "Tenés 10 días corridos desde la contratación para pedir la devolución total según nuestra política. Usá el Botón de arrepentimiento del sitio o Contacto → Arrepentimiento, indicando el correo de tu cuenta. Recibís un número de trámite. La acreditación depende de Mercado Pago y del banco o tarjeta."],
   ["¿Qué correos me mandan?", "Enviamos correos de bienvenida y confirmación de cuenta, recuperación y seguridad del acceso, pagos y respuestas a consultas. No enviamos campañas de marketing ni resúmenes de tus finanzas por correo. Los avisos de vencimientos se consultan en la app o se activan como notificaciones en el dispositivo."],
-  ["¿Dónde veo la respuesta a mi consulta?", "Si escribiste desde Ayuda, aparece en «Tus consultas», en esta misma pantalla. Si usaste el formulario público de Contacto, te respondemos al correo que indicaste y recibís un número de trámite."],
+  ["¿Dónde veo la respuesta a mi consulta?", "Si escribiste desde Ayuda, aparece en «Tus consultas», en esta misma pantalla. Si usaste Contacto, recibís por correo un número de trámite y un enlace privado para ver y continuar la conversación."],
   ["¿Cómo descargo mis datos o borro mi cuenta?", "En Configuración → Importar y exportar descargás tus movimientos; el respaldo completo está en Configuración → Tus datos. Para borrar la cuenta, entrá a Configuración → Seguridad. Si tenés una suscripción paga activa, primero cancelala para detener los cobros. La eliminación es definitiva."],
   ["¿Se conecta con mi banco?", "No. Cargás tus movimientos o importás el extracto del banco o de Mercado Pago (CSV; con Pro también Excel y OFX), desde Configuración → Importar y exportar. Nunca te pedimos la clave del banco."],
   ["¿Qué hago si pierdo el teléfono del segundo factor?", "Guardá previamente tus códigos de recuperación desde Configuración → Seguridad. Al ingresar, elegí Usar un código de recuperación. Cada uno sirve una sola vez. Si no tenés códigos ni acceso a tu autenticador, contactanos: verificamos la identidad antes de recuperar el acceso."],
@@ -46,10 +50,11 @@ const FAQ: [string, string][] = [
 
 export default async function Help() {
   const { user, plan } = await requireWorkspace();
-  const tickets = await getDb().supportTicket.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 20 });
+  const tickets = await getDb().supportTicket.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 20, include: { messages: { where: { internal: false }, orderBy: { createdAt: "asc" } } } });
   return (
     <>
       <PageHead crumb="Ajustes" title="Ayuda" desc="Respuestas rápidas y una forma de escribirnos." />
+      <SupportGuide />
       <div className="grid g32">
         <div className="card">
           <div className="chead"><h3>Preguntas frecuentes</h3></div>
@@ -74,7 +79,7 @@ export default async function Help() {
                   <div className="li" key={t.id} style={{ display: "block" }}>
                     <div className="t">{t.subject}</div>
                     <div className="s">{fmtDate(t.createdAt)} · {t.status === "CLOSED" ? "Cerrada" : t.reply ? "Respondida" : "Esperando respuesta"}</div>
-                    {t.reply && <p className="notice" style={{ marginTop: 8 }}><span><b>Somos Guafra:</b> {t.reply}</span></p>}
+                    <SupportThread body={t.body} reply={t.reply} messages={t.messages} /><ActionForm action={supportFollowupAction} resetOnOk style={{ display: "grid", gap: 10 }}><input type="hidden" name="ticketId" value={t.id} /><input type="hidden" name="nonce" value={randomUUID()} /><label className="field">Continuar esta consulta<textarea name="body" rows={3} maxLength={5000} required /></label><div><Submit>Enviar mensaje</Submit></div></ActionForm>
                   </div>
                 ))}
               </div>

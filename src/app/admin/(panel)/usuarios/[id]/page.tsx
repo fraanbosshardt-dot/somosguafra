@@ -11,7 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
 import { Stats, actionName, int, when } from "@/components/admin-ui";
-import { adminCloseSessionsAction, adminDeleteAccountAction, adminGiftProAction, adminReset2faAction, adminSetPlanAction, adminSuspendAction } from "@/app/actions/admin";
+import { adminExcludeMetricsAction, adminCloseSessionsAction, adminDeleteAccountAction, adminGiftProAction, adminReset2faAction, adminSetPlanAction, adminSuspendAction } from "@/app/actions/admin";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -34,12 +34,16 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
   ]);
   const sub = ws?.subscription;
   const plan = effectivePlan(sub);
+  const firstUse = ws ? await db.transaction.findFirst({ where: { workspaceId: ws.id }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }) : null;
+  const journey = [{ label: "Cuenta creada", at: u.createdAt }, { label: "Correo confirmado", at: u.emailVerified }, { label: "Bienvenida terminada", at: ws?.onboardedAt }, { label: "Primera acción registrada", at: firstUse?.createdAt }].filter(e => e.at).sort((a,b) => a.at!.getTime() - b.at!.getTime());
   const support = can(admin.role, "support"), owner = can(admin.role, "owner");
   const subText = !sub ? "Gratis" : sub.provider === "mercadopago" ? `Pro pago (${sub.billingCycle === "yearly" ? "anual" : "mensual"}) · ${sub.status === "ACTIVE" ? "al día" : sub.status === "PAST_DUE" ? "pago pendiente" : sub.status === "CANCELED" ? "cancelado" : sub.status}${sub.couponCode ? ` · cupón ${sub.couponCode}` : ""}` : plan === "PRO" ? (sub.trialEndsAt ? `Pro hasta el ${fmtDate(sub.trialEndsAt)}` : "Pro regalado sin vencimiento") : "Gratis";
   return (
     <>
       <PageHead crumb="Clientes" title={u.name} desc={u.email} actions={<Link className="btn" href="/admin/usuarios">Volver</Link>} />
       <Stats items={[["Plan", plan === "PRO" ? "Pro" : "Gratis"], ["Cuentas", int(accounts)], ["Movimientos", int(moves)], ["Tarjetas", int(cards)], ["Deudas", int(debts)], ["Sesiones abiertas", int(sessions.length)]]} />
+      {owner && ws && <div className="card"><h3>Estadísticas comerciales</h3><p className="sub">Las cuentas internas y de prueba pueden excluirse sin modificar su acceso ni sus pagos.</p><form action={adminExcludeMetricsAction} className="acts"><input type="hidden" name="workspaceId" value={ws.id} /><label className="check"><input name="excluded" type="checkbox" value="yes" defaultChecked={ws.excludeFromMetrics} /> Cuenta interna o de prueba</label><button className="btn sm">Guardar clasificación</button></form></div>}
+      <div className="card"><h3>Recorrido de la cuenta</h3><div className="list">{journey.map(e => <div className="li" key={e.label}><div className="grow"><b>{e.label}</b></div><span className="sub">{when(e.at!)}</span></div>)}</div><p className="sub">Solo hitos de uso; no se muestran importes ni contenido de las finanzas personales.</p></div>
       <div className="grid g2">
         <div className="card">
           <div className="chead"><h3>Datos</h3></div>

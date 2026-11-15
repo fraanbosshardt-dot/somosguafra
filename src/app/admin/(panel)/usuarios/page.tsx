@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
+import { publicPlan } from "@/server/public-plan";
 import { effectivePlan } from "@/server/plans";
 import { can } from "@/server/admin-team";
 import { countryByCode } from "@/lib/countries";
@@ -21,13 +22,20 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
   const [list, grants] = await Promise.all([
     db.user.findMany({
       where: { deletedAt: null, ...(q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] } : {}), ...(sp.plan === "suspendidos" ? { suspendedAt: { not: null } } : {}) },
-      include: { memberships: { take: 1, orderBy: { createdAt: "asc" }, include: { workspace: { include: { subscription: true } } } } },
+      include: { memberships: { take: 1, orderBy: { createdAt: "asc" }, include: { workspace: { include: { subscription: true, billingAgreements: { where: { status: { not: "cancelled" } }, orderBy: { createdAt: "desc" }, take: 1 } } } } } },
       orderBy: { createdAt: "desc" }, take: 200,
     }),
     db.proGrant.findMany({ where: { usedAt: null }, orderBy: { createdAt: "desc" } }),
   ]);
   const users = list.filter((u) => {
     const p = effectivePlan(u.memberships[0]?.workspace.subscription);
+    const ws = u.memberships[0]?.workspace;
+    const state = publicPlan(ws?.subscription ?? null, true, new Date(), { agreement: ws?.billingAgreements[0] });
+    if (sp.plan === "trial") return state.access === "trial";
+    if (sp.plan === "pendientes") return state.billing === "pending";
+    if (sp.plan === "renovacion-off") return state.billing === "canceled";
+    if (sp.plan === "internas") return ws?.excludeFromMetrics;
+    if (sp.plan === "inactivos") return (u.lastSeenAt ?? u.createdAt).getTime() < Date.now() - 30 * 864e5;
     return sp.plan === "pro" ? p === "PRO" : sp.plan === "gratis" ? p === "FREE" : true;
   });
   const support = can(admin.role, "support");
@@ -38,7 +46,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
       <div className="card">
         <form className="acts" style={{ marginBottom: 12 }}>
           <input className="adm-q" name="q" defaultValue={q} placeholder="Buscar por nombre o correo" aria-label="Buscar" />
-          <select name="plan" defaultValue={sp.plan ?? ""} className="st-sel" aria-label="Filtrar"><option value="">Todos</option><option value="pro">Pro</option><option value="gratis">Gratis</option><option value="suspendidos">Suspendidos</option></select>
+          <select name="plan" defaultValue={sp.plan ?? ""} className="st-sel" aria-label="Filtrar"><option value="">Todos</option><option value="pro">Pro</option><option value="gratis">Gratis</option><option value="suspendidos">Suspendidos</option><option value="trial">En período gratuito</option><option value="pendientes">Intento de compra pendiente</option><option value="renovacion-off">Renovación desactivada</option><option value="internas">Internas / prueba</option><option value="inactivos">Sin actividad en 30 días</option></select>
           <button className="btn" type="submit">Buscar</button>
         </form>
         <div className="tw"><table>
@@ -50,8 +58,8 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
             return (
               <tr key={u.id}>
                 <td><Link className="lnk" href={`/admin/usuarios/${u.id}`} style={{ fontWeight: 500 }}>{u.name}</Link><small>{u.email}</small></td>
-                <td>{ws ? countryByCode(ws.country).name : "—"}</td>
-                <td>{plan === "PRO" ? <span className="pill b">Pro{sub?.provider === "manual" ? " regalado" : sub?.status === "TRIALING" ? " prueba" : ""}</span> : <span className="pill">Gratis</span>}</td>
+                <td>{ws ? countryByCode(ws.country).name : "—"}{ws?.excludeFromMetrics && <small>Interna / prueba</small>}</td>
+                <td>{plan === "PRO" ? <span className="pill b">Pro{publicPlan(sub ?? null, true).access === "trial" ? " prueba" : sub?.provider === "manual" ? " regalado" : ""}</span> : <span className="pill">Gratis</span>}</td>
                 <td>{fmtDate(u.createdAt)}</td>
                 <td>{u.lastSeenAt ? fmtDate(u.lastSeenAt) : "—"}</td>
                 <td>{u.suspendedAt ? <span className="pill r">Suspendida</span> : <span className="pill g">Activa</span>}</td>

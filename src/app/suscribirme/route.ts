@@ -29,9 +29,9 @@ export async function GET(req: Request) {
   // El mensual puede cambiar a anual. Los demás Pro activos no se compran dos veces.
   const agreement = await getDb().billingAgreement.findFirst({ where: { workspaceId: m.workspaceId, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } });
   const offer = publicPlan(sub, true, new Date(), { agreement });
-  if (!offer.canSubscribe && !(anual && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
+  if (!offer.canChoosePlan && !(offer.canResumeCheckout && agreement?.cycle === (anual ? "yearly" : "monthly")) && !(anual && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
   const { needsVerifiedEmail } = await import("@/server/email-verify");
   if (needsVerifiedEmail(s.user)) redirect("/app/configuracion?tab=plan&verificar=pro");
   // Un enlace GET solo muestra el plan; crear una autorización requiere confirmación POST.
-  redirect(`/app/configuracion?tab=plan&ciclo=${anual ? "anual" : "mensual"}#pagar-pro`);
+  redirect(`/app/contratar?ciclo=${anual ? "anual" : "mensual"}`);
 }

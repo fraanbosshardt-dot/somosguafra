@@ -21,6 +21,19 @@ const n = (fd: FormData, k: string) => Number(s(fd, k).replace(",", "."));
 const refresh = () => revalidatePath("/admin", "layout");
 const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 200;
 
+export async function adminCaseToolsAction(_: FormState, fd: FormData): Promise<FormState> {
+  const a = await requireAdmin("support");
+  const kind = s(fd, "kind") === "ticket" ? "ticket" : "contact", id = s(fd, "id"), note = s(fd, "note").slice(0, 3000);
+  const assignedTo = fd.get("unassign") === "yes" ? null : fd.get("assign") === "me" ? a.email : undefined;
+  const db = getDb();
+  await db.$transaction(async tx => {
+    if (kind === "ticket") await tx.supportTicket.update({ where: { id }, data: { assignedTo } });
+    else await tx.contactMessage.update({ where: { id }, data: { assignedTo } });
+    if (note) await tx.supportMessage.create({ data: { ...(kind === "ticket" ? { ticketId: id } : { contactId: id }), role: "staff", internal: true, author: a.email, body: note, dedupeKey: `note/${crypto.randomUUID()}` } });
+  });
+  await adminAudit(a, "admin.case_managed", { entity: kind, entityId: id }); refresh(); return { ok: "Gestión interna guardada." };
+}
+
 // ---------- Sesión del panel ----------
 export async function adminLogoutAction() {
   await destroyAdminSession();
@@ -284,7 +297,7 @@ export async function adminAddCostAction(_: FormState, fd: FormData): Promise<Fo
 
 export async function adminDeleteCostAction(fd: FormData) {
   const a = await requireAdmin("owner");
-  await getDb().companyCost.deleteMany({ where: { id: s(fd, "id") } });
+  await getDb().companyCost.updateMany({ where: { id: s(fd, "id"), active: true }, data: { active: false, endedAt: new Date() } });
   await adminAudit(a, "admin.cost_removed", { entityId: s(fd, "id") });
   refresh();
 }
@@ -399,4 +412,24 @@ export async function adminSaveContactAction(_: FormState, fd: FormData): Promis
   refresh();
   revalidatePath("/", "layout");
   return { ok: "Guardado. Las redes ya se usan en el sitio. El contacto se atiende desde Consultas." };
+}
+
+export async function adminAddExpenseAction(_: FormState, fd: FormData): Promise<FormState> {
+  const a = await requireAdmin("owner");
+  const name = s(fd, "name").slice(0, 100), amount = n(fd, "amount"), paidAt = new Date(s(fd, "paidAt") + "T12:00:00-03:00");
+  if (!name || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(paidAt.getTime())) return { error: "Revisá concepto, importe y fecha." };
+  await getDb().companyExpense.create({ data: { name, amount: amount.toFixed(2), currency: s(fd, "currency") === "USD" ? "USD" : "ARS", paidAt } });
+  await adminAudit(a, "admin.expense_recorded", { meta: { name, amount } }); refresh(); return { ok: "Gasto pagado registrado." };
+}
+export async function adminSettlementAction(_: FormState, fd: FormData): Promise<FormState> {
+  const a = await requireAdmin("owner");
+  const releaseDays = n(fd, "releaseDays"), quotedFeePct = n(fd, "quotedFeePct"), totalFeePct = n(fd, "totalFeePct");
+  if (!Number.isInteger(releaseDays) || releaseDays < 0 || releaseDays > 365 || !Number.isFinite(quotedFeePct) || quotedFeePct < 0 || quotedFeePct > 100 || !Number.isFinite(totalFeePct) || totalFeePct < 0 || totalFeePct > 100) return { error: "Revisá los días y porcentajes." };
+  await writeSetting(getDb(), "settlement", { releaseDays, quotedFeePct, totalFeePct }); await adminAudit(a, "admin.settlement_reference_updated"); refresh(); return { ok: "Referencia guardada. Los datos reales del proveedor tienen prioridad." };
+}
+export async function adminExcludeMetricsAction(fd: FormData) {
+  const a = await requireAdmin("owner");
+  const workspaceId = s(fd, "workspaceId");
+  await getDb().workspace.update({ where: { id: workspaceId }, data: { excludeFromMetrics: fd.get("excluded") === "yes" } });
+  await adminAudit(a, "admin.metrics_exclusion_changed", { workspaceId }); refresh();
 }

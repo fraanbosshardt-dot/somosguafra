@@ -5,18 +5,12 @@
 import Link from "next/link";
 
 import { usePublicPlan } from "./app-cta";
-import { SubscriptionSummary } from "./subscription-summary";
-import type { SubscriptionView } from "@/server/public-plan";
 
 export function PlanAware({ children }: { children: React.ReactNode }) {
   const me = usePublicPlan();
   const state = !me?.logged ? "" : me.plan === "PRO" ? (me.access === "trial" ? "trial" : "pro") : "free";
   return (
     <div className="plan-aware" data-plan={state || undefined} data-upgrade-annual={me?.canUpgradeAnnual ? "true" : undefined}>
-      {me?.logged && me.access && <div className="pa-note">
-        <SubscriptionSummary view={me as SubscriptionView} timeZone={me.timeZone ?? "America/Argentina/Buenos_Aires"} compact />
-        {me.billing !== "pending" && <a className="lnk" href="/app/configuracion?tab=plan">Administrar mi plan</a>}
-      </div>}
       {children}
       {state === "pro" && <div className="pa-go"><a className="ws-btn pri" href="/app">Ir a la app</a></div>}
     </div>

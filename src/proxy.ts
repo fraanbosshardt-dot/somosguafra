@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { PREFERENCE_SCRIPT } from "@/lib/preference-script";
+const preferenceHash = createHash("sha256").update(PREFERENCE_SCRIPT).digest("base64");
 
 // Las páginas privadas son dinámicas: cada respuesta recibe un nonce distinto.
 // Las páginas públicas conservan su caché y su política estática.
@@ -6,7 +9,7 @@ export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'sha256-${preferenceHash}' 'strict-dynamic'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'",
     "frame-ancestors 'none'", "base-uri 'self'", "object-src 'none'",
@@ -26,5 +29,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/admin/:path*", "/ingresar", "/registro", "/recuperar/:path*", "/verificar", "/confirmar-correo", "/bienvenida", "/invitacion/:path*"],
+  matcher: ["/app/:path*", "/admin/:path*", "/consulta/:path*", "/ingresar", "/registro", "/recuperar/:path*", "/verificar", "/confirmar-correo", "/bienvenida", "/invitacion/:path*"],
 };
