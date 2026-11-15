@@ -1,0 +1,25 @@
+name: Salud de producción
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: salud-produccion
+  cancel-in-progress: false
+jobs:
+  disponibilidad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Comprobar sitio, ingreso y base de datos
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /ingresar /api/health; do
+            curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 5 "https://somosguafra.com${path}" -o /tmp/health-response
+            if [ "$path" = "/api/health" ]; then
+              python3 -c 'import json; assert json.load(open("/tmp/health-response"))["ok"] is True'
+            fi
+          done

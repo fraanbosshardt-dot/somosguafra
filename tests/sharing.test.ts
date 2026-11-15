@@ -11,7 +11,8 @@ let db: PrismaClient;
 let owner: { id: string; email: string }, ws: string;
 const mkUser = async (email: string) => {
   const u = await db.user.create({ data: { email, name: email.split("@")[0], passwordHash: "" } });
-  await createWorkspaceForUser(db, u.id);
+  const created = await createWorkspaceForUser(db, u.id);
+  await db.subscription.update({ where: { workspaceId: created.id }, data: { plan: "PRO", status: "ACTIVE", provider: "manual" } });
   return u;
 };
 beforeAll(async () => {
@@ -26,7 +27,7 @@ describe("espacio compartido", () => {
     const ana = await mkUser("ana@test.com");
     const otro = await mkUser("otro@test.com");
     const { token } = await createInvite(db, ws, { email: " Ana@Test.com ", role: "EDITOR", invitedById: owner.id });
-    await expect(acceptInvite(db, token, otro)).rejects.toThrow(/es para ana@test.com/);
+    await expect(acceptInvite(db, token, otro)).rejects.toThrow(/correo al que enviamos/);
     expect(await acceptInvite(db, token, ana)).toBe(ws);
     const m = await db.membership.findUniqueOrThrow({ where: { userId_workspaceId: { userId: ana.id, workspaceId: ws } } });
     expect(m.role).toBe("EDITOR");

@@ -24,14 +24,14 @@ export function PublicNav({ logged: loggedServer }: { logged: boolean }) {
   useEffect(() => {
     if (path !== "/" || !location.hash) return;
     const el = document.getElementById(location.hash.slice(1));
-    if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    if (el) el.scrollIntoView({ behavior: "instant", block: "start" });
   }, [path]);
   const go = (id: string) => (e: React.MouseEvent) => {
     if (path !== "/") return; // otra página: navega a /#id
     const el = document.getElementById(id);
     if (!el) return;
     e.preventDefault();
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
     history.replaceState(null, "", `#${id}`);
   };
   return (
@@ -41,7 +41,7 @@ export function PublicNav({ logged: loggedServer }: { logged: boolean }) {
         <nav className="lp-links" aria-label="Secciones">
           {LINKS.map(([id, label]) => <Link key={id} href={`/#${id}`} onClick={go(id)} scroll={false}>{label}</Link>)}
         </nav>
-        <div className="lp-cta-top"><ThemeButton />{logged ? <AppCta className="btn pri" label="Crear cuenta" logged /> : <><Link className="btn ghost" href="/ingresar">Ingresar</Link><Link className="btn pri" href="/registro">Crear cuenta</Link></>}</div>
+        <div className="lp-cta-top"><ThemeButton />{logged ? <AppCta className="btn pri" label="Crear cuenta" logged navigation /> : <><a className="btn ghost" href="/ingresar">Ingresar</a><a className="btn pri" href="/registro">Crear cuenta</a></>}</div>
       </div>
     </header>
   );

@@ -9,7 +9,7 @@ export const BRAND = {
   address: null as string | null,
   // Formulario oficial de Defensa del Consumidor (Ventanilla Única Federal).
   consumerUrl: "https://www.argentina.gob.ar/produccion/defensadelconsumidor/formulario",
-  legalUpdated: "14/11/2026",
+  legalUpdated: "15/11/2026",
 };
 
 // Áreas de contacto: cada una con su correo (se carga en el panel interno) y lo que atiende.
@@ -31,3 +31,5 @@ export const SOCIALS = [
   { key: "youtube", name: "YouTube" },
 ] as const;
 export type SocialKey = (typeof SOCIALS)[number]["key"];
+
+export const TERMS_VERSION = "2026-11-15";

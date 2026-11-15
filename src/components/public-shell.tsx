@@ -65,6 +65,7 @@ async function SiteFooter() {
         </div>
         <div className="ws-foot-legal">
           <Link href="/arrepentimiento">Botón de arrepentimiento</Link>
+          <Link href="/contacto?area=pagos&gestion=baja">Baja del servicio</Link>
           <a href={BRAND.consumerUrl} target="_blank" rel="noopener noreferrer">Defensa del Consumidor · Reclamos</a>
         </div>
         <div className="ws-foot-bot">

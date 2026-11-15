@@ -1,4 +1,5 @@
 "use server";
+import { TERMS_VERSION } from "@/lib/brand";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
@@ -35,7 +36,7 @@ export async function signupAction(_: FormState, fd: FormData): Promise<FormStat
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim();
   if (ip && (await db.auditLog.count({ where: { action: "auth.signup", ip, createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } })) >= 10) return { error: "Se crearon muchas cuentas desde esta conexión. Probá de nuevo en una hora." };
   if (await db.user.findUnique({ where: { email: parsed.data.email } })) return { error: "Ya hay una cuenta con ese correo. Iniciá sesión." };
-  const user = await db.user.create({ data: { email: parsed.data.email, name: parsed.data.name, passwordHash: await hashPassword(parsed.data.password) } });
+  const user = await db.user.create({ data: { email: parsed.data.email, name: parsed.data.name, passwordHash: await hashPassword(parsed.data.password), termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION, termsChannel: "email" } });
   const ws = await createWorkspaceForUser(db, user.id, "Personal");
   await audit("auth.signup", { userId: user.id, workspaceId: ws.id, meta: { via: "email" } });
   await linkReferral(user.id);
@@ -83,12 +84,18 @@ export async function verifyLoginCodeAction(_: FormState, fd: FormData): Promise
     await destroySession();
     return { error: "Demasiados códigos incorrectos. Ingresá de nuevo en 15 minutos." };
   }
-  if (!verifyTotp(decryptSecret(s.user.totpSecretEnc), code)) {
+  const recovery = String(fd.get("recoveryCode") ?? "").trim();
+  const { consumeRecoveryCode } = await import("@/server/recovery-codes");
+  const valid = recovery ? await consumeRecoveryCode(db, s.userId, recovery) : verifyTotp(decryptSecret(s.user.totpSecretEnc), code);
+  if (!valid) {
     await audit("auth.2fa_failed", { userId: s.userId });
     return { error: fails >= 3 ? "El código no es correcto. Te queda un intento antes de que cerremos la sesión." : "El código no es correcto o ya venció. Probá con el que se ve ahora." };
   }
   await markTwoFactorVerified(s.id);
-  await audit("auth.2fa_ok", { userId: s.userId });
+  await audit(recovery ? "auth.recovery_code_used" : "auth.2fa_ok", { userId: s.userId });
+  if (recovery) {
+    try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(s.user, "recovery_used"); } catch (e) { console.error("[recovery notice]", e); }
+  }
   redirect(await landingPath("/app"));
 }
 

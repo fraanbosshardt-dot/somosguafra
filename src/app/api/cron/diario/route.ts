@@ -1,5 +1,5 @@
+import { cronAuthorized } from "@/lib/cron-auth";
 import { getDb } from "@/lib/db";
-import { appUrl, sendEmail } from "@/lib/email";
 import { todayIn } from "@/lib/dates";
 import { refreshRates } from "@/server/fx";
 import { pushConfig, pushToUser } from "@/server/push";
@@ -9,8 +9,7 @@ import { pushConfig, pushToUser } from "@/server/push";
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) return new Response("No autorizado", { status: 401 });
+  if (!cronAuthorized(req)) return new Response("No autorizado", { status: 401 });
   const db = getDb();
   try {
     return await run(db);
@@ -21,14 +20,13 @@ export async function GET(req: Request) {
 }
 
 async function run(db: ReturnType<typeof getDb>) {
-  const { reconcileBilling } = await import("@/server/billing");
-  const { drainEmailOutbox } = await import("@/server/billing-mail");
-  const billing = await reconcileBilling(db, 10);
-  const delivered = await drainEmailOutbox(db);
+  const { runBillingMaintenance } = await import("@/server/billing-maintenance");
+  const { billing, delivered } = await runBillingMaintenance(db);
   const fx = await refreshRates(db).catch(() => 0);
   const sent = 0, skipped = 0; // No se envían recordatorios de finanzas personales por correo.
   const pushes = await pushDueTomorrow(db);
-  const unverified = await cleanUnverified(db);
+  // La inactividad nunca elimina cuentas ni datos financieros. La eliminación es explícita.
+  const unverified = { unverifiedWarned: 0, unverifiedDeleted: 0 };
   await db.auditLog.create({ data: { action: "cron.diario", meta: { rates: fx, emails: sent, notSent: skipped, pushes, ...unverified } } });
   return Response.json({ ok: true, rates: fx, emails: sent, billing, delivered, notSent: skipped, pushes, ...unverified });
 }
@@ -47,34 +45,4 @@ async function pushDueTomorrow(db: ReturnType<typeof getDb>) {
     if (due) n += await pushToUser(db, u.id);
   }
   return n;
-}
-
-// Cuentas creadas con correo que nunca se confirmaron ni se usaron: a los 23 días se avisa por correo (una vez) y a los
-// 30 se borran con todos sus datos. Solo corre con los correos configurados (si no, nadie podría confirmar).
-async function cleanUnverified(db: ReturnType<typeof getDb>) {
-  const { emailEnabled, abandonedUnverified, UNVERIFIED_DAYS } = await import("@/server/email-verify");
-  if (!emailEnabled()) return { unverifiedWarned: 0, unverifiedDeleted: 0 };
-  const { ownerEmails } = await import("@/server/admin-team");
-  const { deleteAccount } = await import("@/server/admin-accounts");
-  const { sendVerifyEmail } = await import("@/server/account-mail");
-  const staff = ownerEmails();
-  const now = Date.now();
-  let warned = 0, deleted = 0;
-  // Aviso una semana antes: los que se borrarían dentro de 7 días y todavía no recibieron el aviso.
-  const soon = await abandonedUnverified(db, now + 7 * 864e5, staff);
-  for (const u of soon.slice(0, 100)) {
-    if (await db.auditLog.count({ where: { action: "account.unverified_warned", entityId: u.id } })) continue;
-    const user = await db.user.findUnique({ where: { id: u.id } });
-    if (!user) continue;
-    const r = await sendEmail({ purpose: "security", to: user.email, subject: "Tu cuenta de Somos Guafra se borra en 7 días", text: `Hola ${user.name.split(" ")[0]}:\n\nCreaste una cuenta en Somos Guafra pero nunca confirmaste tu correo ni la usaste. Si en 7 días sigue así, la borramos con todos sus datos.\n\nSi la querés conservar, entrá a ${appUrl()}/app y confirmá tu correo (te mandamos un código en otro correo).\n\nSomos Guafra` });
-    if (r.sent) { await sendVerifyEmail(user); warned++; }
-    await db.auditLog.create({ data: { action: "account.unverified_warned", entity: "user", entityId: u.id } });
-  }
-  // Borrado a los 30 días (de a 50 por día como máximo).
-  for (const u of (await abandonedUnverified(db, now, staff)).slice(0, 50)) {
-    await deleteAccount(db, u.id);
-    await db.auditLog.create({ data: { action: "account.auto_deleted", entity: "user", entityId: u.id, meta: { reason: `sin confirmar ni usar en ${UNVERIFIED_DAYS} días` } } });
-    deleted++;
-  }
-  return { unverifiedWarned: warned, unverifiedDeleted: deleted };
 }

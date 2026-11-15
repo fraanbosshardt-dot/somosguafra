@@ -5,12 +5,13 @@ import { checkoutAction, cancelPlanAction, discardCheckoutAction, startTrialActi
 import { OnceButton } from "./forms";
 import { ConfirmSubmit } from "./confirm-submit";
 import { PLAN_FEATURES } from "@/lib/modules";
+import type { PlanFeature } from "@/lib/plan-features";
 import { formatMoney } from "@/lib/money";
 import { Icon } from "./icons";
 import { BillingRefresh } from "./billing-refresh";
 
 type Bill = { enabled: boolean; monthly: number; yearly: number; currency: string };
-export function PlanSubscriptionCard({ view, bill, timeZone, annual = false }: { view: SubscriptionView; bill: Bill; timeZone: string; annual?: boolean }) {
+export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, features = PLAN_FEATURES }: { view: SubscriptionView; bill: Bill; timeZone: string; annual?: boolean; features?: PlanFeature[] }) {
   const save = bill.monthly > 0 ? Math.max(0, Math.round((1 - bill.yearly / (12 * bill.monthly)) * 100)) : 0;
   const summary = <SubscriptionSummary view={view} timeZone={timeZone} />;
   const purchase = bill.enabled && view.canSubscribe;
@@ -22,7 +23,7 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false }: {
         {summary}
         <h4>{view.freeUntil ? "Elegí cómo seguir con Pro" : "Pasate a Pro"}</h4>
         {days > 0 && <p className="plan-note">Te {days === 1 ? "queda 1 día" : `quedan ${days} días`} de acceso gratuito. Los conservás al suscribirte.</p>}
-        <ul>{PLAN_FEATURES.filter(f => f.plan === "pro").slice(0, 5).map(f => <li key={f.name}><Icon name="check" />{f.name}</li>)}</ul>
+        <ul>{features.filter(f => f.plan === "pro").slice(0, 5).map(f => <li key={f.name}><Icon name="check" />{f.name}</li>)}</ul>
       </div>
       <div className="plan-box" id="pagar-pro">
         <form action={checkoutAction} className="plan-buy">

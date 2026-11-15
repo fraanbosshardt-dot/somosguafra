@@ -60,7 +60,7 @@ export async function SharingTab({ workspaceId, role, plan, userId }: { workspac
         <ul className="sub" style={{ margin: "8px 0 0", paddingLeft: 18 }}>
           <li><b>Carga y edita:</b> ve todo y puede cargar, cobrar, pagar y corregir movimientos.</li>
           <li><b>Solo mira:</b> ve todo, pero no puede cambiar nada.</li>
-          <li>Solo el dueño invita o quita personas y maneja el plan. Pro alcanza para todos los que están en el espacio.</li>
+          <li>Solo el dueño invita o quita personas y maneja el plan. Pro alcanza para todos los que están en el espacio. Si el espacio vuelve a Gratis, los invitados conservan lectura; editar o sumar personas requiere Pro.</li>
         </ul>
       </details></div>
     </>

@@ -20,6 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {nueva && <p className="notice">Listo, ya podés ingresar con tu contraseña nueva.</p>}
       <GoogleNotice code={google} />
       <GoogleButton desde="ingresar" />
+      <p className="pub-note">Si es tu primer ingreso con Google, creamos tu cuenta y aceptás los <Link className="lnk" href="/terminos">términos</Link> y la <Link className="lnk" href="/privacidad">política de privacidad</Link>.</p>
       <ActionForm action={loginAction} >
         <label className="field">Correo<input name="email" type="email" autoComplete="username" placeholder="nombre@correo.com" required autoFocus /></label>
         <label className="field">Contraseña<input name="password" type="password" autoComplete="current-password" placeholder="Tu contraseña" required /></label>
@@ -32,3 +33,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     </AuthShell>
   );
 }
+
+export const dynamic = "force-dynamic";

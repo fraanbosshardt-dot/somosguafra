@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 const check = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>;
 
-export default async function Contact({ searchParams }: { searchParams: Promise<{ area?: string }> }) {
-  const { area = "soporte" } = await searchParams;
+export default async function Contact({ searchParams }: { searchParams: Promise<{ area?: string; gestion?: string }> }) {
+  const { area = "soporte", gestion } = await searchParams;
   const session = await getSession().catch(() => null);
   return (
     <PublicShell logged={!!session}>
@@ -30,7 +30,7 @@ export default async function Contact({ searchParams }: { searchParams: Promise<
       </section>
       <section className="ws-w" style={{ paddingBottom: "clamp(64px,8vw,112px)" }}>
         <div className="ws-contact">
-          <ContactForm area={area} email={session?.user.email ?? ""} name={session?.user.name ?? ""} />
+          <ContactForm cancellation={gestion === "baja"} area={gestion === "baja" ? "pagos" : area} email={session?.user.email ?? ""} name={session?.user.name ?? ""} />
           <aside className="ws-aside">
             <div className="ws-card">
               <h3>Lo que tenés que saber</h3>

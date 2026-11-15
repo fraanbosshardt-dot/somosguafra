@@ -1,3 +1,4 @@
+import { resourceQuotaAvailable } from "./resource-quota";
 // Motor financiero: cuentas, obligaciones y movimientos de dinero.
 // Reglas (ver docs/ARQUITECTURA.md):
 // - Un pendiente (Obligation) no mueve dinero. El dinero solo se mueve con un Transaction.
@@ -12,6 +13,7 @@ import { period, periodEnd, periodStart } from "@/lib/dates";
 import type Decimal from "decimal.js";
 import { randomUUID } from "node:crypto";
 import { cache } from "react";
+import { lockWorkspace } from "./workspace-lock";
 
 export type Db = PrismaClient;
 type Tx = Prisma.TransactionClient;
@@ -44,19 +46,23 @@ export async function createAccount(
 ) {
   const name = input.name.trim();
   if (!name) throw new UserError("Poné un nombre para la cuenta.");
-  const last = await db.account.aggregate({ where: { workspaceId: ws }, _max: { position: true } });
-  return db.account.create({
-    data: {
-      workspaceId: ws,
-      position: (last._max.position ?? 0) + 1,
-      name,
-      institution: input.institution?.trim() || null,
-      type: input.type,
-      currency: input.currency,
-      initialBalance: money(input.initialBalance),
-      initialDate: input.initialDate,
-      notes: input.notes?.trim() || null,
-    },
+  return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    if (input.type !== "CREDIT_CARD" && !(await resourceQuotaAvailable(tx, ws, "accounts"))) throw new UserError("El plan Gratis incluye 5 cuentas activas. Desactivá una o pasá a Pro.");
+    const last = await tx.account.aggregate({ where: { workspaceId: ws }, _max: { position: true } });
+    return tx.account.create({
+      data: {
+        workspaceId: ws,
+        position: (last._max.position ?? 0) + 1,
+        name,
+        institution: input.institution?.trim() || null,
+        type: input.type,
+        currency: input.currency,
+        initialBalance: money(input.initialBalance),
+        initialDate: input.initialDate,
+        notes: input.notes?.trim() || null,
+      },
+    });
   });
 }
 
@@ -74,7 +80,7 @@ export async function reorderAccounts(db: Db, ws: string, ids: string[]) {
 
 // Saldo = saldo inicial + entradas − salidas. Se calcula siempre desde el libro.
 // Con asOf, el saldo a esa fecha: lo cargado con fecha posterior todavía no está en la cuenta.
-export async function accountBalances(db: Db, ws: string, asOf?: Date): Promise<Map<string, Decimal>> {
+export async function accountBalances(db: Pick<Db, "account" | "transaction">, ws: string, asOf?: Date): Promise<Map<string, Decimal>> {
   const [accounts, sums] = await Promise.all([
     db.account.findMany({ where: { workspaceId: ws }, select: { id: true, initialBalance: true } }),
     db.transaction.groupBy({ by: ["accountId", "direction"], where: { workspaceId: ws, ...(asOf ? { effectiveDate: { lte: asOf } } : {}) }, _sum: { amount: true } }),
@@ -145,6 +151,13 @@ export async function recordMovement(db: Db, ws: string, input: MovementInput) {
   }
 
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    if (input.idempotencyKey) {
+      const existing = await tx.transaction.findFirst({ where: { workspaceId: ws, idempotencyKey: input.idempotencyKey } });
+      if (existing) return { transactionId: existing.id, obligationId: existing.obligationId, duplicate: true };
+      const pending = await tx.obligation.findFirst({ where: { workspaceId: ws, idempotencyKey: input.idempotencyKey } });
+      if (pending) return { transactionId: null, obligationId: pending.id, duplicate: true };
+    }
     const account = await ownAccount(tx, ws, input.accountId);
     const category = await ownCategory(tx, ws, input.categoryId, input.kind);
     const refDate = input.effectiveDate ?? input.dueDate!;
@@ -159,6 +172,7 @@ export async function recordMovement(db: Db, ws: string, input: MovementInput) {
       ? await tx.obligation.create({
           data: {
             workspaceId: ws,
+            idempotencyKey: input.idempotencyKey ?? null,
             direction: (input.kind === "INCOME" ? "RECEIVABLE" : "PAYABLE") as ObligationDirection,
             description,
             amount: money(amount),
@@ -206,6 +220,7 @@ export async function payObligation(
   input: { obligationId: string; accountId: string; amount: MoneyValue; date: Date; userId?: string | null; settle?: boolean; updateFuture?: boolean },
 ) {
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     // Bloquea el pendiente hasta terminar: dos toques seguidos no registran el pago dos veces.
     await tx.$queryRaw`SELECT "id" FROM "Obligation" WHERE "id" = ${input.obligationId} AND "workspaceId" = ${ws} FOR UPDATE`;
     const ob = await tx.obligation.findFirst({ where: { id: input.obligationId, workspaceId: ws }, include: { payments: true } });
@@ -299,6 +314,7 @@ export async function matchingPaid(db: Db, ws: string, ob: { direction: Obligati
 // Unir un movimiento ya cargado con su pendiente: el pendiente queda cobrado o pagado con ese importe (no se duplica).
 export async function linkToPending(db: Db, ws: string, transactionId: string, obligationId: string) {
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const t = await tx.transaction.findFirst({ where: { id: transactionId, workspaceId: ws } });
     const ob = await tx.obligation.findFirst({ where: { id: obligationId, workspaceId: ws }, include: { payments: true } });
     if (!t || !ob) throw new UserError("No encontramos el movimiento o el pendiente.");
@@ -329,6 +345,7 @@ export async function updateObligation(db: Db, ws: string, id: string, input: { 
   if (paid.gt(amount)) throw new UserError(`Ya ${ob.direction === "RECEIVABLE" ? "cobraste" : "pagaste"} ${paid.toFixed(2).replace(".", ",")}: el importe no puede ser menor.`);
   await ownCategory(db, ws, input.categoryId, ob.direction === "RECEIVABLE" ? "INCOME" : "EXPENSE");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.obligation.update({ where: { id: ob.id }, data: { description, amount: amount.toFixed(2), dueDate: input.dueDate, economicPeriod: period(input.dueDate), categoryId: input.categoryId, notes: input.notes } });
     // Cuota de un préstamo: el cronograma muestra el monto y la fecha nuevos (la diferencia va como interés y gastos).
     if (ob.sourceType === "debt") {
@@ -366,12 +383,22 @@ export async function cancelObligation(db: Db, ws: string, obligationId: string)
 export async function recordTransfer(
   db: Db,
   ws: string,
-  input: { fromAccountId: string; toAccountId: string; amount: MoneyValue; toAmount?: MoneyValue; fxRate?: MoneyValue; date: Date; description?: string; userId?: string | null },
+  input: { fromAccountId: string; toAccountId: string; amount: MoneyValue; toAmount?: MoneyValue; fxRate?: MoneyValue; date: Date; description?: string; userId?: string | null; idempotencyKey?: string | null },
 ) {
   if (input.fromAccountId === input.toAccountId) throw new UserError("Elegí dos cuentas distintas.");
   const amount = round2(input.amount);
   if (!amount.gt(0)) throw new UserError("El importe tiene que ser mayor a cero.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    if (input.idempotencyKey) {
+      if (await tx.obligation.count({ where: { workspaceId: ws, idempotencyKey: input.idempotencyKey } })) throw new UserError("Este formulario ya guardó un pendiente. Abrí uno nuevo para otra operación.");
+      const existing = await tx.transaction.findFirst({ where: { workspaceId: ws, idempotencyKey: input.idempotencyKey } });
+      if (existing) {
+        if (!existing.transferGroupId) throw new UserError("Este formulario ya se guardó. Abrí uno nuevo para otra operación.");
+        const incoming = await tx.transaction.findFirstOrThrow({ where: { workspaceId: ws, transferGroupId: existing.transferGroupId, direction: "IN" } });
+        return { transferGroupId: existing.transferGroupId, outId: existing.id, inId: incoming.id };
+      }
+    }
     const from = await ownAccount(tx, ws, input.fromAccountId);
     const to = await ownAccount(tx, ws, input.toAccountId);
     let toAmount = amount;
@@ -392,33 +419,36 @@ export async function recordTransfer(
       fxDate: input.fxRate != null ? input.date : null,
       createdById: input.userId ?? null,
     };
-    const out = await tx.transaction.create({ data: { ...base, accountId: from.id, direction: "OUT", amount: money(amount), currency: from.currency } });
+    const out = await tx.transaction.create({ data: { ...base, accountId: from.id, direction: "OUT", idempotencyKey: input.idempotencyKey ?? null, amount: money(amount), currency: from.currency } });
     const inn = await tx.transaction.create({ data: { ...base, accountId: to.id, direction: "IN", amount: money(toAmount), currency: to.currency } });
     return { transferGroupId: group, outId: out.id, inId: inn.id };
   });
 }
 
 export async function adjustBalance(db: Db, ws: string, input: { accountId: string; targetBalance: MoneyValue; date: Date; userId?: string | null }) {
-  const account = await ownAccount(db, ws, input.accountId);
-  const current = (await accountBalances(db, ws, input.date)).get(account.id) ?? ZERO;
-  const diff = round2(input.targetBalance).minus(current);
-  await db.account.update({ where: { id: account.id }, data: { lastReconciledAt: new Date() } });
-  if (diff.isZero()) return { diff, transactionId: null };
-  const t = await db.transaction.create({
-    data: {
-      workspaceId: ws,
-      accountId: account.id,
-      type: "ADJUSTMENT",
-      direction: diff.gt(0) ? "IN" : "OUT",
-      amount: money(diff.abs()),
-      currency: account.currency,
-      description: "Ajuste por conciliación",
-      effectiveDate: input.date,
-      economicPeriod: period(input.date),
-      createdById: input.userId ?? null,
-    },
+  return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    const account = await ownAccount(tx, ws, input.accountId);
+    const current = (await accountBalances(tx, ws, input.date)).get(account.id) ?? ZERO;
+    const diff = round2(input.targetBalance).minus(current);
+    await tx.account.update({ where: { id: account.id }, data: { lastReconciledAt: new Date() } });
+    if (diff.isZero()) return { diff, transactionId: null };
+    const t = await tx.transaction.create({
+      data: {
+        workspaceId: ws,
+        accountId: account.id,
+        type: "ADJUSTMENT",
+        direction: diff.gt(0) ? "IN" : "OUT",
+        amount: money(diff.abs()),
+        currency: account.currency,
+        description: "Ajuste por conciliación",
+        effectiveDate: input.date,
+        economicPeriod: period(input.date),
+        createdById: input.userId ?? null,
+      },
+    });
+    return { diff, transactionId: t.id };
   });
-  return { diff, transactionId: t.id };
 }
 
 // ---------- Borrar y corregir un movimiento ----------
@@ -441,6 +471,7 @@ export async function deleteMovement(db: Db, ws: string, id: string) {
   const all = await db.transaction.findMany({ where: { id: { in: [...ids] } }, select: { id: true, obligationId: true, createdAt: true } });
   const obIds = [...new Set(all.map((x) => x.obligationId).filter(Boolean) as string[])];
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const list = [...ids];
     await tx.installmentPlan.deleteMany({ where: { transactionId: { in: list }, card: { workspaceId: ws } } });
     await tx.investmentMovement.deleteMany({ where: { transactionId: { in: list }, investment: { workspaceId: ws } } });
@@ -487,6 +518,7 @@ export async function updateMovement(
     accountId = acc.id;
   }
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const common = { effectiveDate: input.effectiveDate, ...(amount ? { amount: money(amount) } : {}) };
     await tx.transaction.update({ where: { id: t.id }, data: { ...common, description: description.slice(0, 140), categoryId: t.type === "TRANSFER" ? null : input.categoryId, economicPeriod: input.economicPeriod, notes: input.notes, ...(accountId ? { accountId } : {}) } });
     // Transferencia en la misma moneda: la otra pata cambia igual (importe y fecha).
@@ -501,6 +533,7 @@ export async function updateMovement(
 
 export async function reverseTransaction(db: Db, ws: string, transactionId: string, userId?: string | null) {
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const t = await tx.transaction.findFirst({ where: { id: transactionId, workspaceId: ws }, include: { reversedBy: true } });
     if (!t) throw new UserError("No encontramos ese movimiento.");
     if (t.reversalOfId) throw new UserError("Ese movimiento ya es una reversa.");

@@ -15,10 +15,10 @@ export function PlanAware({ children }: { children: React.ReactNode }) {
     <div className="plan-aware" data-plan={state || undefined} data-upgrade-annual={me?.canUpgradeAnnual ? "true" : undefined}>
       {me?.logged && me.access && <div className="pa-note">
         <SubscriptionSummary view={me as SubscriptionView} timeZone={me.timeZone ?? "America/Argentina/Buenos_Aires"} compact />
-        <Link className="lnk" href="/app/configuracion?tab=plan">Ver mi plan</Link>
+        {me.billing !== "pending" && <a className="lnk" href="/app/configuracion?tab=plan">Administrar mi plan</a>}
       </div>}
       {children}
-      {state === "pro" && <div className="pa-go"><Link className="ws-btn pri" href="/app">Ir a la app</Link></div>}
+      {state === "pro" && <div className="pa-go"><a className="ws-btn pri" href="/app">Ir a la app</a></div>}
     </div>
   );
 }

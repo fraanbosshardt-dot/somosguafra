@@ -46,3 +46,5 @@ export default async function ConfirmEmailPage() {
     </AuthShell>
   );
 }
+
+export const dynamic = "force-dynamic";

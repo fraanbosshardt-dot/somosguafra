@@ -1,6 +1,8 @@
+import { effectivePlan, hasFeature } from "./plans";
 // Espacio compartido (Pro): el dueño invita hasta 3 personas por correo. Cada una entra con su propia cuenta y
 // puede "cargar y editar" o "solo mirar". Cada persona elige qué espacio está viendo (el suyo o uno compartido).
 import { createHash, randomBytes } from "node:crypto";
+import { lockWorkspace } from "./workspace-lock";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { UserError } from "./ledger";
 
@@ -18,7 +20,7 @@ export function pickMembership<M extends { workspaceId: string }>(memberships: M
   return memberships.find((m) => m.workspaceId === activeWorkspaceId) ?? memberships[0];
 }
 
-export async function sharingOverview(db: PrismaClient, ws: string) {
+export async function sharingOverview(db: Pick<PrismaClient, "membership" | "workspaceInvite">, ws: string) {
   const [members, invites] = await Promise.all([
     db.membership.findMany({ where: { workspaceId: ws }, include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: "asc" } }),
     db.workspaceInvite.findMany({ where: { workspaceId: ws, acceptedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "asc" } }),
@@ -31,17 +33,21 @@ export async function createInvite(db: PrismaClient, ws: string, input: { email:
   const email = normEmail(input.email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new UserError("Revisá el correo.");
   if (input.role !== "EDITOR" && input.role !== "VIEWER") throw new UserError("Elegí qué puede hacer.");
-  const { members, invites, left } = await sharingOverview(db, ws);
-  if (members.some((m) => m.user.email.toLowerCase() === email)) throw new UserError("Esa persona ya está en el espacio.");
-  if (invites.some((i) => i.email === email)) throw new UserError("Ya hay una invitación pendiente para ese correo. Podés cancelarla y mandar otra.");
-  if (left <= 0) throw new UserError(`Podés compartir con hasta ${MAX_GUESTS} personas. Quitá a alguien o cancelá una invitación.`);
-  const token = randomBytes(24).toString("base64url");
-  const now = input.now ?? new Date();
-  const invite = await db.workspaceInvite.create({ data: { workspaceId: ws, email, role: input.role, tokenHash: hash(token), invitedById: input.invitedById, expiresAt: new Date(now.getTime() + INVITE_DAYS * 864e5) } });
-  return { invite, token };
+  return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    if (!(await hasFeature(tx, effectivePlan(await tx.subscription.findUnique({ where: { workspaceId: ws } })), "compartido"))) throw new UserError("Invitar personas requiere Pro.");
+    const { members, invites, left } = await sharingOverview(tx, ws);
+    if (members.some((m) => m.user.email.toLowerCase() === email)) throw new UserError("Esa persona ya está en el espacio.");
+    if (invites.some((i) => i.email === email)) throw new UserError("Ya hay una invitación pendiente para ese correo. Podés cancelarla y mandar otra.");
+    if (left <= 0) throw new UserError(`Podés compartir con hasta ${MAX_GUESTS} personas. Quitá a alguien o cancelá una invitación.`);
+    const token = randomBytes(24).toString("base64url");
+    const now = input.now ?? new Date();
+    const invite = await tx.workspaceInvite.create({ data: { workspaceId: ws, email, role: input.role, tokenHash: hash(token), invitedById: input.invitedById, expiresAt: new Date(now.getTime() + INVITE_DAYS * 864e5) } });
+    return { invite, token };
+  });
 }
 
-export async function findInvite(db: PrismaClient, token: string, now = new Date()) {
+export async function findInvite(db: Pick<PrismaClient, "workspaceInvite">, token: string, now = new Date()) {
   const inv = await db.workspaceInvite.findUnique({ where: { tokenHash: hash(token) }, include: { workspace: { include: { members: { where: { role: "OWNER" }, take: 1, include: { user: { select: { name: true } } } } } } } });
   if (!inv || inv.acceptedAt || inv.expiresAt < now) return null;
   return inv;
@@ -49,22 +55,33 @@ export async function findInvite(db: PrismaClient, token: string, now = new Date
 
 // Acepta con la cuenta que tiene ese mismo correo, así un enlace reenviado no le sirve a otra persona.
 export async function acceptInvite(db: PrismaClient, token: string, user: { id: string; email: string }, now = new Date()) {
-  const inv = await findInvite(db, token, now);
-  if (!inv) throw new UserError("La invitación venció, ya se usó o fue cancelada. Pedile a quien te invitó que te mande otra.");
-  if (normEmail(user.email) !== inv.email) throw new UserError(`Esta invitación es para ${inv.email}. Entrá con ese correo para aceptarla.`);
-  const already = await db.membership.findUnique({ where: { userId_workspaceId: { userId: user.id, workspaceId: inv.workspaceId } } });
-  const guests = await db.membership.count({ where: { workspaceId: inv.workspaceId, role: { not: "OWNER" } } });
-  if (!already && guests >= MAX_GUESTS) throw new UserError("El espacio ya llegó al máximo de personas.");
-  await db.$transaction([
-    ...(already ? [] : [db.membership.create({ data: { userId: user.id, workspaceId: inv.workspaceId, role: inv.role } })]),
-    db.workspaceInvite.update({ where: { id: inv.id }, data: { acceptedAt: now } }),
-    db.user.update({ where: { id: user.id }, data: { activeWorkspaceId: inv.workspaceId } }),
-  ]);
-  return inv.workspaceId;
+  const candidate = await findInvite(db, token, now);
+  if (!candidate) throw new UserError("La invitación venció, ya se usó o fue cancelada.");
+  return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, candidate.workspaceId);
+    const inv = await findInvite(tx, token, now);
+    if (!inv) throw new UserError("La invitación venció, ya se usó o fue cancelada.");
+    const liveUser = await tx.user.findUnique({ where: { id: user.id }, select: { email: true, emailVerified: true } });
+    if (!liveUser || normEmail(liveUser.email) !== inv.email || normEmail(user.email) !== inv.email) throw new UserError("Entrá con el correo al que enviamos la invitación.");
+    // El enlace compartido no reemplaza la confirmación de la dirección.
+    if (process.env.RESEND_API_KEY && !liveUser.emailVerified) throw new UserError("Confirmá tu correo antes de aceptar la invitación.");
+    if (!(await hasFeature(tx, effectivePlan(await tx.subscription.findUnique({ where: { workspaceId: inv.workspaceId } })), "compartido"))) throw new UserError("El dueño debe activar Pro para sumar personas a este espacio.");
+    const already = await tx.membership.findUnique({ where: { userId_workspaceId: { userId: user.id, workspaceId: inv.workspaceId } } });
+    const guests = await tx.membership.count({ where: { workspaceId: inv.workspaceId, role: { not: "OWNER" } } });
+    if (!already && guests >= MAX_GUESTS) throw new UserError("El espacio ya llegó al máximo de personas.");
+    if (!already) await tx.membership.create({ data: { userId: user.id, workspaceId: inv.workspaceId, role: inv.role } });
+    const used = await tx.workspaceInvite.updateMany({ where: { id: inv.id, acceptedAt: null, expiresAt: { gt: now } }, data: { acceptedAt: now } });
+    if (!used.count) throw new UserError("La invitación ya se usó o venció.");
+    await tx.user.update({ where: { id: user.id }, data: { activeWorkspaceId: inv.workspaceId } });
+    return inv.workspaceId;
+  });
 }
 
 export async function revokeInvite(db: PrismaClient, ws: string, id: string) {
-  await db.workspaceInvite.deleteMany({ where: { id, workspaceId: ws, acceptedAt: null } });
+  await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    await tx.workspaceInvite.deleteMany({ where: { id, workspaceId: ws, acceptedAt: null } });
+  });
 }
 
 export async function changeRole(db: PrismaClient, ws: string, memberId: string, role: GuestRole) {

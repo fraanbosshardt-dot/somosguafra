@@ -29,15 +29,16 @@ export function usePublicPlan() {
   return plan;
 }
 
-export function AppCta({ className, label, href = "/registro", logged = false }: { className: string; label: string; href?: string; logged?: boolean }) {
+export function AppCta({ className, label, href = "/registro", logged = false, navigation = false }: { className: string; label: string; href?: string; logged?: boolean; navigation?: boolean }) {
   const hasSession = useHasSession();
   const plan = usePublicPlan();
   const on = plan ? plan.logged : hasSession || logged;
+  if (on && (navigation || plan?.billing === "pending")) return <a className={className} href="/app">Ir a la app</a>;
   const app = !plan?.canSubscribe || plan?.owner === false;
-  const target = !on ? href : plan?.access === "trial" && plan.canSubscribe ? "/#planes" : plan?.billing === "pending" || plan?.billing === "past_due" ? "/app/configuracion?tab=plan" : app ? "/app" : "/suscribirme?ciclo=mensual";
-  const text = !on ? label : plan?.access === "trial" && plan.canSubscribe ? "Elegir plan Pro" : plan?.billing === "pending" ? "Ver solicitud" : plan?.billing === "past_due" ? "Revisar mi pago" : app ? "Ir a la app" : plan ? "Pasar a Pro" : "Continuar";
+  const target = !on ? href : plan?.access === "trial" && plan.canSubscribe ? "/#planes" : plan?.billing === "past_due" ? "/app/configuracion?tab=plan" : app ? "/app" : "/suscribirme?ciclo=mensual";
+  const text = !on ? label : plan?.access === "trial" && plan.canSubscribe ? "Elegir plan Pro" : plan?.billing === "past_due" ? "Revisar mi pago" : app ? "Ir a la app" : plan ? "Pasar a Pro" : "Continuar";
   if (on && !app && plan?.logged && plan.access !== "trial") return <CheckoutButton className={className} cycle="monthly">Pasar a Pro</CheckoutButton>;
-  return <Link className={className} href={target}>{text}</Link>;
+  return <a className={className} href={target}>{text}</a>;
 }
 
 function CheckoutButton({ className, cycle, children }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode }) {
@@ -52,10 +53,10 @@ export function SubscribeCta({ className, cycle, children, upgradeLabel = "Pasar
   const plan = usePublicPlan();
   if (plan?.logged) {
     if (cycle === "yearly" && plan.canUpgradeAnnual) return <CheckoutButton className={className} cycle="yearly">{upgradeLabel}</CheckoutButton>;
-    if (plan.canResumeCheckout && cycle === plan.pendingCycle) return <form action={checkoutAction} className="checkout-cta"><input type="hidden" name="intent" value="resume" /><OnceButton className={className} pending="Verificando…">Retomar solicitud {cycle === "yearly" ? "anual" : "mensual"}</OnceButton></form>;
+    if (plan.canResumeCheckout && cycle === plan.pendingCycle) return <form action={checkoutAction} className="checkout-cta"><input type="hidden" name="intent" value="resume" /><OnceButton className={className} pending="Abriendo Mercado Pago…">Continuar pago</OnceButton></form>;
     if (!plan.canSubscribe) return null;
     return <CheckoutButton className={className} cycle={cycle}>{plan.access === "trial" ? trialLabel ?? `Elegir Pro ${cycle === "yearly" ? "anual" : "mensual"}` : children}</CheckoutButton>;
   }
-  if (!plan && logged) return <Link className={className} href="/app/configuracion?tab=plan">Ver opciones de Pro</Link>;
+  if (!plan && logged) return <a className={className} href="/app/configuracion?tab=plan">Ver opciones de Pro</a>;
   return <Link className={className} href={`/suscribirme?ciclo=${cycle === "yearly" ? "anual" : "mensual"}`} data-plan-cta="" data-billing-cycle={cycle}>{children}</Link>;
 }

@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Tarjetas de crédito. La tarjeta es una cuenta de deuda (CREDIT_CARD):
 // - una compra es un GASTO en esa cuenta (se cuenta una sola vez, en su categoría y su mes);
 // - pagar el resumen es una TRANSFERENCIA desde el banco a la tarjeta (no es otro gasto).
@@ -149,6 +150,7 @@ export async function createCard(db: Db, ws: string, input: CardInput & { startD
   checkCard(input);
   if (input.payAccountId && !(await db.account.findFirst({ where: { id: input.payAccountId, workspaceId: ws } }))) throw new UserError("No encontramos la cuenta de pago.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const acc = await tx.account.create({ data: { workspaceId: ws, name: input.name.trim(), institution: input.issuer.trim() || null, type: "CREDIT_CARD", currency: input.currency, initialBalance: "0", initialDate: input.startDate } });
     const card = await tx.creditCard.create({
       data: { workspaceId: ws, issuer: input.issuer.trim(), name: input.name.trim(), last4: input.last4 || null, limitAmount: round2(input.limit).toFixed(2), currency: input.currency, closingDay: input.closingDay, dueDay: input.dueDay, payAccountId: input.payAccountId ?? null, accountId: acc.id, ...extra(input) },
@@ -171,6 +173,7 @@ export async function updateCard(db: Db, ws: string, id: string, input: Omit<Car
   if (input.payAccountId && !(await db.account.findFirst({ where: { id: input.payAccountId, workspaceId: ws } }))) throw new UserError("No encontramos la cuenta de pago.");
   const child = await db.creditCard.findFirst({ where: { workspaceId: ws, parentId: card.id } });
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const base = { issuer: input.issuer.trim(), last4: input.last4 || null, closingDay: input.closingDay, dueDay: input.dueDay, payAccountId: input.payAccountId ?? null, ...(input.active != null ? { active: input.active } : {}) };
     const updated = await tx.creditCard.update({ where: { id: card.id }, data: { ...base, name: input.name.trim(), limitAmount: round2(input.limit).toFixed(2), ...extra(input as CardInput) } });
     await tx.account.update({ where: { id: card.accountId! }, data: { name: input.name.trim(), institution: input.issuer.trim() || null, ...(input.active != null ? { active: input.active } : {}) } });
@@ -197,6 +200,7 @@ export async function deleteCard(db: Db, ws: string, id: string) {
   const pays = await db.transaction.findMany({ where: { workspaceId: ws, OR: [{ obligationId: { in: obIds } }, { accountId: { in: accs } }] }, select: { id: true, transferGroupId: true } });
   const groups = [...new Set(pays.map((p) => p.transferGroupId).filter(Boolean) as string[])];
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const all = await tx.transaction.findMany({ where: { workspaceId: ws, OR: [{ id: { in: pays.map((p) => p.id) } }, { transferGroupId: { in: groups } }] }, select: { id: true } });
     const txIds = all.map((t) => t.id);
     await tx.transaction.deleteMany({ where: { workspaceId: ws, reversalOfId: { in: txIds } } });
@@ -224,6 +228,7 @@ export async function setCycle(db: Db, ws: string, cardId: string, input: { usua
   const usual = cal.usual(input.usualClosing);
   const same = usual.closing.getTime() === input.closingDate.getTime() && usual.due.getTime() === input.dueDate.getTime();
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     for (const id of ids) {
       if (same) await tx.cardCycle.deleteMany({ where: { cardId: id, month } });
       else await tx.cardCycle.upsert({ where: { cardId_month: { cardId: id, month } }, create: { cardId: id, month, closingDate: input.closingDate, dueDate: input.dueDate }, update: { closingDate: input.closingDate, dueDate: input.dueDate } });
@@ -263,6 +268,7 @@ export async function cardPurchase(
   const closed = card.statements.find((s) => s.closingDate.getTime() === cycle.getTime());
   if (closed?.loaded && !input.idempotencyKey) throw new UserError(`Esa compra es del resumen que cerró el ${cycle.toISOString().slice(8, 10)}/${cycle.toISOString().slice(5, 7)}, y ese resumen ya lo cargaste completo desde el banco: si la sumás se cuenta dos veces. Si es de este mes, revisá la fecha.`);
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const t = await tx.transaction.create({
       data: {
         workspaceId: ws, accountId: card.accountId!, type: "EXPENSE", direction: "OUT", amount: total.toFixed(2), currency: card.currency,
@@ -382,6 +388,7 @@ export async function closeStatements(db: Db, ws: string, today: Date) {
       if (!total.gt(0)) continue;
       const due = cal.due(c);
       await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
         for (const o of partial) await tx.obligation.update({ where: { id: o.id }, data: { status: "CANCELLED", notes: `Lo que faltó pagar pasó al resumen ${p}` } });
         const ob = await tx.obligation.create({ data: { workspaceId: ws, direction: "PAYABLE", description: `${card.name} — resumen ${p}`, amount: total.toFixed(2), currency: card.currency, dueDate: due, economicPeriod: p, sourceType: "card", sourceId: card.id } });
         await tx.cardStatement.create({ data: { cardId: card.id, closingDate: c, dueDate: due, totalAmount: total.toFixed(2), minimumAmount: round2(total.times("0.1")).toFixed(2), carriedAmount: carried.toFixed(2), obligationId: ob.id } });
@@ -539,6 +546,7 @@ export async function loadStatement(db: Db, ws: string, input: { cardId: string;
   const simple = card.mode === "SIMPLE";
   const cat = simple ? await cardCategory(db, ws) : null;
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     let obligationId = existing?.obligationId ?? null;
     if (existing) {
       const ob = obligationId ? await tx.obligation.findUnique({ where: { id: obligationId }, include: { payments: true } }) : null;

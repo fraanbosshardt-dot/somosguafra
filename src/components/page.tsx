@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SettingsNavigation } from "./settings-navigation";
 
 export function PageHead({ crumb, title, desc, actions }: { crumb?: string; title: string; desc?: React.ReactNode; actions?: React.ReactNode }) {
   return (
@@ -15,9 +16,9 @@ export function PageHead({ crumb, title, desc, actions }: { crumb?: string; titl
 
 export function Tabs({ items, current }: { items: { href: string; label: string; key: string }[]; current: string }) {
   return (
-    <nav className="tabs">
+    <nav className="tabs" aria-label="Secciones">
       {items.map((t) => (
-        <Link key={t.key} href={t.href} className={t.key === current ? "on" : ""}>{t.label}</Link>
+        <Link key={t.key} href={t.href} className={t.key === current ? "on" : ""} aria-current={t.key === current ? "page" : undefined}>{t.label}</Link>
       ))}
     </nav>
   );
@@ -49,5 +50,5 @@ export function SettingsTabs({ current, rules = true }: { current: string; rules
     { key: "plan", label: "Plan", href: "/app/configuracion?tab=plan" },
     { key: "datos", label: "Tus datos", href: "/app/configuracion?tab=datos" },
   ];
-  return <Tabs current={current} items={items} />;
+  return <><SettingsNavigation current={current} items={items} /><div className="settings-desktop"><Tabs current={current} items={items} /></div></>;
 }

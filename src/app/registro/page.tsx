@@ -38,3 +38,5 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     </AuthShell>
   );
 }
+
+export const dynamic = "force-dynamic";

@@ -7,6 +7,12 @@ export function SubscriptionSummary({ view, timeZone, compact = false }: { view:
   const label = view.access === "trial" ? "Pro en período gratuito" : view.access === "paid" ? "Pro con cobertura paga" : view.access === "granted" ? "Pro activado" : "Gratis";
   const cycle = view.billingCycle === "yearly" ? "anual" : "mensual";
   const title = `Tu acceso: ${label}`;
+  // La landing comunica acceso y precio. El seguimiento operativo queda en Tu plan.
+  if (compact) return <div className="subscription-summary">
+    <b>{title}</b>
+    {view.freeUntil ? <p>Tu período gratuito termina el {planDate(view.freeUntil, timeZone)}.</p> : view.coverageUntil ? <p>Tenés Pro hasta el {planDate(view.coverageUntil, timeZone)}.</p> : null}
+    {(view.billing === "active" || view.billing === "scheduled") && view.nextChargeAt && <p>Próximo cobro {cycle}: {planDate(view.nextChargeAt, timeZone)}.</p>}
+  </div>;
   return <div className="subscription-summary">
     {compact ? <b>{title}</b> : <h3>{title}</h3>}
     {view.freeUntil ? <p>Tu período gratuito termina el {planDate(view.freeUntil, timeZone)}.</p> : view.coverageUntil ? <p>Tenés Pro hasta el {planDate(view.coverageUntil, timeZone)}.</p> : null}

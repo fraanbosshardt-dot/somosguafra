@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Deudas y préstamos. Cada cuota es un pendiente (Obligation) vinculado a la deuda.
 // No se inventan tasas: sin TNA, el cronograma usa el importe de cuota informado o reparte sin interés.
 import type { AmortizationSystem } from "@/generated/prisma/enums";
@@ -167,6 +168,7 @@ export async function createDebt(db: Db, ws: string, input: DebtInput) {
   const already = Math.min(input.paidInstallments ?? 0, rows.length);
   if (input.accountId && !(await db.account.findFirst({ where: { id: input.accountId, workspaceId: ws } }))) throw new UserError("No encontramos esa cuenta.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const debt = await tx.debt.create({
       data: {
         workspaceId: ws,
@@ -230,6 +232,7 @@ export async function deleteDebt(db: Db, ws: string, id: string) {
   const l = await debtLinks(db, ws, debt);
   const txIds = [...l.paymentIds, ...l.disbursementIds];
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.transaction.deleteMany({ where: { workspaceId: ws, reversalOfId: { in: txIds } } });
     await tx.transaction.deleteMany({ where: { workspaceId: ws, id: { in: txIds } } });
     await tx.debtInstallment.deleteMany({ where: { debtId: debt.id } });
@@ -251,6 +254,7 @@ export async function updateDebt(db: Db, ws: string, id: string, input: DebtEdit
   const names = { creditor: input.creditor.trim(), kind: input.kind, notes: input.notes?.trim() || null };
   if (l.paymentIds.length) {
     await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
       await tx.debt.update({ where: { id: debt.id }, data: names });
       // Las cuotas que faltan llevan el nombre nuevo.
       const sched = await tx.debtInstallment.findMany({ where: { debtId: debt.id, obligationId: { not: null } } });
@@ -263,6 +267,7 @@ export async function updateDebt(db: Db, ws: string, id: string, input: DebtEdit
   const rows = scheduleFor(P, input);
   const already = Math.min(input.paidInstallments ?? 0, rows.length);
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.debtInstallment.deleteMany({ where: { debtId: debt.id } });
     await tx.obligation.deleteMany({ where: { workspaceId: ws, id: { in: l.obIds } } });
     const updated = await tx.debt.update({
@@ -331,6 +336,7 @@ export async function cancelDebt(db: Db, ws: string, input: { debtId: string; ac
   const amount = round2(input.amount);
   if (!amount.gt(0)) throw new UserError("El importe tiene que ser mayor a cero.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.transaction.create({ data: { workspaceId: ws, accountId: acc.id, type: "DEBT_PAYMENT", direction: "OUT", amount: amount.toFixed(2), currency: acc.currency, description: `Cancelación total — ${det.debt.creditor}`, effectiveDate: input.date, economicPeriod: period(input.date), notes: `debt:${det.debt.id}`, createdById: input.userId ?? null } });
     const ids = det.open.map((r) => r.obligationId).filter(Boolean) as string[];
     if (ids.length) await tx.obligation.updateMany({ where: { id: { in: ids } }, data: { status: "CANCELLED", notes: "Cancelada por pago anticipado" } });
@@ -430,6 +436,7 @@ export async function prepayDebt(db: Db, ws: string, input: { debtId: string; ac
   const rows = withExtras(pure, P, debt);
   const newSum = rows.reduce((s, r) => s.plus(r.total), ZERO);
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.transaction.create({ data: { workspaceId: ws, accountId: acc.id, type: "DEBT_PAYMENT", direction: "OUT", amount: amount.toFixed(2), currency: acc.currency, description: `Pago anticipado — ${debt.creditor}`, effectiveDate: input.date, economicPeriod: period(input.date), notes: `debt:${debt.id}`, createdById: input.userId ?? null } });
     await replaceOpen(tx, ws, debt, det, rows);
   });
@@ -448,6 +455,7 @@ export async function refinanceDebt(db: Db, ws: string, input: { debtId: string;
   const rows = buildSchedule({ system, principal: P, installments: input.installments, tna: input.tna, installmentAmount: input.installmentAmount, firstDue: input.firstDue, extras: debt });
   const note = `Refinanciado el ${input.date.toISOString().slice(0, 10)}: ${P.toFixed(2)} en ${rows.length} cuotas.`;
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await replaceOpen(tx, ws, debt, det, rows);
     await tx.debt.update({ where: { id: debt.id }, data: { system, tna: input.tna != null ? dec(input.tna).toFixed(4) : null, installmentAmount: input.installmentAmount != null ? round2(input.installmentAmount).toFixed(2) : null, notes: [debt.notes, note].filter(Boolean).join(" · ").slice(0, 500) } });
   });

@@ -24,6 +24,9 @@ model User {
   name           String
   passwordHash   String // vacío si la cuenta entra solo con Google
   googleSub      String?   @unique // identificador de la cuenta de Google vinculada
+  termsAcceptedAt DateTime?
+  termsVersion String?
+  termsChannel String?
   emailVerified  DateTime?
   totpSecretEnc  String? // secreto TOTP cifrado (AES-256-GCM)
   totpEnabledAt  DateTime?
@@ -41,12 +44,23 @@ model User {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
+  recoveryCodes RecoveryCode[]
   sessions       Session[]
   passwordResets PasswordReset[]
   memberships    Membership[]
   pushSubs       PushSubscription[]
   auditLogs      AuditLog[]
   tickets        SupportTicket[]
+}
+
+model RecoveryCode {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String @unique
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
 }
 
 model Session {
@@ -81,6 +95,7 @@ model Workspace {
   modules         Json      @default("{}") // funciones activadas: { tarjetas: true, cereal: false, ... }
   onboardedAt     DateTime?
   housekeptAt     DateTime? // última vez que se generaron pendientes recurrentes y resúmenes cerrados
+  referralCreditDays Int @default(0)
   billingDisabledAt DateTime? // cierra nuevas autorizaciones durante la eliminación
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -292,6 +307,7 @@ enum Certainty {
 // Lo que hay que pagar o cobrar. No se borra al cambiar de mes: queda pendiente hasta saldarse.
 model Obligation {
   id              String              @id @default(cuid())
+  idempotencyKey String?
   workspaceId     String
   workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   direction       ObligationDirection
@@ -321,6 +337,7 @@ model Obligation {
   @@index([workspaceId, dueDate])
   @@index([workspaceId, status])
   @@index([workspaceId, sourceType, sourceId])
+  @@unique([workspaceId, idempotencyKey])
 }
 
 enum Frequency {
@@ -969,4 +986,11 @@ model Quote {
   fetchedAt DateTime @default(now())
 
   @@unique([source, symbol])
+}
+
+// Arrendamiento corto para impedir que dos tareas de recuperación corran a la vez.
+model JobLease {
+  key String @id
+  token String
+  expiresAt DateTime
 }

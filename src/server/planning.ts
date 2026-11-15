@@ -1,3 +1,5 @@
+import { resourceQuotaAvailable } from "./resource-quota";
+import { lockWorkspace } from "./workspace-lock";
 // Presupuestos y objetivos de ahorro.
 import type { Db } from "./ledger";
 import { remaining, UserError } from "./ledger";
@@ -35,6 +37,7 @@ export async function saveBudget(db: Db, ws: string, p: string, currency: string
   const cats = new Set((await db.category.findMany({ where: { workspaceId: ws, kind: "EXPENSE" }, select: { id: true } })).map((c) => c.id));
   const valid = lines.filter((l) => cats.has(l.categoryId) && l.limit != null && round2(l.limit).gt(0));
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const b = await tx.budget.upsert({ where: { workspaceId_period: { workspaceId: ws, period: p } }, create: { workspaceId: ws, period: p, currency }, update: {} });
     await tx.budgetLine.deleteMany({ where: { budgetId: b.id } });
     if (valid.length) await tx.budgetLine.createMany({ data: valid.map((l) => ({ budgetId: b.id, categoryId: l.categoryId, limitAmount: round2(l.limit!).toFixed(2) })) });
@@ -72,3 +75,16 @@ export async function addContribution(db: Db, ws: string, goalId: string, amount
 }
 
 export const monthBounds = (p: string) => ({ from: periodStart(p), to: periodEnd(p) });
+
+export async function createGoal(db: Db, ws: string, input: { name: string; target: MoneyValue; currency: string; targetDate: Date | null; monthly: MoneyValue | null; saved: MoneyValue | null; today: Date }) {
+  const target = round2(input.target), monthly = input.monthly == null ? null : round2(input.monthly), saved = input.saved == null ? ZERO : round2(input.saved);
+  if (!input.name.trim() || input.name.length > 100) throw new UserError("Escribí un nombre de hasta 100 caracteres.");
+  if (!target.gt(0) || saved.lt(0) || monthly?.lt(0)) throw new UserError("La meta tiene que ser positiva y los aportes no pueden ser negativos.");
+  return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
+    if (!(await resourceQuotaAvailable(tx, ws, "goals"))) throw new UserError("El plan Gratis incluye 3 objetivos. Pasá a Pro para tener más.");
+    const goal = await tx.goal.create({ data: { workspaceId: ws, name: input.name.trim(), targetAmount: target.toFixed(2), currency: input.currency, targetDate: input.targetDate, monthlyContribution: monthly?.toFixed(2) ?? null } });
+    if (saved.gt(0)) await tx.goalContribution.create({ data: { goalId: goal.id, amount: saved.toFixed(2), date: input.today } });
+    return goal;
+  });
+}

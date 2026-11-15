@@ -360,19 +360,26 @@ export async function reconcileWorkspaceBilling(db: Db, workspaceId: string) {
 }
 
 // Recupera eventos perdidos consultando el estado actual; nunca genera pagos.
-export async function reconcileBilling(db: Db, limit = 20) {
+export async function reconcileBilling(db: Db, limit = 30, timeBudgetMs = 60_000) {
+  const deadline = Date.now() + timeBudgetMs;
   if (!process.env.MP_ACCESS_TOKEN) return 0;
   const unresolved = await db.billingAgreement.findMany({ where: { providerRef: null, status: { in: ["creating", "uncertain"] } }, orderBy: { updatedAt: "asc" }, take: 3 });
   for (const a of unresolved) {
+    if (Date.now() >= deadline) break;
     try {
       const owner = await db.membership.findFirst({ where: { workspaceId: a.workspaceId, role: "OWNER" }, include: { user: { select: { email: true } } } });
       if (owner) await recoverPendingCheckout(db, a.workspaceId, owner.user.email);
     } catch (e) { console.error("[billing checkout recovery]", e); }
     finally { await db.billingAgreement.updateMany({ where: { id: a.id }, data: { updatedAt: new Date() } }); }
   }
-  const agreements = await db.billingAgreement.findMany({ where: { providerRef: { not: null } }, orderBy: { updatedAt: "asc" }, take: limit });
+  const [current, history] = await Promise.all([
+    db.billingAgreement.findMany({ where: { providerRef: { not: null }, status: { notIn: ["cancelled", "superseded"] } }, orderBy: { updatedAt: "asc" }, take: limit }),
+    db.billingAgreement.findMany({ where: { providerRef: { not: null }, status: { in: ["cancelled", "superseded"] } }, orderBy: { updatedAt: "asc" }, take: 2 }),
+  ]);
+  const agreements = [...current, ...history];
   let n = 0;
   for (const a of agreements) {
+    if (Date.now() >= deadline) break;
     try { await reconcileAgreement(db, a.providerRef!); n++; }
     catch (e) { await db.auditLog.create({ data: { workspaceId: a.workspaceId, action: "billing.reconcile_failed", entityId: a.providerRef, meta: { error: String(e).slice(0, 300) } } }); }
     finally { await db.billingAgreement.updateMany({ where: { id: a.id }, data: { updatedAt: new Date() } }); }

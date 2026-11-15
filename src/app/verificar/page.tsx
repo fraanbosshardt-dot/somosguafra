@@ -21,6 +21,12 @@ export default async function VerifyPage() {
           <OtpInput autoSubmit />
           <Submit className="btn pri auth-btn" pending="Verificando…">Verificar</Submit>
         </ActionForm>
+        <details className="more" style={{ marginTop: 20 }}><summary>Usar un código de recuperación</summary>
+          <ActionForm action={verifyLoginCodeAction}>
+            <label className="field">Código de recuperación<input name="recoveryCode" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="xxxxx-xxxxx-xxxxx-xxxxx" maxLength={40} required /></label>
+            <Submit className="btn pri" pending="Verificando…">Ingresar con este código</Submit>
+          </ActionForm>
+        </details>
         <div className="vf-links">
           <a className="lnk" href="/contacto?area=soporte">¿Perdiste el celular? Escribinos</a>
           <form action={logoutAction}><button className="lnk" type="submit">Usar otra cuenta</button></form>
@@ -29,3 +35,5 @@ export default async function VerifyPage() {
     </AuthShell>
   );
 }
+
+export const dynamic = "force-dynamic";

@@ -707,7 +707,7 @@
   .lx-show-aur{display:none}
   .lx-show-card{background:radial-gradient(120% 80% at 30% 20%,#1D382D,#0B1813 70%)}
   .lx-sky .veil{background:radial-gradient(ellipse 80% 60% at 50% 35%,rgba(7,18,14,.25),rgba(7,18,14,.8) 80%)}
-  .site main>section:not(.lx-top):not(.lx-bands):not(#funciones){content-visibility:auto;contain-intrinsic-size:auto 900px}
+  .site main>section:not(.lx-top):not(.lx-bands):not(#funciones){content-visibility:visible}
 }
 
 /* Celular: animaciones livianas (solo moverse y aparecer, lo más barato para el teléfono).

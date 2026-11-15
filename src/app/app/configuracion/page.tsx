@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { RecoveryCodes } from "@/components/recovery-codes";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { Icon } from "@/components/icons";
-import { MODULES, PLAN_FEATURES } from "@/lib/modules";
+import { MODULES } from "@/lib/modules";
 import { formatMoney } from "@/lib/money";
 import { PlanSubscriptionCard } from "@/components/plan-subscription-card";
 import { publicPlan } from "@/server/public-plan";
+import { planSettings, planFeatures } from "@/server/plans";
 import { billingConfig } from "@/server/billing";
 import { fmtDate } from "@/lib/dates";
 import { COUNTRIES, CURRENCIES } from "@/lib/countries";
@@ -31,6 +33,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const asked = sp.tab;
   const t = TABS.some(([k]) => k === asked) ? asked! : "general";
+  const features = planFeatures((await planSettings(getDb())).freeAlso);
   const tabs = <SettingsTabs current={t} rules={modules.reglas} />;
   const now = new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "full", timeStyle: "short" }).format(new Date());
 
@@ -73,6 +76,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
     );
   }
   if (t === "seguridad") {
+    const recoveryRemaining = await getDb().recoveryCode.count({ where: { userId: user.id, usedAt: null } });
     const qr = user.totpEnabledAt ? null : await twoFactorQr();
     const sessions = await getDb().session.findMany({ where: { userId: user.id, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } });
     const others = sessions.filter((x) => x.id !== session.id).length;
@@ -146,6 +150,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
             </div>
           )}
         </div>
+        {user.totpEnabledAt && <RecoveryCodes remaining={recoveryRemaining} />}
         <div className="card">
           <div className="chead"><h3>Sesiones abiertas</h3>{sessions.length > 1 && <form action={revokeOtherSessionsAction}><button className="btn sm" type="submit">Cerrar las demás</button></form>}</div>
           <div className="list">{sessions.map((s) => (
@@ -187,14 +192,15 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         {sp.yatenes && <div className="notice">Revisá tu suscripción actual antes de iniciar otro pago.</div>}
         {sp.cancelado && view.billing === "canceled" && <div className="notice">La cancelación fue confirmada. Conservás el acceso que ya tengas cubierto; tus datos quedan guardados.</div>}
         {sp.solicituddescartada && view.billing !== "pending" && <div className="notice">La solicitud pendiente ya no está activa. Descartarla no elimina tu trial ni da de baja otra suscripción.</div>}
-        <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual"} />
+        <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual"} features={features} />
         <div className="card">
-          <div className="chead"><div><h3>Invitá y ganá Pro</h3><p className="sub">Cuando alguien se registra con tu link y termina la bienvenida, ustedes dos reciben {REFERRAL_DAYS} días de Pro.</p></div>{refStats.rewarded > 0 && <span className="pill g">{refStats.rewarded} {refStats.rewarded === 1 ? "invitación" : "invitaciones"}</span>}</div>
+          <div className="chead"><div><h3>Invitá y ganá Pro</h3><p className="sub">Cuando alguien se registra con tu link, confirma su correo, termina la bienvenida y registra su primer movimiento, ustedes dos reciben {REFERRAL_DAYS} días de Pro.</p></div>{refStats.rewarded > 0 && <span className="pill g">{refStats.rewarded} {refStats.rewarded === 1 ? "invitación" : "invitaciones"}</span>}</div>
+          {refStats.creditDays > 0 && <p className="notice g">Tenés {refStats.creditDays} días de Pro ganados y guardados. Se aplican cuando no haya una renovación programada ni un período pago pendiente de terminar. No modifican tus cobros actuales.</p>}
           <ShareLink url={`${SITE.url}/?ref=${refCode}`} text="Yo uso Somos Guafra para ordenar mi plata. Probalo gratis:" />
-          {refStats.invited > refStats.rewarded && <p className="sub" style={{ margin: "10px 0 0" }}>{refStats.invited - refStats.rewarded} {refStats.invited - refStats.rewarded === 1 ? "persona se registró y todavía no terminó" : "personas se registraron y todavía no terminaron"} la bienvenida.</p>}
+          {refStats.invited > refStats.rewarded && <p className="sub" style={{ margin: "10px 0 0" }}>{refStats.invited - refStats.rewarded} {refStats.invited - refStats.rewarded === 1 ? "persona todavía no completó" : "personas todavía no completaron"} su activación: confirmar correo, terminar la bienvenida y registrar un movimiento.</p>}
           {refStats.left === 0 && <p className="sub" style={{ margin: "10px 0 0" }}>Llegaste al máximo de premios por invitar. ¡Gracias por recomendarnos!</p>}
         </div>
-        <div className="card"><div className="chead"><h3>Qué suma Pro</h3></div><div className="list">{PLAN_FEATURES.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></div>
+        <div className="card"><div className="chead"><h3>Qué suma Pro</h3></div><div className="list">{features.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></div>
         {invoices.length > 0 && (
           <div className="card"><div className="chead"><h3>Historial de pagos</h3></div><div className="tw"><table>
             <thead><tr><th>Fecha</th><th>Detalle</th><th>Estado</th><th className="n">Importe</th></tr></thead>

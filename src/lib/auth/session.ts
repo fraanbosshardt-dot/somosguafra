@@ -67,6 +67,10 @@ export async function requireUser() {
   if (!s.user.lastSeenAt || Date.now() - s.user.lastSeenAt.getTime() > 3600_000) {
     await getDb().user.update({ where: { id: s.userId }, data: { lastSeenAt: new Date() } });
   }
+  if (s.user.referredById && !s.user.referralRewardedAt && s.user.emailVerified) {
+    const { rewardReferral } = await import("@/server/referrals");
+    await rewardReferral(getDb(), s.userId).catch((e) => console.error("[referral retry]", e));
+  }
   return { session: s, user: s.user };
 }
 
@@ -76,7 +80,12 @@ export async function requireWorkspace(opts: { allowNotOnboarded?: boolean } = {
   const { session, user } = await requireUser();
   const membership = pickMembership(user.memberships, user.activeWorkspaceId);
   if (!membership) redirect("/ingresar");
-  const workspace = membership.workspace;
+  let workspace = membership.workspace;
+  if (workspace.referralCreditDays > 0) {
+    const { applyReferralCredit } = await import("@/server/referral-credit");
+    const changed = await getDb().$transaction((tx) => applyReferralCredit(tx, workspace.id));
+    if (changed) workspace = await getDb().workspace.findUniqueOrThrow({ where: { id: workspace.id }, include: { subscription: true } });
+  }
   if (!workspace.onboardedAt && !opts.allowNotOnboarded) redirect("/bienvenida");
   return { session, user, membership, workspace, modules: readModules(workspace.modules), plan: effectivePlan(workspace.subscription) };
 }
@@ -84,7 +93,7 @@ export async function requireWorkspace(opts: { allowNotOnboarded?: boolean } = {
 // La autorización depende del rol, también para formularios multipart sin next-action.
 export async function requireWritableWorkspace(opts: { allowNotOnboarded?: boolean } = {}) {
   const ctx = await requireWorkspace(opts);
-  if (ctx.membership.role !== "OWNER" && ctx.membership.role !== "EDITOR") redirect("/app?solomirar=1");
+  if (ctx.membership.role !== "OWNER" && (ctx.membership.role !== "EDITOR" || !(await canUse(ctx.plan, "compartido")))) redirect("/app?solomirar=1");
   return ctx;
 }
 

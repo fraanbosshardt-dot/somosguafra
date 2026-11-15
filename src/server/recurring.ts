@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Reglas recurrentes: generan pendientes (Obligation) sin duplicar y sin tocar el pasado.
 import type { Frequency, ObligationDirection, WeekendRule } from "@/generated/prisma/enums";
 import type { Db } from "./ledger";
@@ -148,6 +149,7 @@ export async function changeRuleFrom(db: Db, ws: string, ruleId: string, from: D
   const r = await db.recurringRule.findFirst({ where: { id: ruleId, workspaceId: ws } });
   if (!r) throw new UserError("No encontramos esa regla.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.recurringRule.update({ where: { id: r.id }, data: { endDate: new Date(from.getTime() - 864e5) } });
     await dropFuture(tx as unknown as Db, r.id, from);
     return tx.recurringRule.create({
@@ -195,6 +197,7 @@ export async function deleteRule(db: Db, ws: string, ruleId: string) {
   const r = await db.recurringRule.findFirst({ where: { id: ruleId, workspaceId: ws } });
   if (!r) throw new UserError("No encontramos esa regla.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const obs = await tx.obligation.findMany({ where: { recurringRuleId: r.id, workspaceId: ws }, include: { payments: true } });
     const drop = obs.filter((o) => o.payments.length === 0 && o.status === "PENDING").map((o) => o.id);
     if (drop.length) await tx.obligation.deleteMany({ where: { id: { in: drop } } });

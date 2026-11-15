@@ -1,14 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb } from "./helpers/testdb";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { createAccount, recordMovement } from "@/server/ledger";
 import { createWorkspaceForUser } from "@/server/workspace";
 import { attachReferral, ensureReferralCode, isReferralCode, newReferralCode, referralStats, rewardReferral, REFERRAL_MAX_REWARDS } from "@/server/referrals";
 
 let t: Awaited<ReturnType<typeof startTestDb>>;
 let db: PrismaClient;
 const mk = async (email: string) => {
-  const u = await db.user.create({ data: { email, name: email.split("@")[0], passwordHash: "" } });
+  const u = await db.user.create({ data: { email, name: email.split("@")[0], passwordHash: "", emailVerified: new Date() } });
   const ws = await createWorkspaceForUser(db, u.id);
+  await db.workspace.update({ where: { id: ws.id }, data: { onboardedAt: new Date() } });
+  const a = await createAccount(db, ws.id, { name: "Cuenta", type: "SAVINGS", currency: "ARS", initialBalance: 0, initialDate: new Date() });
+  await recordMovement(db, ws.id, { kind: "EXPENSE", description: "Primer gasto", amount: 10, accountId: a.id, status: "PAID", effectiveDate: new Date() });
   return { id: u.id, ws: ws.id };
 };
 const sub = (ws: string) => db.subscription.findUnique({ where: { workspaceId: ws } });
@@ -51,7 +55,7 @@ describe("referidos", () => {
       await attachReferral(db, u.id, ana.referralCode);
       const r = await rewardReferral(db, u.id);
       expect(r.rewarded).toBe(true);
-      if (i === REFERRAL_MAX_REWARDS - 1) expect(r.referrerGets).toBe(false);
+      if (r.rewarded && i === REFERRAL_MAX_REWARDS - 1) expect(r.referrerGets).toBe(false);
     }
     expect((await referralStats(db, ana.id)).left).toBe(0);
   });

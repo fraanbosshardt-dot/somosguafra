@@ -18,6 +18,7 @@ function groups(overdue: number): [string, Item[]][] {
     ["Mi dinero", [
       { href: "/app/movimientos", label: "Movimientos", icon: "list" },
       { href: "/app/cuentas", label: "Cuentas", icon: "wallet" },
+      { href: "/app/revision", label: "Revisión del mes", icon: "check" },
       { href: "/app/cereal", label: "Ventas de cereal", icon: "grain", module: "cereal" },
     ]],
     ["Pagos y deudas", [
@@ -49,7 +50,7 @@ const Mark = () => <LogoMark />;
 
 export type Space = { id: string; label: string; active: boolean };
 
-export function Shell({ children, modules, overdue, userName, plan, isAdmin, logout, spaces = [], switchSpace }: { children: React.ReactNode; modules: ModuleState; overdue: number; userName: string; plan: string; isAdmin: boolean; logout: () => Promise<void>; spaces?: Space[]; switchSpace?: (fd: FormData) => Promise<void> }) {
+export function Shell({ children, modules, overdue, userName, plan, isAdmin, logout, spaces = [], switchSpace, readOnly = false }: { children: React.ReactNode; modules: ModuleState; overdue: number; userName: string; plan: string; isAdmin: boolean; logout: () => Promise<void>; spaces?: Space[]; readOnly?: boolean; switchSpace?: (fd: FormData) => Promise<void> }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -94,7 +95,7 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
         <form action="/app/buscar" className="search top-search" role="search"><input name="q" placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" /></form>
         <span style={{ flex: 1 }} />
         <Link className="ibtn top-search-btn" href="/app/buscar" aria-label="Buscar"><Icon name="search" /></Link>
-        <Link href="/app/movimientos/nuevo" className="btn pri top-new"><Icon name="plus" />Nuevo movimiento</Link>
+        {!readOnly && <Link href="/app/movimientos/nuevo" className="btn pri top-new"><Icon name="plus" />Nuevo movimiento</Link>}
         {modules.alertas && <Link className="ibtn" href="/app/alertas" aria-label="Alertas"><Icon name="bell" />{overdue > 0 && <span className="dot" />}</Link>}
         <ThemeButton />
         <Link className="ibtn" href="/app/ayuda" aria-label="Ayuda"><Icon name="help" /></Link>
@@ -113,12 +114,12 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
       <div className="main">
         <main className="view">{children}</main>
         <Suspense fallback={null}><SavedToast /></Suspense>
-        <QuickAdd />
+        {!readOnly && <QuickAdd />}
       </div>
       <nav className="tabbar" aria-label="Accesos rápidos">
         {tab("/app", "Inicio", "home", true)}
         {tab("/app/movimientos", "Movimientos", "list")}
-        <button type="button" className="plus" aria-label="Cargar un movimiento" onClick={() => openQuickAdd("EXPENSE")}><span><Icon name="plus" /></span></button>
+        {readOnly ? tab("/app/ayuda", "Ayuda", "help") : <button type="button" className="plus" aria-label="Cargar un movimiento" onClick={() => openQuickAdd("EXPENSE")}><span><Icon name="plus" /></span></button>}
         {tab("/app/proximos", "Próximos", "clock")}
         <button onClick={() => setOpen(true)} aria-expanded={open}><Icon name="menu" />Más</button>
       </nav>

@@ -1,3 +1,4 @@
+import { operationsSnapshot } from "@/server/operations";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
@@ -39,11 +40,18 @@ export default async function SystemPage() {
     db.emailOutbox.count({ where: { sentAt: null, lastError: { not: null } } }),
     db.billingAgreement.count({ where: { status: { in: ["creating", "uncertain"] } } }),
   ]);
+  const operations = await operationsSnapshot(db);
   const ok = (good: boolean, text: string) => <span className={`pill ${good ? "g" : "r"}`}>{text}</span>;
   return (
     <>
       <PageHead title="Sistema y seguridad" desc="Si todo funciona y si alguien está intentando entrar donde no debe." />
       {sys.maintenance && <p className="notice a">La app está en modo mantenimiento: los clientes ven el aviso en lugar de sus pantallas. Se cambia en Ajustes.</p>}
+      <div className="card"><div className="chead"><h3>Recuperación de cobros y comunicaciones</h3>{ok(operations.ok, operations.ok ? "Al día" : "Necesita atención")}</div>
+        <p className="sub">Ejecución programada cada 15 minutos, con hasta 15 minutos de variación del alojamiento. Webhooks y regreso del pago actualizan el estado en el momento.</p>
+        {operations.issues.length > 0 && <ul>{operations.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
+        <p className="sub">Última ejecución: {operations.ageMinutes === null ? "sin registrar" : `hace ${operations.ageMinutes} min`}. Correo más antiguo: {operations.emailAgeMinutes} min. Pagos vigentes sin acceso: {operations.paidWithoutAccess}.</p>
+        <p className="sub">Consultas abiertas antiguas para revisar: {operations.openSupport} de Ayuda y {operations.openContacts} de Contacto.</p>
+      </div>
       <div className="grid g2">
         <div className="card">
           <div className="chead"><h3>Estado</h3></div>

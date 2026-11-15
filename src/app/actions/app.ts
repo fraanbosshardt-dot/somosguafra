@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import QRCode from "qrcode";
+import { lockWorkspace } from "@/server/workspace-lock";
+import { resourceQuotaAvailable } from "@/server/resource-quota";
 import { getDb } from "@/lib/db";
 import { audit, canUse, requireUser, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
 import { parseAmount } from "@/lib/money";
@@ -100,9 +102,6 @@ export async function createAccountAction(_: FormState, fd: FormData): Promise<F
   let id: string;
   try {
     const db = getDb();
-    if (!(await canUse(plan, "ilimitado")) && (await db.account.count({ where: { workspaceId: workspace.id, active: true } })) >= FREE_LIMITS.accounts) {
-      throw new UserError(`El plan Gratis incluye ${FREE_LIMITS.accounts} cuentas activas. Desactivá una o pasá a Pro.`);
-    }
     const type = z.enum(ACCOUNT_TYPES).parse(fd.get("type"));
     const currency = currencyOf(fd.get("currency"), workspace.baseCurrency);
     const a = await createAccount(db, workspace.id, {
@@ -147,12 +146,15 @@ export async function toggleAccountAction(fd: FormData) {
   const { workspace, plan } = await requireWorkspace();
   const id = String(fd.get("id"));
   const db = getDb();
-  const a = await db.account.findFirst({ where: { id, workspaceId: workspace.id } });
-  // Reactivar una cuenta también cuenta para el límite de Gratis (si no, se podía pasar de 5 desactivando y reactivando).
-  if (a && !a.active && !(await canUse(plan, "ilimitado")) && (await db.account.count({ where: { workspaceId: workspace.id, active: true } })) >= FREE_LIMITS.accounts) {
-    redirect("/app/cuentas?limite=1");
-  }
-  if (a) await db.account.update({ where: { id }, data: { active: !a.active } });
+  const allowed = await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, workspace.id);
+    const a = await tx.account.findFirst({ where: { id, workspaceId: workspace.id } });
+    if (!a) return true;
+    if (!a.active && !(await resourceQuotaAvailable(tx, workspace.id, "accounts"))) return false;
+    await tx.account.update({ where: { id }, data: { active: !a.active } });
+    return true;
+  });
+  if (!allowed) redirect("/app/cuentas?limite=1");
   revalidatePath("/app", "layout");
 }
 
@@ -189,7 +191,7 @@ export async function createMovementAction(_: FormState, fd: FormData): Promise<
         if (!rate) throw new UserError("Entre monedas distintas, indicá la cotización usada.");
         toAmount = from.currency === workspace.baseCurrency ? amount.dividedBy(rate) : amount.times(rate);
       }
-      await recordTransfer(db, workspace.id, { fromAccountId: String(fd.get("fromAccountId")), toAccountId: String(fd.get("toAccountId")), amount, toAmount, fxRate: rate ?? undefined, date: date(fd.get("date"), "la fecha"), description: String(fd.get("description") ?? ""), userId: user.id });
+      await recordTransfer(db, workspace.id, { fromAccountId: String(fd.get("fromAccountId")), toAccountId: String(fd.get("toAccountId")), amount, toAmount, fxRate: rate ?? undefined, date: date(fd.get("date"), "la fecha"), description: String(fd.get("description") ?? ""), userId: user.id, idempotencyKey });
     } else {
       const status = z.enum(["PAID", "PARTIAL", "PENDING"]).parse(fd.get("status"));
       let categoryId = String(fd.get("categoryId") ?? "") || null;
@@ -386,7 +388,10 @@ export async function disable2faAction(_: FormState, fd: FormData): Promise<Form
   const { user } = await requireUser();
   if (!user.totpSecretEnc || !user.totpEnabledAt) return { error: "No está activada." };
   if (!verifyTotp(decryptSecret(user.totpSecretEnc), String(fd.get("code") ?? ""))) return { error: "Para desactivarla, escribí un código válido." };
-  await getDb().user.update({ where: { id: user.id }, data: { totpEnabledAt: null, totpSecretEnc: null } });
+  await getDb().$transaction([
+    getDb().user.update({ where: { id: user.id }, data: { totpEnabledAt: null, totpSecretEnc: null } }),
+    getDb().recoveryCode.deleteMany({ where: { userId: user.id } }),
+  ]);
   await audit("auth.2fa_disabled", { userId: user.id });
   try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(user, "2fa_off"); } catch (e) { console.error("aviso 2fa", e); }
   revalidatePath("/app/configuracion");

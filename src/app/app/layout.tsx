@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Shell } from "@/components/shell";
-import { requireWorkspace } from "@/lib/auth/session";
+import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { todayIn } from "@/lib/dates";
 import { logoutAction } from "@/app/actions/auth";
@@ -64,14 +64,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ownerOf = (wsId: string) => owners.find((o) => o.workspaceId === wsId)?.user.name.split(" ")[0] ?? "otra persona";
   const spaces = user.memberships.map((m) => ({ id: m.workspaceId, label: m.role === "OWNER" ? "Tu espacio" : `Espacio de ${ownerOf(m.workspaceId)}`, active: m.workspaceId === workspace.id }));
   const sharedView = membership.role !== "OWNER";
+  const sharedReadOnly = sharedView && (membership.role === "VIEWER" || !(await canUse(plan, "compartido")));
   return (
     <><BigTextSync saved={user.bigText ?? null} />
-    <Shell spaces={spaces} switchSpace={switchWorkspaceAction} modules={modules} overdue={overdue} userName={user.name} plan={plan} isAdmin={!!role} logout={logoutAction}>
+    <Shell readOnly={sharedReadOnly} spaces={spaces} switchSpace={switchWorkspaceAction} modules={modules} overdue={overdue} userName={user.name} plan={plan} isAdmin={!!role} logout={logoutAction}>
       {notice && <AnnouncementBar text={notice.text} tone={notice.tone} link={notice.link} />}
+      {sharedReadOnly && <p className="notice a" role="status">Podés consultar este espacio. Editar requiere permiso de editor y Pro activo en el espacio; los datos se conservan al volver a Gratis.</p>}
       {sharedView && (
         <div className="notice b app-ann" role="status">
           <Icon name="user" />
-          <span>Estás viendo el espacio de {ownerOf(workspace.id)}{membership.role === "VIEWER" ? " (solo mirar)" : ""}. Cambiás al tuyo desde el menú de tu cuenta.</span>
+          <span>Estás viendo el espacio de {ownerOf(workspace.id)}{sharedReadOnly ? " (solo lectura)" : ""}. Cambiás al tuyo desde el menú de tu cuenta.</span>
         </div>
       )}
       {/* Confirmar el correo: solo si los correos están configurados (si no, prometería algo que no llega).
@@ -93,6 +95,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         );
       })()}
       {sys.maintenance && <div className="notice a app-ann" role="status"><Icon name="info" /><span>Modo mantenimiento activo: las personas ven la pantalla de “Volvemos enseguida”. Vos entrás porque sos del equipo.</span></div>}
+      {sharedReadOnly && <p className="notice a" role="status">Este espacio está en modo de solo lectura para vos. El dueño puede activar Pro para habilitar la edición compartida; los datos se conservan.</p>}
       {children}
     </Shell></>
   );

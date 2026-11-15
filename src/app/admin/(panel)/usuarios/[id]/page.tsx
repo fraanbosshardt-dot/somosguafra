@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, adminAudit } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
 import { effectivePlan } from "@/server/plans";
 import { can } from "@/server/admin-team";
@@ -21,6 +21,7 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
   const db = getDb();
   const u = await db.user.findUnique({ where: { id }, include: { memberships: { orderBy: { createdAt: "asc" }, include: { workspace: { include: { subscription: true } } } } } });
   if (!u || u.deletedAt) notFound();
+  await adminAudit(admin, "admin.customer_viewed", { entity: "user", entityId: id });
   const ws = u.memberships[0]?.workspace;
   const where = { workspaceId: ws?.id ?? "-" };
   // Solo cantidades: nunca montos ni descripciones de los movimientos del cliente.

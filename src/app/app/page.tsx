@@ -1,3 +1,4 @@
+import { spendableUntil } from "@/server/spendable";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
@@ -76,10 +77,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
   // Próximo cobro: el siguiente después de hoy (lo de hoy se confirma en "Para confirmar").
   const nextIn = sure.find((o) => o.direction === "RECEIVABLE" && o.dueDate > today);
   const until = nextIn?.dueDate ?? periodEnd(period(today));
-  const owed = base.filter((o) => o.direction === "PAYABLE" && (o.overdue || o.dueDate < until)).reduce((s, o) => s.plus(o.remaining), ZERO);
-  const left = d.cash.minus(owed);
-  const days = Math.max(1, Math.round((until.getTime() - today.getTime()) / 864e5));
-  const perDay = left.gt(0) ? left.dividedBy(days).round() : ZERO;
+  const { owed, left, days, perDay } = spendableUntil(d.cash, base, cur, today, until, !nextIn);
   // Lo que viene: todo lo que hay por cobrar, y cómo terminás el mes con lo que entra y sale.
   const toCollect = base.filter((o) => o.direction === "RECEIVABLE");
   const toCollectTotal = toCollect.reduce((s, o) => s.plus(o.remaining), ZERO);
@@ -95,6 +93,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
     <>
       <PageHead crumb={dateLine} title={`${hello}, ${first}`} />
       {paymentNotice}
+      {(incomeRules === 0 || expenseRules === 0) && <p className="notice a">El disponible usa únicamente lo que cargaste. Si faltan cobros o gastos fijos, puede cambiar. <Link className="lnk" href="/app/revision">Revisar mis datos</Link></p>}
       <div className="card hero">
         <div className="hero-main">
           <div className="lbl">{nextIn ? `Te queda hasta tu próximo cobro, el ${fmtDayMonth(nextIn.dueDate)}` : "Te queda hasta fin de mes"}</div>
@@ -157,6 +156,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
           {dueNow.length > toConfirm.length && <div className="acts" style={{ justifyContent: "center", paddingTop: 10 }}><Link className="btn sm" href="/app/proximos">Ver {dueNow.length - toConfirm.length} más en Próximos pagos</Link></div>}
         </div>
       )}
+      <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
       {stepsLeft > 0 && (
         <div className="card">
           <div className="chead"><div><h3>Terminá de configurar</h3><p className="sub">{steps.length - stepsLeft} de {steps.length} listos. Con esto Somos Guafra te muestra cuánto vas a tener cada mes.</p></div></div>

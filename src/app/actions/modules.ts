@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { audit, canUse, requireOwner, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
+import { audit, canUse, requireOwner, requireWorkspace as readWorkspace, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
 import { parseAmount } from "@/lib/money";
 import { parseDate, todayIn } from "@/lib/dates";
 import { isCurrency } from "@/lib/countries";
@@ -12,7 +12,7 @@ import { changeRuleFrom, createRule, endRule, materialize, pauseRule } from "@/s
 import { MATERIALIZE_DAYS } from "@/server/forecast";
 import { cardPurchase, createCard } from "@/server/cards";
 import { cancelDebt, createDebt, deleteDebt, payDebtOnAccount, updateDebt } from "@/server/debts";
-import { addContribution, copyBudget, saveBudget } from "@/server/planning";
+import { createGoal, addContribution, copyBudget, saveBudget } from "@/server/planning";
 import { addValuation, createAsset, createInvestment, investmentMove, saveManualRate } from "@/server/wealth";
 import { createGrainSale } from "@/server/grain";
 import { applyImport, autoMap, previewImport, revertImport } from "@/server/io";
@@ -374,16 +374,7 @@ export async function copyBudgetAction(fd: FormData) {
 export async function createGoalAction(_: FormState, fd: FormData): Promise<FormState> {
   const { workspace, plan } = await requireWorkspace();
   try {
-    if (!(await canUse(plan, "ilimitado")) && (await getDb().goal.count({ where: { workspaceId: workspace.id } })) >= FREE_LIMITS.goals) throw new UserError(`El plan Gratis incluye ${FREE_LIMITS.goals} objetivos. Pasá a Pro para tener más.`);
-    if (!str(fd, "name")) throw new UserError("Poné un nombre al objetivo.");
-    await getDb().goal.create({
-      data: { workspaceId: workspace.id, name: str(fd, "name"), targetAmount: money(fd, "target", "la meta").toFixed(2), currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthlyContribution: optMoney(fd, "monthly", "el aporte")?.toFixed(2) ?? null },
-    });
-    const start = optMoney(fd, "saved", "lo que ya tenés");
-    if (start && start.gt(0)) {
-      const g = await getDb().goal.findFirstOrThrow({ where: { workspaceId: workspace.id }, orderBy: { createdAt: "desc" } });
-      await addContribution(getDb(), workspace.id, g.id, start, todayIn(workspace.timezone));
-    }
+    await createGoal(getDb(), workspace.id, { name: str(fd, "name"), target: money(fd, "target", "la meta"), currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte"), saved: optMoney(fd, "saved", "lo que ya tenés"), today: todayIn(workspace.timezone) });
   } catch (e) { return fail(e); }
   redirect(done("/app/objetivos"));
 }

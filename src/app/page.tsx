@@ -11,9 +11,8 @@ import { PlanAware } from "@/components/plan-aware";
 import { Aurora, ScrollFx } from "@/components/landing-scrollfx";
 import { PublicShell } from "@/components/public-shell";
 import { AppCta, SubscribeCta } from "@/components/app-cta";
-import { PLAN_FEATURES } from "@/lib/modules";
 import { getDb } from "@/lib/db";
-import { planSettings, priceLabel, PRICES_DEFAULT } from "@/server/plans";
+import { planSettings, planFeatures, priceLabel, PRICES_DEFAULT } from "@/server/plans";
 import { jsonLd, SITE } from "@/lib/seo";
 import { BRAND } from "@/lib/brand";
 
@@ -49,7 +48,7 @@ const FAQ: [string, string][] = [
   ["¿Las compras con tarjeta se cuentan dos veces?", "No. La compra es el gasto. Pagar el resumen es pasar plata de tu cuenta a la tarjeta, así que no suma otra vez."],
   ["¿Puedo usarlo en el celular?", "Sí. Funciona en cualquier navegador y se instala como app en la pantalla de inicio, sin pasar por la tienda."],
   ["¿Sirve en mi país y con mi moneda?", "Sí. Elegís tu país y tu moneda al registrarte, y podés usar pesos y dólares a la vez. La cotización se actualiza sola."],
-  ["¿Puedo invitar a alguien?", "Sí. Desde Configuración → Plan copiás tu link. Cuando la otra persona se registra y termina la bienvenida, los dos reciben un mes de Pro."],
+  ["¿Puedo invitar a alguien?", "Sí. Desde Configuración → Plan copiás tu link. Cuando la otra persona confirma su correo, termina la bienvenida y registra su primer movimiento, los dos reciben un mes de Pro."],
   ["¿Cómo cancelo Pro?", "Desde Configuración, cuando quieras. Dentro de los 10 días de contratarlo te devolvemos todo."],
 ];
 
@@ -138,8 +137,9 @@ function Phone() {
 }
 
 export default async function Landing() {
-  const ps = await planSettings(getDb()).catch(() => ({ prices: PRICES_DEFAULT, pricesArs: null }));
+  const ps = await planSettings(getDb()).catch(() => ({ prices: PRICES_DEFAULT, pricesArs: null, freeAlso: [] }));
   const pm = priceLabel(ps, "monthly"), py = priceLabel(ps, "yearly");
+  const PLAN_FEATURES = planFeatures(ps.freeAlso);
   const free = PLAN_FEATURES.filter((f) => f.plan === "free");
   const { pdfMonthlyLimit } = await import("@/server/settings");
   const pdfLimit = await pdfMonthlyLimit(getDb()).catch(() => 5);
@@ -154,7 +154,7 @@ export default async function Landing() {
       </div>
       <div className="lx-plan pro" style={{ "--i": 1 } as React.CSSProperties}>
         <span className="lx-reco">Recomendado</span>
-        <div><h3>Pro</h3><p>Para planificar todo el año.</p></div>
+        <div><h3>Pro</h3><p>Para anticipar decisiones y ahorrar carga manual.</p></div>
         {pm.amount > 0 ? <div className="lx-price"><b>{price}</b><span>ARS por {period}</span></div> : <div className="lx-price"><b style={{ fontSize: 28 }}>{price}</b></div>}
         <SubscribeCta className="ws-btn pri lx-shine" cycle={cycle === "anual" ? "yearly" : "monthly"}>Suscribirme a Pro{cycle === "anual" ? " por año" : ""}</SubscribeCta>
         {cycle === "mensual" && py.amount > 0 && <SubscribeCta className="lx-link checkout-yearly" cycle="yearly" upgradeLabel={`Pasar a anual: ${py.text} por año`} trialLabel={`Elegir Pro anual: ${py.text} por año`}>o pagá el año: {py.text}</SubscribeCta>}

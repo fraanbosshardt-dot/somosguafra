@@ -1347,3 +1347,10 @@ input[list]{appearance:none;-webkit-appearance:none}
 .subscription-summary h3,.subscription-summary p{margin:0}
 .subscription-summary p{font-size:14px;line-height:1.5;color:var(--muted)}
 .pa-note .subscription-summary{margin:0;text-align:left}
+
+/* Configuración y ayuda: navegación completa sin pestañas ocultas en móvil. */
+.settings-mobile{display:none}
+.help-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:14px}
+.recovery-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px;padding:0;list-style:none;margin:18px 0}
+.recovery-list code{display:block;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:15px;overflow-wrap:anywhere}
+@media(max-width:900px){.settings-mobile{display:flex;margin-bottom:18px}.settings-desktop{display:none}.help-filters{grid-template-columns:1fr}}

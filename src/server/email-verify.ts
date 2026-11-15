@@ -30,7 +30,7 @@ export function checkVerifyCode(userId: string, email: string, input: string, no
   return [slot, slot - 1].some((s) => timingSafeEqual(Buffer.from(codeFor(userId, email, s)), Buffer.from(code)));
 }
 
-// Cuentas creadas con correo que nunca se confirmaron y no se usaron en 30 días: se borran solas.
+// Candidatos vacíos para revisión manual. No se eliminan automáticamente.
 // Nunca se tocan cuentas con Google, con Pro (pago, prueba o regalado), del equipo del panel, ni las que se usaron.
 export const UNVERIFIED_DAYS = 30;
 export async function abandonedUnverified(db: PrismaClient, now = Date.now(), staff: string[] = []) {
@@ -38,8 +38,13 @@ export async function abandonedUnverified(db: PrismaClient, now = Date.now(), st
   const users = await db.user.findMany({
     where: {
       emailVerified: null, googleSub: null, deletedAt: null, createdAt: { lt: cutoff },
-      OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: cutoff } }],
-      memberships: { none: { workspace: { subscription: { plan: "PRO" } } } },
+      lastSeenAt: null,
+      memberships: { none: { OR: [{ role: { not: "OWNER" } }, { workspace: { OR: [
+        { onboardedAt: { not: null } }, { subscription: { plan: "PRO" } },
+        { accounts: { some: {} } }, { transactions: { some: {} } }, { obligations: { some: {} } },
+        { goals: { some: {} } }, { debts: { some: {} } }, { investments: { some: {} } },
+        { invoices: { some: {} } }, { billingAgreements: { some: {} } }, { members: { some: { role: { not: "OWNER" } } } },
+      ] } }] } },
     },
     select: { id: true, email: true },
   });

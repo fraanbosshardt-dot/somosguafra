@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Ventas de cereal. Se guarda en toneladas y precio por tonelada; 1 t = 10 quintales.
 // Cada venta crea su cobro: si ya se cobró, un ingreso; si no, un pendiente que entra en el flujo de caja.
 import type { Db } from "./ledger";
@@ -82,6 +83,7 @@ export async function updateGrainSale(db: Db, ws: string, id: string, input: Gra
   const net = n.net.toFixed(2);
   const econ = period(input.saleDate);
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     if (ob && ob.status !== "CANCELLED") {
       if (ob.status === "SETTLED" && live.length === 1) {
         await tx.transaction.update({ where: { id: live[0].id }, data: { amount: net, currency: acc.currency, accountId: acc.id, effectiveDate: input.collectDate, economicPeriod: econ, description } });
@@ -117,6 +119,7 @@ export async function deleteGrainSale(db: Db, ws: string, id: string, userId?: s
   const reversed = live.reduce((a, p) => a.plus(p.direction === "IN" ? dec(p.amount) : dec(p.amount).neg()), ZERO);
   for (const p of live) await reverseTransaction(db, ws, p.id, userId);
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     if (ob) await tx.obligation.update({ where: { id: ob.id }, data: { status: "CANCELLED", notes: "Venta de cereal borrada" } });
     await tx.grainSale.delete({ where: { id: sale.id } });
   });

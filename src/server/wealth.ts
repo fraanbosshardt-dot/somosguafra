@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Inversiones, bienes, cotizaciones y patrimonio neto.
 // Una valuación cambia el patrimonio, nunca la caja. Aportar o retirar sí mueve dinero.
 import type { Db } from "./ledger";
@@ -56,6 +57,7 @@ export async function investmentMove(db: Db, ws: string, input: { investmentId: 
   const a = round2(input.amount);
   if (!a.gt(0)) throw new UserError("El importe tiene que ser mayor a cero.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const t = await tx.transaction.create({
       data: { workspaceId: ws, accountId: acc.id, type: "INVESTMENT", direction: input.kind === "CONTRIBUTION" ? "OUT" : "IN", amount: a.toFixed(2), currency: acc.currency, description: `${input.kind === "CONTRIBUTION" ? "Aporte a" : "Retiro de"} ${inv.name}`, effectiveDate: input.date, economicPeriod: period(input.date), createdById: input.userId ?? null },
     });
@@ -104,6 +106,7 @@ export async function holdingTrade(db: Db, ws: string, input: { investmentId: st
   if (input.accountId && (!acc || acc.type === "CREDIT_CARD")) throw new UserError("Elegí una cuenta de dinero.");
   if (acc && acc.currency !== inv.currency) throw new UserError(`${inv.ticker ?? inv.name} cotiza en ${inv.currency}: elegí una cuenta en ${inv.currency} o "No mover ninguna cuenta".`);
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const t = acc && total.gt(0) ? await tx.transaction.create({
       data: { workspaceId: ws, accountId: acc.id, type: "INVESTMENT", direction: input.side === "BUY" ? "OUT" : "IN", amount: total.toFixed(2), currency: acc.currency, description: `${input.side === "BUY" ? "Compra de" : "Venta de"} ${inv.ticker ?? inv.name}`, effectiveDate: input.date, economicPeriod: period(input.date), createdById: input.userId ?? null },
     }) : null;
@@ -116,6 +119,7 @@ export async function deleteInvestment(db: Db, ws: string, id: string) {
   if (!inv) throw new UserError("No encontramos esa inversión.");
   const txIds = inv.movements.map((m) => m.transactionId).filter(Boolean) as string[];
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.transaction.deleteMany({ where: { workspaceId: ws, reversalOfId: { in: txIds } } });
     await tx.transaction.deleteMany({ where: { workspaceId: ws, id: { in: txIds } } });
     await tx.investment.delete({ where: { id: inv.id } });
@@ -192,6 +196,7 @@ export async function investmentsOverview(db: Db, ws: string) {
 export async function createAsset(db: Db, ws: string, input: { name: string; kind: string; currency: string; value: MoneyValue; date: Date; notes?: string | null }) {
   if (!input.name.trim()) throw new UserError("Poné un nombre al bien.");
   return db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     const a = await tx.asset.create({ data: { workspaceId: ws, name: input.name.trim(), kind: input.kind, currency: input.currency, notes: input.notes?.trim() || null } });
     await tx.valuation.create({ data: { assetId: a.id, value: round2(input.value).toFixed(2), currency: input.currency, date: input.date } });
     return a;

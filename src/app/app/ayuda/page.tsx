@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HelpFaq } from "@/components/help-faq";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -38,6 +39,9 @@ const FAQ: [string, string][] = [
   ["¿Dónde veo la respuesta a mi consulta?", "Si escribiste desde Ayuda, aparece en «Tus consultas», en esta misma pantalla. Si usaste el formulario público de Contacto, te respondemos al correo que indicaste y recibís un número de trámite."],
   ["¿Cómo descargo mis datos o borro mi cuenta?", "En Configuración → Importar y exportar descargás tus movimientos; el respaldo completo está en Configuración → Tus datos. Para borrar la cuenta, entrá a Configuración → Seguridad. Si tenés una suscripción paga activa, primero cancelala para detener los cobros. La eliminación es definitiva."],
   ["¿Se conecta con mi banco?", "No. Cargás tus movimientos o importás el extracto del banco o de Mercado Pago (CSV; con Pro también Excel y OFX), desde Configuración → Importar y exportar. Nunca te pedimos la clave del banco."],
+  ["¿Qué hago si pierdo el teléfono del segundo factor?", "Guardá previamente tus códigos de recuperación desde Configuración → Seguridad. Al ingresar, elegí Usar un código de recuperación. Cada uno sirve una sola vez. Si no tenés códigos ni acceso a tu autenticador, contactanos: verificamos la identidad antes de recuperar el acceso."],
+  ["¿Qué pasa con un espacio compartido al volver a Gratis?", "Los datos y las membresías se conservan. Los invitados pueden consultar el espacio; editar y sumar nuevas personas requiere Pro. Solo el dueño administra el plan. Podés salir del espacio cuando quieras."],
+  ["¿Cuándo recibimos Pro por una invitación?", "La persona invitada debe confirmar el correo, terminar la bienvenida y registrar su primer movimiento. El premio se acredita una sola vez. Si ya tenés una suscripción paga o programada, los días se guardan: no cambian tus cobros actuales y se aplican cuando ya no haya renovación ni período pago vigente."],
 ];
 
 export default async function Help() {
@@ -49,7 +53,7 @@ export default async function Help() {
       <div className="grid g32">
         <div className="card">
           <div className="chead"><h3>Preguntas frecuentes</h3></div>
-          <div className="list">{FAQ.map(([q, a]) => <details className="li" key={q} style={{ display: "block" }}><summary style={{ cursor: "pointer", listStyle: "none" }}>{q}</summary><p className="sub" style={{ margin: "8px 0 0", fontSize: 14 }}>{a}</p></details>)}</div>
+          <HelpFaq items={FAQ} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
           <div className="card">

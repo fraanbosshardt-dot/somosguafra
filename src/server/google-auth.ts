@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "@/lib/brand";
 // Encuentra o crea la cuenta para un ingreso con Google.
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { GoogleProfile } from "@/lib/auth/google";
@@ -26,7 +27,7 @@ export async function findOrCreateGoogleUser(db: PrismaClient, g: GoogleProfile)
     ]);
     return { ok: true, userId: byEmail.id, created: false, linked: true, passwordCleared: unverified && byEmail.passwordHash !== "" };
   }
-  const user = await db.user.create({ data: { email: g.email, name: g.name, passwordHash: "", googleSub: g.sub, emailVerified: new Date() } });
+  const user = await db.user.create({ data: { email: g.email, name: g.name, passwordHash: "", googleSub: g.sub, emailVerified: new Date(), termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION, termsChannel: "google" } });
   const ws = await createWorkspaceForUser(db, user.id, "Personal");
   return { ok: true, userId: user.id, created: true, linked: false, passwordCleared: false, workspaceId: ws.id };
 }

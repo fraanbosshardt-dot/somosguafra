@@ -57,29 +57,4 @@ export function modulesForUses(uses: string[]): ModuleState {
 
 export const PRICE_USD = { monthly: 5, yearly: 48 };
 
-// beta: todavía en desarrollo; se habilita para Pro sin costo extra cuando esté lista.
-export const PLAN_FEATURES: { name: string; plan: "free" | "pro"; beta?: boolean }[] = [
-  { name: "Cuentas, movimientos, ingresos y gastos", plan: "free" },
-  { name: "Tarjetas, cuotas y deudas", plan: "free" },
-  { name: "Próximos pagos y calendario", plan: "free" },
-  { name: "Presupuestos y objetivos de ahorro", plan: "free" },
-  { name: "Flujo de caja a 1 año", plan: "free" },
-  { name: "Alertas y consejos", plan: "free" },
-  { name: "Inversiones y patrimonio", plan: "free" },
-  { name: "Cotización del dólar en vivo", plan: "free" },
-  { name: "Importar y exportar CSV", plan: "free" },
-  { name: "Verificación en dos pasos", plan: "free" },
-  { name: "Flujo de caja a 2, 3 y 5 años", plan: "pro" },
-  { name: "Simulador de escenarios", plan: "pro" },
-  { name: "Módulo Agro: ventas de granos", plan: "pro" },
-  { name: "Informes avanzados", plan: "pro" },
-  { name: "Leer el resumen de la tarjeta desde el PDF", plan: "pro" },
-  { name: "Saldo día a día en el flujo de caja", plan: "pro" },
-  { name: "Exportar a Excel y PDF", plan: "pro" },
-  { name: "Importar Excel y OFX", plan: "pro" },
-  { name: "Espacio compartido (hasta 3 personas)", plan: "pro" },
-  { name: "Cuentas y objetivos sin límite", plan: "pro" },
-  { name: "Soporte prioritario (respuesta en 1 día hábil)", plan: "pro" },
-];
-
-export const FREE_LIMITS = { accounts: 5, goals: 3 };
+export { PLAN_FEATURES, FREE_LIMITS } from "./plan-features";

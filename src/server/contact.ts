@@ -64,19 +64,19 @@ export function validateContact(i: Omit<ContactInput, "ip" | "userId">): string 
 export const HOURLY_LIMIT = 5;
 
 export async function createContactMessage(db: PrismaClient, i: ContactInput) {
-  if (i.ip) {
-    const recent = await db.contactMessage.count({ where: { ip: i.ip, createdAt: { gt: new Date(Date.now() - 3600e3) } } });
-    if (recent >= HOURLY_LIMIT) return { error: "Recibimos varias consultas seguidas desde tu conexión. Probá de nuevo en un rato." } as const;
-  }
   for (let tries = 0; tries < 4; tries++) {
     try {
-      const m = await db.contactMessage.create({
-        data: {
-          code: ticketCode(), area: i.area, name: i.name.slice(0, 120), email: i.email.toLowerCase().slice(0, 200),
-          subject: i.subject.slice(0, 160), body: i.body.slice(0, 5000), ip: i.ip, userId: i.userId,
-        },
+      return await db.$transaction(async (tx) => {
+        if (i.ip) {
+          await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtext(${`contact:${i.ip}`}))`;
+          const recent = await tx.contactMessage.count({ where: { ip: i.ip, createdAt: { gt: new Date(Date.now() - 3600e3) } } });
+          if (recent >= HOURLY_LIMIT) return { error: "Recibimos varias consultas seguidas desde tu conexión. Probá de nuevo en un rato." } as const;
+        }
+        const m = await tx.contactMessage.create({ data: { code: ticketCode(), area: i.area, name: i.name.slice(0, 120), email: i.email.toLowerCase().slice(0, 200), subject: i.subject.slice(0, 160), body: i.body.slice(0, 5000), ip: i.ip, userId: i.userId } });
+        // La constancia queda en la misma transacción. Un fallo de Resend no pierde ni duplica el trámite.
+        await tx.emailOutbox.create({ data: { dedupeKey: `contact/${m.id}/received`, to: m.email, purpose: "support", subject: `Recibimos tu consulta (${m.code})`, text: `Hola ${m.name.split(" ")[0]}:\n\nRecibimos tu consulta sobre "${m.subject}" (${areaName(m.area)}). Tu número de trámite es ${m.code}.\nTe respondemos por correo: soporte Pro tiene prioridad dentro de 1 día hábil; las demás consultas, normalmente en menos de 48 horas hábiles.\n\n${m.area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento.\n\n" : ""}Somos Guafra` } });
+        return { message: m } as const;
       });
-      return { message: m } as const;
     } catch (e) {
       if (!String(e).includes("Unique")) throw e;
     }

@@ -1,7 +1,8 @@
 // Referidos: cada persona tiene un link para invitar. Cuando alguien se registra con ese link y termina la
 // bienvenida, los dos reciben 1 mes de Pro. Hay un tope de premios por persona para evitar abusos.
 import type { PrismaClient } from "@/generated/prisma/client";
-import { giftPro } from "./grants";
+import { applyReferralCredit } from "./referral-credit";
+import { lockWorkspace } from "./workspace-lock";
 
 export const REFERRAL_DAYS = 30;
 export const REFERRAL_MAX_REWARDS = 12;
@@ -41,28 +42,40 @@ export async function attachReferral(db: PrismaClient, newUserId: string, code: 
 }
 
 const workspaceOf = async (db: PrismaClient, userId: string) =>
-  (await db.membership.findFirst({ where: { userId }, orderBy: { createdAt: "asc" }, select: { workspaceId: true } }))?.workspaceId ?? null;
+  (await db.membership.findFirst({ where: { userId, role: "OWNER" }, orderBy: { createdAt: "asc" }, select: { workspaceId: true } }))?.workspaceId ?? null;
 
-// Al terminar la bienvenida: premio para los dos (una sola vez por persona invitada).
+// Se habilita al confirmar el correo, terminar la bienvenida y registrar el primer movimiento.
+// Cupo y ambos premios se confirman juntos; un fallo permite reintentar sin perder días.
 export async function rewardReferral(db: PrismaClient, userId: string) {
-  const u = await db.user.findUnique({ where: { id: userId }, select: { referredById: true, referralRewardedAt: true } });
-  if (!u?.referredById || u.referralRewardedAt) return { rewarded: false as const };
-  // Se marca primero, así dos pedidos a la vez no premian dos veces.
-  const mark = await db.user.updateMany({ where: { id: userId, referralRewardedAt: null }, data: { referralRewardedAt: new Date() } });
-  if (!mark.count) return { rewarded: false as const };
-  const given = await db.user.count({ where: { referredById: u.referredById, referralRewardedAt: { not: null }, id: { not: userId } } });
-  const [mine, theirs] = await Promise.all([workspaceOf(db, userId), workspaceOf(db, u.referredById)]);
-  if (mine) await giftPro(db, mine, REFERRAL_DAYS);
-  // Quien invita recibe premio hasta el tope; la persona invitada siempre recibe el suyo.
-  const referrerGets = given < REFERRAL_MAX_REWARDS && !!theirs;
-  if (referrerGets && theirs) await giftPro(db, theirs, REFERRAL_DAYS);
-  return { rewarded: true as const, referrerId: u.referredById, referrerGets };
+  const candidate = await db.user.findUnique({ where: { id: userId }, select: { referredById: true, referralRewardedAt: true } });
+  if (!candidate?.referredById || candidate.referralRewardedAt) return { rewarded: false as const };
+  const [mine, theirs] = await Promise.all([workspaceOf(db, userId), workspaceOf(db, candidate.referredById)]);
+  if (!mine || !theirs || mine === theirs) return { rewarded: false as const };
+  return db.$transaction(async (tx) => {
+    for (const id of [mine, theirs].sort()) await lockWorkspace(tx, id);
+    const u = await tx.user.findUnique({ where: { id: userId } });
+    const referrer = await tx.user.findUnique({ where: { id: candidate.referredById! } });
+    if (!u || u.deletedAt || u.suspendedAt || !u.emailVerified || u.referralRewardedAt || u.referredById !== referrer?.id || referrer.deletedAt || referrer.suspendedAt) return { rewarded: false as const };
+    const active = await tx.workspace.findFirst({ where: { id: mine, onboardedAt: { not: null }, billingDisabledAt: null, accounts: { some: {} }, transactions: { some: { type: { in: ["INCOME", "EXPENSE"] } } } } });
+    if (!active) return { rewarded: false as const };
+    const given = await tx.user.count({ where: { referredById: referrer.id, referralRewardedAt: { not: null } } });
+    const referrerGets = given < REFERRAL_MAX_REWARDS;
+    // Primero reservar todos los bloqueos, después modificar. Conserva el orden global aun con referidos cruzados.
+    await tx.workspace.update({ where: { id: mine }, data: { referralCreditDays: { increment: REFERRAL_DAYS } } });
+    if (referrerGets) await tx.workspace.update({ where: { id: theirs }, data: { referralCreditDays: { increment: REFERRAL_DAYS } } });
+    await applyReferralCredit(tx, mine);
+    if (referrerGets) await applyReferralCredit(tx, theirs);
+    await tx.user.update({ where: { id: userId }, data: { referralRewardedAt: new Date() } });
+    await tx.auditLog.create({ data: { action: "referral.rewarded", userId, workspaceId: mine, meta: { referrerId: referrer.id, referrerGets, days: REFERRAL_DAYS } } });
+    return { rewarded: true as const, referrerId: referrer.id, referrerGets };
+  });
 }
 
 export async function referralStats(db: PrismaClient, userId: string) {
-  const [invited, rewarded] = await Promise.all([
+  const [invited, rewarded, own] = await Promise.all([
     db.user.count({ where: { referredById: userId } }),
     db.user.count({ where: { referredById: userId, referralRewardedAt: { not: null } } }),
+    db.membership.findFirst({ where: { userId, role: "OWNER" }, include: { workspace: { select: { referralCreditDays: true } } } }),
   ]);
-  return { invited, rewarded, left: Math.max(0, REFERRAL_MAX_REWARDS - rewarded) };
+  return { invited, rewarded, creditDays: own?.workspace.referralCreditDays ?? 0, left: Math.max(0, REFERRAL_MAX_REWARDS - rewarded) };
 }

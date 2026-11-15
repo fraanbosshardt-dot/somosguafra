@@ -32,3 +32,5 @@ export default async function WelcomePage() {
     </>
   );
 }
+
+export const dynamic = "force-dynamic";

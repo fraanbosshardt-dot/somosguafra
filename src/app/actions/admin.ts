@@ -10,6 +10,8 @@ import { PRO_FEATURES, planSettings, savePlanSettings, type FeatureKey } from "@
 import { savedReplies, systemSettings, writeSetting } from "@/server/settings";
 import { giftPro } from "@/server/grants";
 import { deleteAccount, normCode } from "@/server/admin-accounts";
+import { replyToContact, replyToTicket } from "@/server/support-replies";
+import { drainEmailOutbox } from "@/server/billing-mail";
 import { appUrl, sendEmail } from "@/lib/email";
 import type { FormState } from "./auth";
 import { UserError } from "@/server/ledger";
@@ -75,7 +77,7 @@ export async function adminSuspendAction(fd: FormData) {
 export async function adminReset2faAction(fd: FormData) {
   const a = await requireAdmin("support");
   const id = s(fd, "userId");
-  await getDb().user.update({ where: { id }, data: { totpSecretEnc: null, totpEnabledAt: null } });
+  await getDb().$transaction([getDb().user.update({ where: { id }, data: { totpSecretEnc: null, totpEnabledAt: null } }), getDb().recoveryCode.deleteMany({ where: { userId: id } })]);
   await adminAudit(a, "admin.2fa_reset", { entity: "user", entityId: id });
   refresh();
 }
@@ -176,16 +178,11 @@ export async function adminReplyTicketAction(_: FormState, fd: FormData): Promis
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  const t = await db.supportTicket.update({ where: { id }, data: { reply: reply.slice(0, 4000), status: "ANSWERED" }, include: { user: true } });
-  const mail = await sendEmail({
-    purpose: "support",
-    to: t.user.email,
-    subject: `Respuesta a tu consulta: ${t.subject}`,
-    text: `Hola ${t.user.name.split(" ")[0]}:\n\n${reply}\n\nTu consulta: "${t.subject}"\nPodés verla en ${appUrl()}/app/ayuda\n\nSomos Guafra`,
-  });
-  await adminAudit(a, "admin.ticket_answered", { entity: "ticket", entityId: id, meta: { emailed: mail.sent } });
+  await replyToTicket(db, id, reply, appUrl());
+  await drainEmailOutbox(db).catch((e) => console.error("[support reply queued]", e));
+  await adminAudit(a, "admin.ticket_answered", { entity: "ticket", entityId: id, meta: { queued: true } });
   refresh();
-  return { ok: mail.sent ? "Respuesta enviada y avisada por correo." : "Respuesta guardada. El correo no salió (falta la clave de Resend), pero la ve en Ayuda." };
+  return { ok: "Respuesta guardada en Ayuda y preparada para enviar por correo. Los fallos de envío se reintentan." };
 }
 
 export async function adminCloseTicketAction(fd: FormData) {
@@ -373,16 +370,11 @@ export async function adminReplyContactAction(_: FormState, fd: FormData): Promi
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  const m = await db.contactMessage.update({ where: { id }, data: { reply: reply.slice(0, 5000), status: "ANSWERED" } });
-  const mail = await sendEmail({
-    purpose: "support",
-    to: m.email,
-    subject: `Re: ${m.subject} (${m.code})`,
-    text: `Hola ${m.name.split(" ")[0]}:\n\n${reply}\n\n—\nTu consulta (${m.code}): "${m.subject}"\nSi necesitás algo más, respondé desde ${appUrl()}/contacto indicando este número.`,
-  });
-  await adminAudit(a, "admin.contact_answered", { entity: "contact", entityId: id, meta: { emailed: mail.sent, area: m.area } });
+  const m = await replyToContact(db, id, reply, appUrl());
+  await drainEmailOutbox(db).catch((e) => console.error("[contact reply queued]", e));
+  await adminAudit(a, "admin.contact_answered", { entity: "contact", entityId: id, meta: { queued: true, area: m.area } });
   refresh();
-  return { ok: mail.sent ? "Respuesta enviada por correo." : "Respuesta guardada, pero el correo no salió (falta la clave de Resend). Respondé a mano a " + m.email + "." };
+  return { ok: "Respuesta guardada y preparada para enviar por correo. Si el proveedor falla, se reintenta automáticamente." };
 }
 
 export async function adminContactStatusAction(fd: FormData) {

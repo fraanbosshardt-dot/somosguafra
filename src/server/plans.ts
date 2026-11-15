@@ -1,34 +1,16 @@
 // Planes: qué incluye Gratis y qué incluye Pro. El dueño lo cambia desde el panel interno.
 import type { Db } from "./ledger";
 
-export type FeatureKey = "flujo5" | "simulador" | "cereal" | "informes" | "compartido" | "ilimitado" | "soporte" | "pdf";
-
-// Por defecto, casi todo es gratis. Pro suma lo avanzado.
-export const PRO_FEATURES: { key: FeatureKey; name: string; beta?: boolean }[] = [
-  { key: "flujo5", name: "Flujo de caja a 2, 3 y 5 años" },
-  { key: "simulador", name: "Simulador de escenarios" },
-  { key: "cereal", name: "Módulo Agro: ventas de granos" },
-  { key: "informes", name: "Informes avanzados y respaldo completo" },
-  { key: "compartido", name: "Espacio compartido (hasta 3 personas)" },
-  { key: "ilimitado", name: "Cuentas y objetivos sin límite" },
-  { key: "soporte", name: "Soporte prioritario (respuesta en 1 día hábil)" },
-  { key: "pdf", name: "Leer el resumen de la tarjeta desde el PDF (hasta 5 por mes)" },
-];
-export const FREE_INCLUDES = [
-  "Cuentas, movimientos, ingresos, gastos y transferencias",
-  "Tarjetas de crédito y compras en cuotas",
-  "Deudas y préstamos, con cancelación total",
-  "Próximos pagos, calendario y reglas recurrentes",
-  "Flujo de caja a 1 año",
-  "¿Puedo comprarlo en cuotas?",
-  "Presupuestos y objetivos de ahorro",
-  "Inversiones, bienes y patrimonio neto",
-  "Alertas y consejos",
-  "Importar y exportar movimientos en CSV",
-  "Verificación en dos pasos",
-];
+import { FEATURE_KEYS, PLAN_FEATURES, FREE_LIMITS, type FeatureKey, type PlanFeature } from "@/lib/plan-features";
+export { FREE_LIMITS };
+export type { FeatureKey };
+export const PRO_FEATURES: { key: FeatureKey; name: string; beta?: boolean }[] = FEATURE_KEYS.map((key) => ({ key, name: PLAN_FEATURES.find((f) => f.feature === key)!.name }));
+export const FREE_INCLUDES = PLAN_FEATURES.filter((f) => f.plan === "free").map((f) => f.name);
 export const PRICES_DEFAULT = { monthly: 5, yearly: 48 };
-export const FREE_LIMITS = { accounts: 5, goals: 3 };
+
+export function planFeatures(freeAlso: readonly FeatureKey[] = []): PlanFeature[] {
+  return PLAN_FEATURES.map((f) => f.feature && freeAlso.includes(f.feature) ? { ...f, plan: "free" } : f);
+}
 
 export async function startFreeTrial(db: Db, workspaceId: string) {
   return db.$transaction(async (tx) => {
@@ -44,7 +26,7 @@ export async function startFreeTrial(db: Db, workspaceId: string) {
 // pricesArs: el precio en pesos que se muestra en la web y en la app (si está cargado, reemplaza al de dólares).
 type PlanSettings = { freeAlso: FeatureKey[]; prices: { monthly: number; yearly: number }; pricesArs?: { monthly: number; yearly: number } | null };
 
-export async function planSettings(db: Db): Promise<PlanSettings> {
+export async function planSettings(db: Pick<Db, "appSetting">): Promise<PlanSettings> {
   const s = await db.appSetting.findUnique({ where: { key: "plans" } });
   const v = (s?.value ?? {}) as Partial<PlanSettings>;
   const ars = v.pricesArs && v.pricesArs.monthly > 0 && v.pricesArs.yearly > 0 ? v.pricesArs : null;
@@ -83,7 +65,7 @@ export function paidUntil(paidAt: Date, cycle: string | null | undefined, offset
   return new Date(d.getTime() - offsetMinutes * 60_000);
 }
 
-export async function hasFeature(db: Db, plan: "FREE" | "PRO", key: FeatureKey) {
+export async function hasFeature(db: Pick<Db, "appSetting">, plan: "FREE" | "PRO", key: FeatureKey) {
   if (plan === "PRO") return true;
   return (await planSettings(db)).freeAlso.includes(key);
 }

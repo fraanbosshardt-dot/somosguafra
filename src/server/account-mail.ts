@@ -49,11 +49,12 @@ export async function sendPasswordChanged(user: { email: string; name: string })
 }
 
 // Avisos de seguridad de la cuenta (doble factor, espacio compartido). Si no fuiste vos, se ve enseguida.
-export async function sendSecurityNotice(user: { email: string; name: string }, what: "2fa_on" | "2fa_off" | "member_joined", extra?: string) {
+export async function sendSecurityNotice(user: { email: string; name: string }, what: "2fa_on" | "2fa_off" | "member_joined" | "recovery_used", extra?: string) {
   const { appUrl, sendEmail } = await mail();
   const t = {
     "2fa_on": ["Activaste la verificación en dos pasos", "Activaste la verificación en dos pasos en tu cuenta de Somos Guafra. Desde ahora, al ingresar te pedimos el código de tu app."],
     "2fa_off": ["Desactivaste la verificación en dos pasos", "Se desactivó la verificación en dos pasos de tu cuenta de Somos Guafra. Te recomendamos volver a activarla en Configuración → Seguridad."],
+    "recovery_used": ["Usaste un código de recuperación", "Se usó uno de tus códigos de recuperación para ingresar. Ese código ya no funciona. Si no fuiste vos, cerrá las demás sesiones desde Configuración → Seguridad y contactanos."],
     "member_joined": ["Alguien se sumó a tu espacio", `${extra ?? "Una persona"} aceptó tu invitación y ya puede ver tu espacio en Somos Guafra. Lo podés quitar cuando quieras en Configuración → Compartir.`],
   }[what];
   return sendEmail({

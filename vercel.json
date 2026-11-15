@@ -3,10 +3,18 @@
   "regions": [
     "sfo1"
   ],
-  "crons": [
-    {
+  "schedules": {
+    "mantenimiento-diario": {
       "path": "/api/cron/diario",
-      "schedule": "0 11 * * *"
+      "schedule": "0 11 * * *",
+      "requestMethod": "GET",
+      "jitter": 15
+    },
+    "recuperacion-cobros": {
+      "path": "/api/cron/cobros",
+      "schedule": "*/15 * * * *",
+      "requestMethod": "GET",
+      "jitter": 15
     }
-  ]
+  }
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 // Acceso al panel interno: sesión propia (cookie somosguafra_admin), solo con Google y lista blanca.
 // No depende de la cuenta de la app: alguien del equipo puede administrar sin tener cuenta en Somos Guafra.
 import { cookies, headers } from "next/headers";
@@ -34,12 +35,13 @@ export async function getAdmin(): Promise<Admin | null> {
   return { sessionId: s.id, email: s.email, name: s.name, role };
 }
 
-export async function requireAdmin(perm: Perm = "view"): Promise<Admin> {
+export const requireAdmin = cache(async function requireAdmin(perm: Perm = "view"): Promise<Admin> {
   const a = await getAdmin();
   if (!a) redirect("/admin/ingresar");
   if (!can(a.role, perm)) redirect("/admin?sinpermiso=1");
+  await adminAudit(a, "admin.access", { meta: { permission: perm, role: a.role, path: (await headers()).get("x-audit-path") ?? "admin" } });
   return a;
-}
+});
 
 export async function destroyAdminSession() {
   const jar = await cookies();

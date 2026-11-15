@@ -1,3 +1,4 @@
+import { lockWorkspace } from "./workspace-lock";
 // Informes, exportación e importación de movimientos.
 import { createHash } from "node:crypto";
 import type { Db } from "./ledger";
@@ -206,6 +207,7 @@ export async function revertImport(db: Db, ws: string, batchId: string) {
   if (!b) throw new UserError("No encontramos esa importación.");
   if (b.status === "REVERTED") throw new UserError("Ya fue revertida.");
   await db.$transaction(async (tx) => {
+    await lockWorkspace(tx, ws);
     await tx.transaction.deleteMany({ where: { workspaceId: ws, notes: `import:${b.id}` } });
     await tx.importBatch.update({ where: { id: b.id }, data: { status: "REVERTED" } });
   });

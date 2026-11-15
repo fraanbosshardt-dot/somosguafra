@@ -1,3 +1,4 @@
+import type Decimal from "decimal.js";
 // Alertas y consejos con reglas fijas sobre los datos del usuario (sin IA externa).
 import type { Db } from "./ledger";
 import { openObligations, readBalances } from "./ledger";
@@ -12,6 +13,11 @@ export type Insight = { level: "urgent" | "warn" | "info" | "good"; title: strin
 export async function insights(db: Db, ws: string, currency: string, today: Date, pre?: { open?: Awaited<ReturnType<typeof openObligations>> }): Promise<Insight[]> {
   const out: Insight[] = [];
   const f = (v: Parameters<typeof formatMoney>[0]) => formatMoney(v, currency);
+  const byCurrency = (items: { currency: string; remaining: Decimal }[]) => {
+    const totals = new Map<string, Decimal>();
+    for (const item of items) totals.set(item.currency, (totals.get(item.currency) ?? ZERO).plus(item.remaining));
+    return [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([code, amount]) => `${code} ${formatMoney(amount, code)}`).join(" + ");
+  };
   const in10 = new Date(today.getTime() + 10 * 864e5);
   const [open, fc, debts, alertCards, b, allGoals, accs, bal] = await Promise.all([
     pre?.open ?? openObligations(db, ws, today),
@@ -24,7 +30,7 @@ export async function insights(db: Db, ws: string, currency: string, today: Date
     readBalances(db, ws, null),
   ]);
   const late = open.filter((o) => o.overdue && o.direction === "PAYABLE");
-  if (late.length) out.push({ level: "urgent", title: `${late.length} ${late.length === 1 ? "pago atrasado" : "pagos atrasados"} por ${f(late.reduce((s, o) => s.plus(o.remaining), ZERO))}`, detail: late.slice(0, 3).map((o) => o.description).join(" · "), href: "/app/proximos", kind: "late" });
+  if (late.length) out.push({ level: "urgent", title: `${late.length} ${late.length === 1 ? "pago atrasado" : "pagos atrasados"} por ${byCurrency(late)}`, detail: late.slice(0, 3).map((o) => o.description).join(" · "), href: "/app/proximos", kind: "late" });
   // Una venta de cereal estimada que pasó no es un cobro atrasado: falta cargar la venta.
   const lateGrain = open.filter((o) => o.overdue && isEstimatedGrain(o));
   if (lateGrain.length) out.push({ level: "info", title: lateGrain.length === 1 ? "Falta cargar la venta de cereal estimada" : `Faltan cargar ${lateGrain.length} ventas de cereal estimadas`, detail: "Cargala con quintales y precio para que quede el cobro real.", href: loadSaleHref(lateGrain[0].dueDate) });
@@ -50,7 +56,7 @@ export async function insights(db: Db, ws: string, currency: string, today: Date
 
   const week = new Date(today.getTime() + 7 * 864e5);
   const soon = open.filter((o) => !o.overdue && o.direction === "PAYABLE" && o.dueDate <= week);
-  if (soon.length >= 3) out.push({ level: "info", title: `${soon.length} vencimientos en los próximos 7 días`, detail: `Suman ${f(soon.reduce((s, o) => s.plus(o.remaining), ZERO))}.`, href: "/app/proximos" });
+  if (soon.length >= 3) out.push({ level: "info", title: `${soon.length} vencimientos en los próximos 7 días`, detail: `Suman ${byCurrency(soon)}.`, href: "/app/proximos" });
 
   if (debts[0] && Number(debts[0].cft) > 100) out.push({ level: "warn", title: "Tenés una deuda cara", detail: `${debts[0].creditor} tiene un CFT de ${Number(debts[0].cft).toFixed(1).replace(".", ",")}%. Si podés, conviene pagarla primero.`, href: "/app/deudas" });
 

@@ -14,12 +14,14 @@ export async function queueBillingNotice(db: MailDb, ws: string, event: string, 
     text: `Hola ${owner.user.name.split(" ")[0]}:\n\n${body}\n\nRevisá tu plan en ${base}/app/configuracion?tab=plan\n\nEste aviso informa el estado de tu suscripción.\n\nsomosguafra` } });
 }
 
-export async function drainEmailOutbox(db: Db, limit = 20) {
+export async function drainEmailOutbox(db: Db, limit = 20, timeBudgetMs = 20_000) {
+  const deadline = Date.now() + timeBudgetMs;
   if (!process.env.RESEND_API_KEY) return 0;
   const rows = await db.emailOutbox.findMany({ where: { sentAt: null, nextAttemptAt: { lte: new Date() } }, orderBy: { createdAt: "asc" }, take: limit });
   let delivered = 0;
   const { sendEmail } = await import("@/lib/email");
   for (const row of rows) {
+    if (Date.now() >= deadline) break;
     const now = new Date();
     const lease = await db.emailOutbox.updateMany({ where: { id: row.id, sentAt: null, nextAttemptAt: { lte: now } }, data: { nextAttemptAt: new Date(now.getTime() + 60_000), attempts: { increment: 1 } } });
     if (!lease.count) continue;

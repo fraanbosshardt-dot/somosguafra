@@ -19,3 +19,5 @@ export default function ForgotPage() {
     </AuthShell>
   );
 }
+
+export const dynamic = "force-dynamic";

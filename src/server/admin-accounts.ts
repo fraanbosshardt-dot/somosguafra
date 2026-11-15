@@ -20,7 +20,7 @@ export const discounted = (price: number, percentOff: number) => Math.round(pric
 export async function exportAccountData(db: PrismaClient, userId: string) {
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, email: true, name: true, createdAt: true, emailVerified: true, emailReminders: true, totpEnabledAt: true, lastSeenAt: true, memberships: { select: { workspaceId: true, role: true } } },
+    select: { id: true, email: true, name: true, createdAt: true, termsAcceptedAt: true, termsVersion: true, termsChannel: true, emailVerified: true, emailReminders: true, totpEnabledAt: true, lastSeenAt: true, memberships: { select: { workspaceId: true, role: true } } },
   });
   const spaces = [];
   for (const m of user.memberships) {
