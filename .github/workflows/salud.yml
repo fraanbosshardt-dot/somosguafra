@@ -1,4 +1,5 @@
 name: Salud de producción
+run-name: ${{ inputs.diagnose_provider && 'Diagnóstico de proveedor (solo lectura)' || inputs.test_notification && 'PRUEBA de avisos (sin consultar producción)' || 'Salud de producción' }}
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -35,7 +36,7 @@ jobs:
             curl --fail --silent --show-error --max-time 45 \
               -H "Authorization: Bearer $OPERATIONS_SECRET" \
               "https://somosguafra.com/api/health/operaciones?diagnostic=provider" -o /tmp/provider-diagnostic
-            python3 -c 'import json; d=json.load(open("/tmp/provider-diagnostic")); print(json.dumps(d)); assert isinstance(d.get("checks"),list)'
+            python3 -c 'import json; d=json.load(open("/tmp/provider-diagnostic")); assert isinstance(d.get("checks"),list); print(json.dumps(d)); assert d.get("ok") is True'
             exit 0
           fi
           for path in / /ingresar /api/health; do

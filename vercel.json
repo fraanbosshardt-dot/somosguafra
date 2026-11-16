@@ -5,7 +5,9 @@
       "fix/auditoria-integral-20261115": false,
       "fix/alertas-operativas": false,
       "fix/diagnostico-conciliacion": false,
-      "fix/consulta-pagos-proveedor": false
+      "fix/consulta-pagos-proveedor": false,
+      "fix/paginacion-mercadopago": false,
+      "feat/guafra-chatbot": false
     }
   },
   "regions": [

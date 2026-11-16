@@ -8,6 +8,8 @@ vi.mock("@/server/billing-mail", () => ({ queueBillingNotice: vi.fn(async () => 
 // All state and responses stay in memory. No database or network is used.
 let local: any, remote: any, payment: any, invoice: any, agreement: any;
 let pages = false;
+let pageSize = 100;
+let withoutTotal = false;
 let unconfirmedCancellation = false;
 let expireAfterCursor: (() => void) | null = null;
 const calls: string[] = [];
@@ -32,7 +34,7 @@ const memory: any = {
 };
 
 beforeEach(() => {
-  paymentEvents.clear(); calls.length = 0; pages = false; invoice = null; unconfirmedCancellation = false; expireAfterCursor = null;
+  paymentEvents.clear(); calls.length = 0; pages = false; pageSize = 100; withoutTotal = false; invoice = null; unconfirmedCancellation = false; expireAfterCursor = null;
   local = { plan: "PRO", status: "ACTIVE", provider: "mercadopago", providerRef: "agreement", trialEndsAt: null, legacyPaidUntil: null, currentPeriodEnd: null, billingCycle: "monthly" };
   agreement = { id: "reservation", workspaceId: "space", providerRef: "agreement", amount: 7499, currency: "ARS", cycle: "monthly", status: "authorized", couponCode: null, couponCounted: false };
   remote = { id: "agreement", external_reference: "space||reservation", status: "authorized", next_payment_date: end.toISOString(), auto_recurring: { transaction_amount: 7499, currency_id: "ARS", frequency: 1, frequency_type: "months" } };
@@ -46,9 +48,11 @@ beforeEach(() => {
     if (url.pathname === "/authorized_payments/charge") return Response.json({ id: "charge", preapproval_id: "agreement", transaction_amount: 7499, currency_id: "ARS", debit_date: start.toISOString(), payment: { id: "actual-payment", status: "approved" } });
     if (url.pathname === "/v1/payments/actual-payment") return Response.json(payment);
     if (url.pathname === "/authorized_payments/search") {
+      if (url.searchParams.has('limit')) return Response.json({message:'invalid value limit'},{status:400});
       const offset = Number(url.searchParams.get("offset"));
-      const results = pages ? Array.from({ length: offset === 0 ? 100 : 1 }, () => ({ id: "charge" })) : [];
-      return Response.json({ results, paging: { total: pages ? 101 : 0 } });
+      const total = pages ? pageSize + 1 : 0;
+      const results = Array.from({length:Math.min(pageSize,Math.max(0,total-offset))},()=>({id:'charge'}));
+      return Response.json({ results, ...(withoutTotal ? {} : {paging:{total}}) });
     }
     throw new Error("Unexpected request; real network is disabled");
   }));
@@ -125,6 +129,23 @@ it("workspace reconciliation follows pagination without creating or charging any
   expect(local.currentPeriodEnd).toEqual(end);
 });
 
+it.each([false,true])('uses the provider page size and handles absent totals (%s)',async(noTotal)=>{
+  pages=true;pageSize=7;withoutTotal=noTotal;
+  await reconcileWorkspaceBilling(db,'space');
+  expect(calls.some(path=>path.includes('offset=7'))).toBe(true);
+  expect(calls.every(path=>!path.includes('limit='))).toBe(true);
+  if(noTotal) expect(calls.some(path=>path.includes('offset=8'))).toBe(true);
+  expect(agreement.reconcileOffset).toBe(0);
+  expect(agreement.lastReconciledAt).toBeInstanceOf(Date);
+  expect(local.currentPeriodEnd).toEqual(end);
+});
+it('does not interpret a provider validation error as an empty paid history',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async(input:string)=>new URL(input).pathname.startsWith('/preapproval/')?Response.json(remote):Response.json({message:'invalid filter'},{status:400})));
+  await expect(reconcileWorkspaceBilling(db,'space')).rejects.toMatchObject({httpStatus:400,operation:'authorized_payment_search'});
+  expect(agreement.lastReconciledAt).toBeUndefined();
+  expect(local.currentPeriodEnd).toBeNull();
+});
+
 it("a time budget saves the committed payment cursor and the next pass resumes there", async () => {
   pages = true;
   const clock = vi.spyOn(Date, "now").mockReturnValue(start.getTime());
@@ -134,7 +155,7 @@ it("a time budget saves the committed payment cursor and the next pass resumes t
   expect(invoice.status).toBe("approved");
   expireAfterCursor = null;
   await reconcileWorkspaceBilling(db, "space");
-  expect(calls.some(path => path.includes("offset=1&"))).toBe(true);
+  expect(calls.some(path => new URL(path,'https://example.invalid').searchParams.get('offset') === '1')).toBe(true);
   expect(agreement.reconcileOffset).toBe(0);
   expect(agreement.lastReconciledAt).toBeInstanceOf(Date);
 });

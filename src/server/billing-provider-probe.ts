@@ -35,9 +35,7 @@ export async function billingProviderProbe(db: Pick<Db, 'billingAgreement'>) {
     const id = encodeURIComponent(agreement.providerRef);
     const status = await read('agreement', `/preapproval/${id}`);
     if (status >= 200 && status < 300) {
-      const searchStatus = await read('authorized_payment_search_limit100', `/authorized_payments/search?preapproval_id=${id}&offset=0&limit=100`);
-      if (searchStatus === 400) await read('authorized_payment_search_limit20', `/authorized_payments/search?preapproval_id=${id}&offset=0&limit=20`);
-      if (searchStatus === 400) await read('authorized_payment_search_default', `/authorized_payments/search?preapproval_id=${id}`);
+      await read('authorized_payment_search', `/authorized_payments/search?preapproval_id=${id}&offset=0`);
     }
   }
   return { ok: checks.length > 0 && checks.every(c => c.status >= 200 && c.status < 300), checks };
