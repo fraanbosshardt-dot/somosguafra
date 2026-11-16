@@ -5,10 +5,10 @@
 ## Ejecutado
 
 - Suite general: 67 archivos aprobados, 1 omitido; 475 pruebas aprobadas y 2 omitidas. Las omitidas requieren PostgreSQL externo para concurrencia y se ejecutan en CI.
-- Regresiones posteriores: 46 pruebas aprobadas sobre chat, bandeja, exportación, eliminación de datos, correo y administración; luego 38 pruebas aprobadas incluyendo los 4 casos específicos del retorno desde correo.
+- Regresiones posteriores: 50 pruebas aprobadas sobre chat, bandeja, exportación, eliminación de datos, correo, administración y retorno desde correo. Otras 28 pruebas de exportación, administración y retorno se ejecutaron después de ajustar la exportación del historial público.
 - TypeScript: aprobado después de los cambios finales.
 - Migración ejecutada en las bases locales de integración, con ticket de compatibilidad escrito como la versión anterior.
-- Build Turbopack local: bloqueado por la junction de node_modules hacia el checkout principal, no por un diagnóstico de código. La comprobación definitiva con instalación normal se realiza en CI; también se verifica la compilación local con webpack. No se alteró la configuración productiva para acomodar la junction.
+- Build Turbopack local: bloqueado por la junction de node_modules hacia el checkout principal, no por un diagnóstico de código. La comprobación definitiva con instalación normal se realiza en CI; la compilación local con webpack y una base PGlite aislada terminó correctamente (58 páginas estáticas). Se mantuvo un aviso previo de webpack en pdf-worker/createRequire, sin modificar ese módulo; CI comprueba el compilador normal y el arranque HTTP. No se alteró la configuración productiva para acomodar la junction.
 
 ## Recorrido por navegador
 

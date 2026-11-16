@@ -331,7 +331,7 @@ it("exportación no revela hash de acceso ni notas; borrado limpia chats vincula
   const u = await t.db.user.create({
       data: {
         email: "chat-delete@audit.invalid",
-        name: "Fixture",
+        name: "A",
         passwordHash: "x",
       },
     }),
@@ -355,10 +355,23 @@ it("exportación no revela hash de acceso ni notas; borrado limpia chats vincula
       dedupeKey: crypto.randomUUID(),
     },
   });
-  await t.db.contactMessage.update({where:{id:contact.id},data:{assignedTo:"staff-private@audit.invalid"}});
-  await replyToContact(t.db,contact.id,"Respuesta pública exportable","https://example.invalid","staff-private@audit.invalid");
-  const exportedData=await exportAccountData(t.db,u.id);
-  expect(exportedData.chats[0].messages.some(m=>m.body==="Respuesta pública exportable")).toBe(true);
+  await t.db.contactMessage.update({
+    where: { id: contact.id },
+    data: { assignedTo: "staff-private@audit.invalid" },
+  });
+  await replyToContact(
+    t.db,
+    contact.id,
+    "Respuesta pública exportable",
+    "https://example.invalid",
+    "staff-private@audit.invalid",
+  );
+  const exportedData = await exportAccountData(t.db, u.id);
+  expect(
+    exportedData.chats[0].messages.some(
+      (m) => m.body === "Respuesta pública exportable",
+    ),
+  ).toBe(true);
   const exported = JSON.stringify(exportedData);
   expect(exported).not.toContain("staff-private@audit.invalid");
   expect(exported).toContain(c.code);
@@ -371,10 +384,53 @@ it("exportación no revela hash de acceso ni notas; borrado limpia chats vincula
   ).toBeNull();
 });
 
-it("el resumen del panel incluye consultas del chat y estados de atención",async()=>{
- const {overview}=await import("@/server/admin-metrics");const result=await overview(t.db,{monthly:0,yearly:0});const status={in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]};const expected=await t.db.supportTicket.count({where:{status}})+await t.db.contactMessage.count({where:{status}});expect(result.openTickets).toBe(expected);expect(expected).toBeGreaterThan(0);
+it("el resumen del panel incluye consultas del chat y estados de atención", async () => {
+  const { overview } = await import("@/server/admin-metrics");
+  const result = await overview(t.db, { monthly: 0, yearly: 0 });
+  const status = { in: ["OPEN", "IN_PROGRESS", "WAITING_INTERNAL"] };
+  const expected =
+    (await t.db.supportTicket.count({ where: { status } })) +
+    (await t.db.contactMessage.count({ where: { status } }));
+  expect(result.openTickets).toBe(expected);
+  expect(expected).toBeGreaterThan(0);
 });
 
-it("un mensaje nuevo impide cerrar un caso desde una pantalla desactualizada",async()=>{
- const {updateSupportCase}=await import("@/server/support-case-state");const a=guest("stale-close"),c=await message(a,"Ayuda del equipo");await handoffChat(t.db,a,c,{name:"Fixture",email:"stale-close@audit.invalid",area:"soporte"});let contact=await t.db.contactMessage.findUniqueOrThrow({where:{code:c.code}});const old=contact.updatedAt.toISOString();await t.db.contactMessage.update({where:{id:contact.id},data:{updatedAt:new Date(contact.updatedAt.getTime()+1000)}});await expect(updateSupportCase(t.db,{kind:"contact",id:contact.id,status:"CLOSED",priority:"NORMAL",revision:old})).rejects.toThrow("caso cambió");contact=await t.db.contactMessage.findUniqueOrThrow({where:{id:contact.id}});expect(contact.status).toBe("OPEN");await updateSupportCase(t.db,{kind:"contact",id:contact.id,status:"RESOLVED",priority:"NORMAL",revision:contact.updatedAt.toISOString()});expect((await readChat(t.db,a,c)).resolved).toBe(true);
+it("un mensaje nuevo impide cerrar un caso desde una pantalla desactualizada", async () => {
+  const { updateSupportCase } = await import("@/server/support-case-state");
+  const a = guest("stale-close"),
+    c = await message(a, "Ayuda del equipo");
+  await handoffChat(t.db, a, c, {
+    name: "Fixture",
+    email: "stale-close@audit.invalid",
+    area: "soporte",
+  });
+  let contact = await t.db.contactMessage.findUniqueOrThrow({
+    where: { code: c.code },
+  });
+  const old = contact.updatedAt.toISOString();
+  await t.db.contactMessage.update({
+    where: { id: contact.id },
+    data: { updatedAt: new Date(contact.updatedAt.getTime() + 1000) },
+  });
+  await expect(
+    updateSupportCase(t.db, {
+      kind: "contact",
+      id: contact.id,
+      status: "CLOSED",
+      priority: "NORMAL",
+      revision: old,
+    }),
+  ).rejects.toThrow("caso cambió");
+  contact = await t.db.contactMessage.findUniqueOrThrow({
+    where: { id: contact.id },
+  });
+  expect(contact.status).toBe("OPEN");
+  await updateSupportCase(t.db, {
+    kind: "contact",
+    id: contact.id,
+    status: "RESOLVED",
+    priority: "NORMAL",
+    revision: contact.updatedAt.toISOString(),
+  });
+  expect((await readChat(t.db, a, c)).resolved).toBe(true);
 });

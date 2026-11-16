@@ -61,6 +61,7 @@ export function GuafraChat({
     generation = useRef(0),
     inFlight = useRef(false),
     selected = useRef<ChatView | null>(null),
+    previousIdentity = useRef<Payload["identity"]>(null),
     requestedCode = useRef<string | undefined>(undefined),
     feed = useRef<HTMLDivElement>(null),
     nearBottom = useRef(true),
@@ -70,6 +71,18 @@ export function GuafraChat({
     setCurrent(data.current);
     setCases(data.cases);
     if (data.identity !== undefined) {
+      if (
+        previousIdentity.current &&
+        previousIdentity.current.email !== data.identity?.email
+      ) {
+        setName("");
+        setEmail("");
+        setText("");
+        setCaseCode("");
+        setHandoff(false);
+        draft.current = null;
+      }
+      previousIdentity.current = data.identity;
       setIdentity(data.identity);
       if (data.identity) {
         setName(data.identity.name);
@@ -91,7 +104,14 @@ export function GuafraChat({
           selected.current = null;
           setCurrent(null);
           setCases([]);
+          previousIdentity.current = null;
           setIdentity(null);
+          setName("");
+          setEmail("");
+          setText("");
+          setCaseCode("");
+          setHandoff(false);
+          draft.current = null;
         }
         throw new Error(payload.error ?? "No pudimos completar la solicitud.");
       }
@@ -152,7 +172,10 @@ export function GuafraChat({
       requestedCode.current = code;
       newCase.current = false;
       if (open) void load(code);
-      else setOpen(true);
+      else {
+        setLoading(true);
+        setOpen(true);
+      }
     };
     window.addEventListener("guafra:open", handler);
     return () => window.removeEventListener("guafra:open", handler);
@@ -289,7 +312,10 @@ export function GuafraChat({
           aria-label={open ? "Cerrar chat Guafra" : "Abrir chat Guafra"}
           aria-expanded={open}
           aria-controls={id}
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            setLoading(true);
+            setOpen(true);
+          }}
         >
           <svg
             width="23"
@@ -356,7 +382,7 @@ export function GuafraChat({
               </button>
             </nav>
           )}
-          {history && (
+          {history && !loading && (
             <div className={styles.history}>
               <p>Conversaciones recientes</p>
               <form
@@ -406,7 +432,7 @@ export function GuafraChat({
               )}
             </div>
           )}
-          {current && (
+          {current && !loading && (
             <p className={styles.case}>
               {current.code} ·{" "}
               {CASE_STATUS[current.status] ??
@@ -430,7 +456,7 @@ export function GuafraChat({
             aria-relevant="additions text"
             aria-busy={busy}
           >
-            {!current && (
+            {!current && !loading && (
               <div className={styles.welcome}>
                 <span className={styles.eyebrow}>ESTAMOS PARA AYUDARTE</span>
                 <h2>Hola, soy Guafra.</h2>
@@ -462,7 +488,7 @@ export function GuafraChat({
                 </div>
               </div>
             )}
-            {current && (
+            {current && !loading && (
               <>
                 {current.hasOlder && (
                   <button
@@ -548,7 +574,7 @@ export function GuafraChat({
               </>
             )}
           </div>
-          {handoff && current && !current.human && (
+          {handoff && current && !current.human && !loading && (
             <form
               className={styles.handoff}
               onSubmit={(e) => {
@@ -619,9 +645,7 @@ export function GuafraChat({
               · <a href="/contacto">Contacto</a>
             </div>
           )}
-          {loading && !current && (
-            <p className={styles.hint}>Abriendo conversación…</p>
-          )}
+          {loading && <p className={styles.hint}>Abriendo conversación…</p>}
           {!handoff && (
             <form
               className={styles.compose}

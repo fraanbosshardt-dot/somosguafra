@@ -497,7 +497,7 @@ export async function handoffChat(
   const name = (a.user?.name ?? input.name).trim(),
     email = (a.user?.email ?? input.email).trim().toLowerCase();
   if (
-    name.length < 2 ||
+    name.length < (a.user ? 1 : 2) ||
     name.length > 120 ||
     email.length > 200 ||
     !/^\S+@\S+\.\S+$/.test(email)
