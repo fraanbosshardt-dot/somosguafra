@@ -49,9 +49,14 @@ export async function exportAccountData(db: PrismaClient, userId: string) {
       invoices: m.role === "OWNER" ? await db.invoice.findMany({ where }) : undefined,
     });
   }
-  const tickets = await db.supportTicket.findMany({ where: { userId }, include: { messages: { where: { internal: false }, select: { id: true, role: true, body: true, createdAt: true }, orderBy: { createdAt: "asc" } } } });
-  const contactMessages = await db.contactMessage.findMany({ where: { userId }, include: { messages: { where: { internal: false }, select: { id: true, role: true, body: true, createdAt: true }, orderBy: { createdAt: "asc" } } } });
-  return { version: 3, exportedAt: new Date().toISOString(), user, spaces, supportTickets: tickets, contactMessages };
+  const publicMessages={where:{internal:false},select:{id:true,role:true,body:true,createdAt:true},orderBy:{createdAt:"asc"}} as const;
+  const publicCase={id:true,code:true,userId:true,subject:true,body:true,reply:true,status:true,createdAt:true,updatedAt:true,messages:publicMessages} as const;
+  const tickets = await db.supportTicket.findMany({where:{userId},select:publicCase});
+  const contactMessages = await db.contactMessage.findMany({where:{userId},select:{...publicCase,name:true,email:true,area:true}});
+  const chatRows=await db.chatSession.findMany({where:{userId},select:{code:true,source:true,botResolved:true,createdAt:true,updatedAt:true,messages:publicMessages,contact:{select:{messages:publicMessages}}}});
+  const chats=chatRows.map(({contact,messages,...chat})=>({...chat,messages:[...new Map([...messages,...(contact?.messages??[])].map(m=>[m.id,m])).values()].sort((a,b)=>a.createdAt.getTime()-b.createdAt.getTime()||a.id.localeCompare(b.id))}));
+
+  return { version: 4, exportedAt: new Date().toISOString(), user, spaces, supportTickets: tickets, contactMessages, chats };
 }
 
 // ---------- Borrar una cuenta ----------
@@ -105,6 +110,7 @@ export async function deleteAccount(db: PrismaClient, userId: string) {
       }
     }
     await tx.productActivity.deleteMany({ where: { userId } });
+    await tx.contactMessage.deleteMany({where:{chatSession:{userId}}});
     await tx.user.delete({ where: { id: userId } });
     await tx.emailOutbox.deleteMany({ where: { to: account.email } });
   });

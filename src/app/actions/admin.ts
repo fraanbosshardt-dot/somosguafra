@@ -192,7 +192,7 @@ export async function adminReplyTicketAction(_: FormState, fd: FormData): Promis
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  await replyToTicket(db, id, reply, appUrl());
+  await replyToTicket(db, id, reply, appUrl(), a.email);
   await drainEmailOutbox(db).catch((e) => reportError("[support reply queued]", e));
   await adminAudit(a, "admin.ticket_answered", { entity: "ticket", entityId: id, meta: { queued: true } });
   refresh();
@@ -384,7 +384,7 @@ export async function adminReplyContactAction(_: FormState, fd: FormData): Promi
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  const m = await replyToContact(db, id, reply, appUrl());
+  const m = await replyToContact(db, id, reply, appUrl(), a.email);
   await drainEmailOutbox(db).catch((e) => reportError("[contact reply queued]", e));
   await adminAudit(a, "admin.contact_answered", { entity: "contact", entityId: id, meta: { queued: true, area: m.area } });
   refresh();

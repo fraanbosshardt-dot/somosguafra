@@ -22,6 +22,7 @@ export async function GET(req: Request) {
 async function run(db: ReturnType<typeof getDb>) {
   const { runBillingMaintenance } = await import("@/server/billing-maintenance");
   const { billing, delivered } = await runBillingMaintenance(db);
+  await db.chatSession.deleteMany({where:{contactId:null,updatedAt:{lt:new Date(Date.now()-30*864e5)}}});
   const fx = await refreshRates(db).catch(() => 0);
   const sent = 0, skipped = 0; // No se envían recordatorios de finanzas personales por correo.
   const pushes = await pushDueTomorrow(db);

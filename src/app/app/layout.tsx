@@ -18,6 +18,7 @@ import { emailEnabled } from "@/server/email-verify";
 import { LogoMark } from "@/components/logo-mark";
 import { AnnouncementBar } from "@/components/announcement-bar";
 import "./mobile.css";
+import { GuafraChat } from "@/components/guafra-chat";
 
 // La app es privada: nunca se indexa.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -31,7 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [sys, role] = await Promise.all([systemSettings(db), roleFor(db, user.email)]);
   if (sys.maintenance && !role) {
     return (
-      <main className="maint" role="main">
+      <><main className="maint" role="main">
         <div className="maint-box">
           <LogoMark className="maint-logo" />
           <h1>Volvemos enseguida</h1>
@@ -39,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <span className="maint-pulse" aria-hidden="true"><i /><i /><i /></span>
           <form action={logoutAction}><button className="btn" type="submit">Cerrar sesión</button></form>
         </div>
-      </main>
+      </main><GuafraChat source="app" /></>
     );
   }
   const today = todayIn(workspace.timezone);
@@ -97,6 +98,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       })()}
       {sys.maintenance && <div className="notice a app-ann" role="status"><Icon name="info" /><span>Modo mantenimiento activo: las personas ven la pantalla de “Volvemos enseguida”. Vos entrás porque sos del equipo.</span></div>}
       {children}
-    </Shell></>
+    </Shell><GuafraChat source="app" /></>
   );
 }

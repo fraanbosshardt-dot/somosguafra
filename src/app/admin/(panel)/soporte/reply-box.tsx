@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState,useEffect,useRef } from "react";
 
 // Caja de respuesta con las respuestas guardadas a mano.
 export function ReplyBox({ replies, name }: { replies: { title: string; text: string }[]; name: string }) {
   const [text, setText] = useState("");
+  const input=useRef<HTMLTextAreaElement>(null);
+  useEffect(()=>{const form=input.current?.form;const reset=()=>setText("");form?.addEventListener("reset",reset);return()=>form?.removeEventListener("reset",reset);},[]);
   return (
     <>
       {replies.length > 0 && (
@@ -12,7 +14,7 @@ export function ReplyBox({ replies, name }: { replies: { title: string; text: st
           {replies.map((r) => <option key={r.title} value={r.title}>{r.title}</option>)}
         </select>
       )}
-      <label className="field">Respuesta<textarea name="reply" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={`Hola ${name}…`} /></label>
+      <label className="field">Respuesta<textarea ref={input} name="reply" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={`Hola ${name}…`} /></label>
     </>
   );
 }

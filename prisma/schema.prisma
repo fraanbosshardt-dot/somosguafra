@@ -51,6 +51,7 @@ model User {
   pushSubs       PushSubscription[]
   auditLogs      AuditLog[]
   tickets        SupportTicket[]
+  chats          ChatSession[]
 }
 
 model RecoveryCode {
@@ -794,6 +795,7 @@ model AppSetting {
 
 model SupportTicket {
   id        String   @id @default(cuid())
+  code      String   @unique @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject   String
@@ -991,6 +993,7 @@ model ContactMessage {
   assignedTo String?
   priority String @default("NORMAL")
   messages SupportMessage[]
+  chatSession ChatSession?
   userId    String?
   ip        String?
   createdAt DateTime @default(now())
@@ -1007,6 +1010,9 @@ model SupportMessage {
   ticket SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   contactId String?
   contact ContactMessage? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  chatId String?
+  chat ChatSession? @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  botTopic String?
   role String
   body String
   author String?
@@ -1015,6 +1021,26 @@ model SupportMessage {
   createdAt DateTime @default(now())
   @@index([ticketId, createdAt])
   @@index([contactId, createdAt])
+  @@index([chatId, createdAt])
+}
+
+// Access envelope for the Guafra assistant. Human handoff uses the existing ContactMessage case.
+model ChatSession {
+  id String @id @default(cuid())
+  code String @unique
+  visitorHash String?
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId String? @unique
+  contact ContactMessage? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  source String @default("site")
+  botResolved Boolean @default(false)
+  messages SupportMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([visitorHash, updatedAt])
+  @@index([userId, updatedAt])
+  @@index([contactId, updatedAt])
 }
 
 // Eventos económicos independientes: no reescribir ingresos anteriores al llegar una devolución.

@@ -8,7 +8,13 @@ import { UserError } from "@/server/ledger";
 export async function supportFollowupAction(_: FormState, fd: FormData): Promise<FormState> {
   const db = getDb(); const token = String(fd.get("token") ?? "");
   let target: { kind: "contact" | "ticket"; id: string } | null;
-  if (token) target = await resolveCaseToken(db, token);
+  if (token) {
+    target = await resolveCaseToken(db, token);
+    if(target?.kind==='contact'){
+      const chat=await db.chatSession.findUnique({where:{contactId:target.id},select:{userId:true}});
+      if(chat?.userId){const {user}=await requireUser();if(user.id!==chat.userId)return {error:'Esta conversación no pertenece a tu cuenta.'};}
+    }
+  }
   else {
     const { user } = await requireUser();
     const ticket = await db.supportTicket.findFirst({ where: { id: String(fd.get("ticketId") ?? ""), userId: user.id } });

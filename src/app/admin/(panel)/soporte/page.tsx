@@ -1,85 +1,217 @@
-import { SupportThread } from "@/components/support-thread";
-import { CaseTools, SupportInboxSummary } from "@/components/support-inbox";
-import Link from "next/link";
-import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
-import { can } from "@/server/admin-team";
-import { savedReplies } from "@/server/settings";
-import { emailEnabled } from "@/lib/email";
+import Link from "next/link";
 import { PageHead } from "@/components/page";
-import { ActionForm, Submit } from "@/components/forms";
-import { when } from "@/components/admin-ui";
-import { adminCloseTicketAction, adminDeleteReplyAction, adminReplyTicketAction, adminSaveReplyAction, adminTicketPriorityAction } from "@/app/actions/admin";
-import { ReplyBox } from "./reply-box";
 import { Pagination } from "@/components/pagination";
 import { pageNumber } from "@/lib/pagination";
-import { supportPage } from "@/server/support-listing";
-
-export const metadata: Metadata = { title: "Soporte" };
-const PRI: Record<string, [string, string]> = { HIGH: ["Alta", "r"], NORMAL: ["Normal", ""], LOW: ["Baja", "a"] };
-
-export default async function Support({ searchParams }: { searchParams: Promise<{ ver?: string; pagina?: string }> }) {
-  const admin = await requireAdmin();
-  const support = can(admin.role, "support");
-  const params = await searchParams;
-  const ver = params.ver ?? "abiertas", page = pageNumber(params.pagina);
-  const db = getDb();
-  const status = ver === "cerradas" ? ["CLOSED"] : ver === "respondidas" ? ["ANSWERED"] : ver === "todas" ? ["OPEN", "ANSWERED", "CLOSED"] : ["OPEN"];
-  const [tickets, replies, counts] = await Promise.all([
-    supportPage(db, status, page),
-    savedReplies(db),
-    db.supportTicket.groupBy({ by: ["status"], _count: { _all: true } }),
-  ]);
-  const c = (s: string) => counts.find((x) => x.status === s)?._count._all ?? 0;
-  const total = status.reduce((n, s) => n + c(s), 0);
+import { AREAS } from "@/lib/brand";
+import { CASE_STATUS } from "@/lib/chat-help";
+import { unifiedInbox } from "@/server/support-inbox";
+import { when } from "@/components/admin-ui";
+import { SupportInboxSummary } from "@/components/support-inbox";
+import { savedReplies } from "@/server/settings";
+import { ActionForm, Submit } from "@/components/forms";
+import { SupportRefresh } from "@/components/support-refresh";
+import { can } from "@/server/admin-team";
+import {
+  adminSaveReplyAction,
+  adminDeleteReplyAction,
+} from "@/app/actions/admin";
+export const metadata = { title: "Conversaciones" };
+export default async function Inbox({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const a = await requireAdmin("support"),
+    p = await searchParams,
+    page = pageNumber(p.pagina),
+    status =
+      p.estado ??
+      (p.ver === "todas"
+        ? "all"
+        : p.ver === "cerradas"
+          ? "CLOSED"
+          : p.ver === "respondidas"
+            ? "ANSWERED"
+            : "open");
+  const db = getDb(),
+    [{ rows, total }, replies] = await Promise.all([
+      unifiedInbox(db, {
+        status,
+        query: p.q,
+        channel: p.canal,
+        page,
+        assigned: p.mias === "1" ? a.email : undefined,
+        area: AREAS.some((a) => a.key === p.area) ? p.area : undefined,
+      }),
+      savedReplies(db),
+    ]);
+  const url = (n: number) =>
+    `/admin/soporte?${new URLSearchParams({
+      estado: status,
+      q: p.q ?? "",
+      canal: p.canal ?? "all",
+      mias: p.mias ?? "",
+      area: p.area ?? "",
+      pagina: String(n),
+    })}`;
   return (
     <>
-      <PageHead title="Soporte" desc="Consultas de los clientes, de la más urgente a la más vieja." />
+      <PageHead
+        title="Conversaciones"
+        desc="Guafra, consultas del sitio y ayuda: un historial por caso."
+      />
       <SupportInboxSummary />
-      {!emailEnabled() && <p className="notice a">Las respuestas se guardan y el cliente las ve en Ayuda, pero no le llega un correo hasta cargar la clave de Resend.</p>}
-      <div className="seg" style={{ alignSelf: "flex-start" }}>
-        {[["abiertas", `Sin responder (${c("OPEN")})`], ["respondidas", `Respondidas (${c("ANSWERED")})`], ["cerradas", "Cerradas"], ["todas", "Todas"]].map(([k, l]) => <Link key={k} className={`segl ${ver === k ? "on" : ""}`} href={`/admin/soporte?ver=${k}`}>{l}</Link>)}
-      </div>
-      {tickets.length ? tickets.map((t) => (
-        <div className="card" key={t.id}>
-          <div className="chead">
-            <div><h3>{t.subject}</h3><p className="sub"><Link className="lnk" href={`/admin/usuarios/${t.user.id}`}>{t.user.name}</Link> · {t.user.email} · {when(t.createdAt)}</p></div>
-            <span className={`pill ${PRI[t.priority]?.[1] ?? ""}`}>Prioridad {PRI[t.priority]?.[0] ?? "Normal"}</span>
-          </div>
-          <SupportThread body={t.body} reply={t.reply} messages={t.messages} internal />
-          {support && <CaseTools kind="ticket" id={t.id} assignedTo={t.assignedTo} />}
-          {support && t.status !== "CLOSED" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <ActionForm action={adminReplyTicketAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input type="hidden" name="id" value={t.id} />
-                <ReplyBox replies={replies} name={t.user.name.split(" ")[0]} />
-                <div><Submit pending="Enviando…">Responder</Submit></div>
-              </ActionForm>
-              <div className="acts">
-                <form action={adminTicketPriorityAction} className="acts"><input type="hidden" name="id" value={t.id} /><select name="priority" defaultValue={t.priority} className="st-sel" aria-label="Prioridad"><option value="HIGH">Alta</option><option value="NORMAL">Normal</option><option value="LOW">Baja</option></select><button className="btn sm" type="submit">Cambiar prioridad</button></form>
-                <form action={adminCloseTicketAction}><input type="hidden" name="id" value={t.id} /><button className="btn sm" type="submit">Cerrar consulta</button></form>
-              </div>
-            </div>
-          )}
-        </div>
-      )) : <div className="empty">No hay consultas acá.</div>}
-      <Pagination page={page} size={25} total={total} href={p => `/admin/soporte?ver=${encodeURIComponent(ver)}&pagina=${p}`} label="Páginas de consultas de soporte" />
-
-      {support && (
-        <div className="card">
-          <div className="chead"><h3>Respuestas guardadas</h3><span className="sub">Para no escribir lo mismo cada vez. Usá {"{nombre}"} para el nombre del cliente</span></div>
-          {replies.length > 0 && <div className="list" style={{ marginBottom: 12 }}>{replies.map((r) => (
-            <div className="li" key={r.title}><div className="grow"><div className="t">{r.title}</div><div className="s">{r.text.slice(0, 120)}{r.text.length > 120 ? "…" : ""}</div></div>
-              <form action={adminDeleteReplyAction}><input type="hidden" name="title" value={r.title} /><button className="btn ghost sm" type="submit">Borrar</button></form></div>
-          ))}</div>}
-          <ActionForm action={adminSaveReplyAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <label className="field" style={{ maxWidth: 320 }}>Nombre<input name="title" placeholder="Ej.: Cómo cargar un resumen" /></label>
-            <label className="field">Texto<textarea name="text" rows={4} placeholder="Hola {nombre}, para cargar el resumen…" /></label>
-            <div><Submit>Guardar respuesta</Submit></div>
-          </ActionForm>
-        </div>
+      <SupportRefresh />
+      {can(a.role, "owner") && (
+        <p>
+          <Link className="lnk" href="/admin/soporte/respuestas">
+            Administrar respuestas automáticas de Guafra →
+          </Link>
+        </p>
       )}
+      <form
+        className="card"
+        style={{
+          display: "flex",
+          gap: 14,
+          flexWrap: "wrap",
+          alignItems: "end",
+        }}
+      >
+        <label className="field" style={{ flex: "1 1 220px" }}>
+          Buscar
+          <input
+            name="q"
+            defaultValue={p.q}
+            placeholder="Código, nombre, correo o asunto"
+            maxLength={120}
+          />
+        </label>
+        <label className="field">
+          Estado
+          <select name="estado" defaultValue={status}>
+            <option value="open">Pendientes del equipo</option>
+            <option value="all">Todos los casos humanos</option>
+            {Object.entries(CASE_STATUS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Canal
+          <select name="canal" defaultValue={p.canal ?? "all"}>
+            <option value="all">Todos</option>
+            <option value="contact">Chat y contacto</option>
+            <option value="ticket">Ayuda anterior</option>
+            <option value="bot">Solo automáticas</option>
+          </select>
+        </label>
+        <label className="field">
+          Motivo
+          <select name="area" defaultValue={p.area ?? ""}>
+            <option value="">Todos los motivos</option>
+            {AREAS.map((a) => (
+              <option key={a.key} value={a.key}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            name="mias"
+            value="1"
+            defaultChecked={p.mias === "1"}
+          />
+          Asignadas a mí
+        </label>
+        <button className="btn pri">Filtrar</button>
+      </form>
+      <p className="sub">
+        {total} conversaciones · Las automáticas sin derivación se consultan con
+        “Solo automáticas”.
+      </p>
+      {rows.map((c) => (
+        <Link
+          className="card"
+          style={{ display: "block", textDecoration: "none", color: "inherit" }}
+          key={`${c.kind}-${c.id}`}
+          href={`/admin/soporte/${c.kind}/${c.id}`}
+        >
+          <div className="chead">
+            <div>
+              <span className="sub">
+                {c.code} ·{" "}
+                {c.kind === "bot"
+                  ? "Guafra automático"
+                  : c.kind === "contact"
+                    ? "Chat / contacto"
+                    : "Ayuda"}
+              </span>
+              <h3 style={{ overflowWrap: "anywhere" }}>{c.subject}</h3>
+              <p className="sub">
+                {c.name} {c.email && `· ${c.email}`}
+              </p>
+            </div>
+            <span className={`pill ${c.priority === "HIGH" ? "r" : ""}`}>
+              {CASE_STATUS[c.status] ?? "Automática"}
+            </span>
+          </div>
+          <p className="sub">
+            {when(c.at)} ·{" "}
+            {c.assigned ? `Asignada a ${c.assigned}` : "Sin asignar"} ·
+            Prioridad{" "}
+            {c.priority === "HIGH"
+              ? "alta"
+              : c.priority === "LOW"
+                ? "baja"
+                : "normal"}
+          </p>
+        </Link>
+      ))}
+      {!rows.length && (
+        <div className="empty">No hay conversaciones con estos filtros.</div>
+      )}
+      <Pagination page={page} size={25} total={total} href={url} />
+      <details className="card">
+        <summary>Respuestas guardadas para el equipo</summary>
+        {replies.map((r) => (
+          <div className="li" key={r.title}>
+            <div className="grow">
+              <b>{r.title}</b>
+              <p className="sub">{r.text}</p>
+            </div>
+            <form action={adminDeleteReplyAction}>
+              <input type="hidden" name="title" value={r.title} />
+              <button className="btn sm">Borrar</button>
+            </form>
+          </div>
+        ))}
+        <ActionForm
+          action={adminSaveReplyAction}
+          style={{ display: "grid", gap: 14, marginTop: 20 }}
+        >
+          <label className="field">
+            Nombre
+            <input name="title" required />
+          </label>
+          <label className="field">
+            Texto
+            <textarea
+              name="text"
+              rows={4}
+              required
+              placeholder="Hola {nombre}, …"
+            />
+          </label>
+          <Submit>Guardar respuesta</Submit>
+        </ActionForm>
+      </details>
     </>
   );
 }

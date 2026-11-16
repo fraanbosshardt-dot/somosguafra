@@ -658,7 +658,8 @@ export async function supportTicketAction(_: FormState, fd: FormData): Promise<F
   const ticket = await db.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id} FOR UPDATE`;
     if (await tx.supportTicket.count({ where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 3600e3) } } }) >= 5) return null;
-    const t = await tx.supportTicket.create({ data: { userId: user.id, subject: subject.slice(0, 140), body, priority: plan === "PRO" ? "HIGH" : "NORMAL" } });
+    const {supportCode}=await import("@/server/guafra-chat");
+    const t = await tx.supportTicket.create({ data: { code:supportCode(),userId: user.id, subject: subject.slice(0, 140), body, priority: plan === "PRO" ? "HIGH" : "NORMAL" } });
     const links = caseLinks("ticket", t.id, user.email, appUrl());
     await tx.emailOutbox.create({ data: { dedupeKey: `support/${t.id}/received`, purpose: "support", to: user.email, replyTo: links.replyTo, subject: `Recibimos tu consulta: ${t.subject}`, text: `Hola ${user.name.split(" ")[0]}:\n\nRecibimos tu consulta. Podés seguirla en ${appUrl()}/app/ayuda o desde este enlace privado: ${links.url}\nTe avisaremos por correo cuando respondamos.\n\nsomosguafra` } });
     return t;
