@@ -4,6 +4,7 @@ import { operationsSnapshot } from "@/server/operations";
 import { billingProviderProbe } from "@/server/billing-provider-probe";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export async function GET(req: Request) {
   if (!operationsAuthorized(req)) return new Response("No autorizado", { status: 401, headers: { "cache-control": "no-store" } });
   if (new URL(req.url).searchParams.get("diagnostic") === "provider") {

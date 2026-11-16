@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "fix/auditoria-integral-20261115": false,
       "fix/alertas-operativas": false,
-      "fix/diagnostico-conciliacion": false
+      "fix/diagnostico-conciliacion": false,
+      "fix/consulta-pagos-proveedor": false
     }
   },
   "regions": [
