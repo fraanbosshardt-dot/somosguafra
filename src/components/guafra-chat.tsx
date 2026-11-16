@@ -215,7 +215,7 @@ export function GuafraChat({
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panel.current?.querySelector<HTMLElement>("button")?.focus();
+    panel.current?.focus({ preventScroll: true });
     return () => {
       document.body.style.overflow = overflow;
       if (previous && previous !== document.body && previous.isConnected)
@@ -287,6 +287,7 @@ export function GuafraChat({
   }
   function fresh() {
     screenVersion.current++;
+    queuedLoad.current = null;
     generation.current++;
     selected.current = null;
     setCurrent(null);
@@ -373,6 +374,7 @@ export function GuafraChat({
           role={inline ? "region" : "dialog"}
           aria-modal={inline ? undefined : true}
           aria-label="Chat Guafra"
+          tabIndex={-1}
           onKeyDown={keyDown}
         >
           <header className={styles.header}>
