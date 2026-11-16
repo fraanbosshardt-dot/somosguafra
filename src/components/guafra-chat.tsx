@@ -14,7 +14,7 @@ const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> 
   cancel: "Cancelar renovación",
   moves: "Movimientos",
 };
-type Case = ChatSelection & { code: string; subject: string; status: string };
+type Case = ChatSelection & { code: string; subject: string; status: string; at: string };
 type Payload = {
   current: ChatView | null;
   cases: Case[];
@@ -396,7 +396,7 @@ export function GuafraChat({
           )}
           {history && !loading && (
             <div className={styles.history}>
-              <p>Conversaciones recientes</p>
+              <p>Tus conversaciones quedan guardadas acá, también las resueltas.</p>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -425,6 +425,7 @@ export function GuafraChat({
                 cases.map((c) => (
                   <button
                     key={`${c.kind}-${c.id}`}
+                    aria-current={current?.id === c.id && current.kind === c.kind ? "true" : undefined}
                     disabled={busy || loading}
                     type="button"
                     onClick={() => {
@@ -435,8 +436,14 @@ export function GuafraChat({
                       );
                     }}
                   >
-                    <b>{c.code}</b>
+                    <div className={styles.historyMeta}>
+                      <b>{c.code}</b>
+                      <em>{CASE_STATUS[c.status] ?? (c.status === "BOT" ? "Con Guafra" : c.status)}</em>
+                    </div>
                     <span>{c.subject}</span>
+                    <time dateTime={c.at}>
+                      {new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" }).format(new Date(c.at))}
+                    </time>
                   </button>
                 ))
               ) : (
@@ -444,7 +451,7 @@ export function GuafraChat({
               )}
             </div>
           )}
-          {current && !loading && (
+          {current && !loading && !history && (
             <p className={styles.case}>
               {current.code} ·{" "}
               {CASE_STATUS[current.status] ??
@@ -453,6 +460,7 @@ export function GuafraChat({
           )}
           <div
             ref={feed}
+            hidden={history && !loading}
             className={styles.feed}
             onScroll={() => {
               if (feed.current)
@@ -586,7 +594,7 @@ export function GuafraChat({
               </>
             )}
           </div>
-          {handoff && current && !current.human && !loading && (
+          {handoff && current && !current.human && !loading && !history && (
             <form
               className={styles.handoff}
               onSubmit={(e) => {
@@ -658,7 +666,7 @@ export function GuafraChat({
             </div>
           )}
           {loading && <p className={styles.hint}>Abriendo conversación…</p>}
-          {!handoff && (
+          {!handoff && !history && (
             <form
               className={styles.compose}
               onSubmit={(e) => {

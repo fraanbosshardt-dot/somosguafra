@@ -290,8 +290,8 @@
   font-size: 12px;
 }
 .history {
-  max-height: 180px;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   border-bottom: 1px solid var(--chat-line);
   padding: 10px 16px;
@@ -301,7 +301,7 @@
   display: block;
   width: 100%;
   text-align: left;
-  background: white;
+  background: var(--chat-bg);
   border: 1px solid var(--chat-line);
   border-radius: 10px;
   padding: 10px;
@@ -318,6 +318,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 12px;
+}
+.history button[aria-current="true"] {
+  border-color: #7bb197;
+  box-shadow: inset 3px 0 #7bb197;
+}
+.historyMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.historyMeta em {
+  border-radius: 12px;
+  padding: 2px 7px;
+  background: var(--chat-soft);
+  font-size: 10px;
+  font-style: normal;
+}
+.history time {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--muted, #5f6368);
 }
 .handoff {
   overflow: auto;

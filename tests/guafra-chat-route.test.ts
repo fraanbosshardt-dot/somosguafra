@@ -7,7 +7,7 @@ vi.mock("@/lib/auth/session", () => ({
   getSession: async () => state.session,
 }));
 import { GET, POST } from "@/app/api/soporte/chat/route";
-import { sendChatMessage, chatHash } from "@/server/guafra-chat";
+import { sendChatMessage, chatHash, resolveBotChat } from "@/server/guafra-chat";
 let t: Awaited<ReturnType<typeof startTestDb>>;
 beforeAll(async () => {
   t = await startTestDb();
@@ -46,6 +46,29 @@ it("GET es privado, no crea casos y entrega solo una cookie técnica HttpOnly", 
   expect(r.headers.get("set-cookie")).toContain("HttpOnly");
   expect((await r.json()).cases).toEqual([]);
   expect(await t.db.chatSession.count()).toBe(0);
+});
+
+it("reabrir el widget recupera el último chat incluso resuelto, sin crear otro caso", async () => {
+  const visitor = "P".repeat(43);
+  const actor = { user: null, visitorHash: chatHash(visitor), ip: null };
+  const chat = await sendChatMessage(t.db, actor, {
+    text: "Cómo agrego movimientos", nonce: crypto.randomUUID(),
+  });
+  const count = await t.db.chatSession.count();
+  const reopen = () => GET(new NextRequest("https://example.invalid/api/soporte/chat", {
+    headers: { cookie: `somosguafra_chat=${visitor}` },
+  }));
+  const opened = await (await reopen()).json();
+  expect(opened.current.code).toBe(chat.code);
+  expect(opened.current.resolved).toBe(false);
+  await resolveBotChat(t.db, actor, chat);
+  const saved = await (await reopen()).json();
+  expect(saved.current.code).toBe(chat.code);
+  expect(saved.current.resolved).toBe(true);
+  expect(saved.current.messages).toEqual(opened.current.messages);
+  expect(saved.cases).toEqual(expect.arrayContaining([expect.objectContaining({ code: chat.code, status: "RESOLVED", subject: "Cómo agrego movimientos" })]));
+  expect(await t.db.chatSession.count()).toBe(count);
+  await t.db.chatSession.delete({ where: { id: chat.id } });
 });
 it("rechaza origen ajeno, origen ausente, JSON roto y cuerpos demasiado grandes", async () => {
   for (const origin of ["https://attacker.invalid", ""])
