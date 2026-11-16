@@ -90,16 +90,17 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
   return (
     <div className={`app ${sideOff ? "side-off" : ""}`}>
       <header className="top">
-        <button className="ibtn menu-btn" aria-label={open || !sideOff ? "Ocultar menú" : "Mostrar menú"} aria-expanded={open || !sideOff} onClick={toggleMenu}><Icon name="menu" /></button>
+        <button className="ibtn menu-btn desktop-menu" aria-label={sideOff ? "Mostrar menú" : "Ocultar menú"} aria-expanded={!sideOff} onClick={toggleMenu}><Icon name="menu" /></button>
+        <button className="ibtn menu-btn mobile-menu" aria-label={open ? "Ocultar menú" : "Mostrar menú"} aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="menu" /></button>
         <Link href="/app" className="brand" aria-label="Somos Guafra, ir al inicio"><Mark /><b className="wordmark">somosguafra</b></Link>
         <form action="/app/buscar" className="search top-search" role="search"><input name="q" placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" /></form>
         <span style={{ flex: 1 }} />
         <Link className="ibtn top-search-btn" href="/app/buscar" aria-label="Buscar"><Icon name="search" /></Link>
         {!readOnly && <Link href="/app/movimientos/nuevo" className="btn pri top-new"><Icon name="plus" />Nuevo movimiento</Link>}
         {modules.alertas && <Link className="ibtn" href="/app/alertas" aria-label="Alertas"><Icon name="bell" />{overdue > 0 && <span className="dot" />}</Link>}
-        <ThemeButton />
-        <Link className="ibtn" href="/app/ayuda" aria-label="Ayuda"><Icon name="help" /></Link>
-        <Link className="ibtn" href="/app/configuracion" aria-label="Configuración"><Icon name="gear" /></Link>
+        <ThemeButton className="ibtn top-secondary" />
+        <Link className="ibtn top-secondary" href="/app/ayuda" aria-label="Ayuda"><Icon name="help" /></Link>
+        <Link className="ibtn top-secondary" href="/app/configuracion" aria-label="Configuración"><Icon name="gear" /></Link>
         <button className="avatar" style={{ border: 0, cursor: "pointer" }} aria-label="Tu cuenta" aria-haspopup="dialog" aria-expanded={menu} title={userName} onClick={() => setMenu(true)}>{initials}</button>
       </header>
       <aside className={`side ${open ? "open" : ""}`} aria-label="Menú principal">
@@ -143,10 +144,11 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
               </div>
             )}
             <div className="list">
-              {[...(isAdmin ? [["Panel interno", "/admin"]] : []), ["Tu plan", "/app/configuracion?tab=plan"], ["Configuración", "/app/configuracion"]].map(([l, h]) => (
+              {[...(isAdmin ? [["Panel interno", "/admin"]] : []), ["Tu plan", "/app/configuracion?tab=plan"], ["Configuración", "/app/configuracion"], ["Ayuda", "/app/ayuda"]].map(([l, h]) => (
                 <Link key={h} className="li" href={h} onClick={() => setMenu(false)} style={{ textDecoration: "none", color: "inherit" }}><div className="grow">{l}</div><span className="mut">›</span></Link>
               ))}
             </div>
+            <div className="account-mobile-preferences"><span>Modo claro u oscuro</span><ThemeButton /></div>
             <div className="acts">
               <form action={logout}><button className="btn" type="submit">Cerrar sesión</button></form>
               <button className="btn ghost" onClick={() => setMenu(false)}>Cerrar</button>

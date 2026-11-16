@@ -17,6 +17,7 @@ import { switchWorkspaceAction } from "@/app/actions/sharing";
 import { emailEnabled } from "@/server/email-verify";
 import { LogoMark } from "@/components/logo-mark";
 import { AnnouncementBar } from "@/components/announcement-bar";
+import "./mobile.css";
 
 // La app es privada: nunca se indexa.
 export const metadata: Metadata = { robots: { index: false, follow: false } };

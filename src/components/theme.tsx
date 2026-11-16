@@ -26,12 +26,12 @@ function useMode() {
 }
 
 // Botón de la barra de arriba: alterna claro y oscuro con un toque.
-export function ThemeButton() {
+export function ThemeButton({ className = "ibtn" }: { className?: string } = {}) {
   const mode = useMode();
   const [dark, setDark] = useState(false);
   useEffect(() => { setDark(isDarkNow(mode)); }, [mode]);
   return (
-    <button type="button" className="ibtn" aria-label={dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} title={dark ? "Modo claro" : "Modo oscuro"} onClick={() => apply(dark ? "light" : "dark")}>
+    <button type="button" className={className} aria-label={dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"} title={dark ? "Modo claro" : "Modo oscuro"} onClick={() => apply(dark ? "light" : "dark")}>
       <svg className="ic" viewBox="0 0 24 24" aria-hidden="true">
         {dark
           ? <path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6L4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />

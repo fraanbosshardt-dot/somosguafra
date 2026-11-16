@@ -66,6 +66,7 @@ export function QuickAdd() {
       <button className="qa-back" aria-label="Cerrar" onClick={() => setOpen(false)} />
       <div className="qa-sheet" role="dialog" aria-modal="true" aria-label="Cargar un movimiento" tabIndex={-1} ref={sheet}>
         <span className="qa-grip" aria-hidden="true" />
+        <div className="qa-heading"><b>Carga rápida</b><button type="button" className="ibtn" aria-label="Cerrar carga rápida" onClick={() => setOpen(false)}>×</button></div>
         <form action={run} className="qa-form">
           <div className="qa-kinds" role="group" aria-label="Tipo">
             {([["EXPENSE", "Gasto"], ["INCOME", "Ingreso"]] as const).map(([k, l]) => (

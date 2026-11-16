@@ -1,0 +1,128 @@
+/* Ritmo y controles de la app privada en pantallas pequeñas. */
+.app .mobile-menu,.app .account-mobile-preferences{display:none}
+.app .qa-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}
+.app .qa-heading b{font-size:16px;font-weight:500}
+.app .qa-heading button{font-size:26px;line-height:1;min-width:44px;min-height:44px}
+
+@media(max-width:900px){
+  .app{grid-template-rows:calc(64px + env(safe-area-inset-top,0px)) minmax(0,1fr)}
+  .app .top{top:0;height:calc(64px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);gap:8px;padding-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px))}
+  .app .top :is(.top-secondary,.desktop-menu){display:none}
+  .app .top .mobile-menu{display:grid}
+  .app .top .ibtn,.app .top .avatar{width:44px;height:44px;min-width:44px;min-height:44px;flex-shrink:0;margin:0}
+  .app .top .brand{padding:0;flex:none;gap:8px}
+  .app .top .brand>svg{width:32px;height:32px}
+  .app .top .brand b{font-size:19px}
+  .app .account-mobile-preferences{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-block:1px solid var(--line)}
+  .app .panel{padding:24px max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));gap:20px;max-height:calc(100dvh - 20px)}
+  .app .panel .list .li{padding-block:16px;min-height:52px}
+  .app .panel .acts{gap:12px}
+  .app .panel .acts>form{flex:1}
+  .app .panel .acts .btn{width:100%;min-height:48px}
+  .app .side .navg a{min-height:48px;height:auto;padding-block:12px;line-height:1.4}
+  .app .side .navg h6{margin-top:20px;margin-bottom:10px}
+  .app .side .navg a span{overflow-wrap:anywhere}
+  .app .view{gap:22px;padding-top:24px;padding-bottom:calc(112px + env(safe-area-inset-bottom,0px));line-height:1.5}
+  .app .view>*{min-width:0;max-width:100%}
+  .app .view :is(.grow,.field,.chead>div,.ph>div){min-width:0}
+  .app :is(.btn,.btn.sm){min-height:48px;height:auto;padding-block:11px;white-space:normal;line-height:1.4;text-align:center;max-width:100%}
+  .app .view .ibtn,.app .panel .ibtn{min-width:44px;min-height:44px}
+  .app .field{gap:8px;font-size:14px;line-height:1.5;max-width:100%;min-width:0}
+  .app .field :is(input,select,textarea),.app .search input,.app .qa-acc select{font-size:16px;max-width:100%;min-width:0}
+  .app .field input:not([type=checkbox]):not([type=radio]):not([type=hidden]),.app .field select{min-height:48px;padding:11px 12px}
+  .app .field textarea{padding:12px;line-height:1.6;resize:vertical}
+  .app .view form:not(.search){row-gap:18px!important}
+  .app .view .frow{gap:18px}
+  .app .view :is(.sub,.hint,.s,.help-line){line-height:1.6}
+  .app .view :is(.t,.s,.sub,.hint,.field,.notice,.support-bubble){overflow-wrap:anywhere}
+  .app .view .card{padding:20px 18px}
+  .app .view .chead{gap:12px;margin-bottom:16px;align-items:flex-start}
+  .app .view .chead h3+.sub{margin-top:6px}
+  .app .view .ph{gap:16px;align-items:flex-start}
+  .app .view .ph h1{font-size:24px;line-height:1.3}
+  .app .view .ph p{font-size:14px;line-height:1.6;margin-top:8px}
+  .app .view .ph>.acts{width:100%}
+  .app .view .ph>.acts>.btn{flex:1 1 auto}
+  .app .view .acts{gap:12px;row-gap:12px;max-width:100%}
+  .app .view .acts>form{max-width:100%;min-width:0}
+  .app .view .notice{padding:16px;gap:14px;line-height:1.6;flex-wrap:wrap;margin-block:0}
+  .app .view .notice>.acts{flex-basis:100%;margin-left:0!important}
+  .app .view .notice>.acts .btn{flex:1}
+  .app .view .form-msg{margin-top:8px!important;line-height:1.6}
+  .app .view .field+.form-msg{margin-top:12px!important}
+  .app .view .check{gap:10px;min-height:44px;line-height:1.6;align-items:center}
+  .app .view .more>summary{min-height:48px;padding-block:10px;line-height:1.5}
+  .app .view .chips{gap:10px}
+  .app .view :is(.chip,.chipck span){min-height:44px;padding:9px 14px;line-height:1.4}
+  .app .view .seg{max-width:100%;overscroll-behavior-x:contain}
+  .app .view .seg :is(button,a,.segl){min-height:48px;padding:10px 14px;line-height:1.4}
+  .app .view .li{padding-block:16px;column-gap:12px;row-gap:14px;flex-wrap:wrap}
+  .app .view .li>.grow{min-width:0!important;flex:1 1 140px}
+  .app .view .li :is(.t,.s){line-height:1.5}
+  .app .view .li .s{margin-top:5px}
+  .app .view .cf-acts{gap:12px;padding-top:4px}
+  .app .view .hrow{gap:16px;row-gap:8px;padding-block:14px;flex-wrap:wrap}
+  .app .view .hrow>span{min-width:0;flex:1 1 150px;overflow-wrap:anywhere}
+  .app .view .hrow>b{margin-left:auto}
+  .app .view .fc{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .app .view .fc>div{padding:16px 14px}
+  .app .view .fc b{display:block;white-space:normal;overflow-wrap:anywhere;margin-top:6px;font-size:18px;line-height:1.4}
+  .app .view .tw{margin-inline:-18px;padding-inline:18px;max-width:calc(100% + 36px);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .app .view .tw :is(th,td){padding:14px 12px;font-size:14px;line-height:1.5}
+  .app .view .tw th{font-size:12px}
+  .app .view .settings-mobile{margin-bottom:4px}
+  .app .view .plan-up{gap:24px}
+  .app .view .plan-box{padding:20px}
+  .app .view .plan-buy{gap:18px}
+  .app .view .plan-cycle span{min-height:48px}
+  .app .view .subscription-summary{gap:12px;margin-bottom:20px}
+  .app .view .plan-why>h4{margin-top:20px;margin-bottom:12px}
+  .app .view .plan-fine{line-height:1.6;margin-top:14px}
+  .app .view .support-thread{gap:16px;margin-block:20px}
+  .app .view .support-bubble{padding:16px;line-height:1.65}
+  .app .view .recovery-list{grid-template-columns:minmax(0,1fr);gap:14px}
+  .app .qa-sheet{padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px));max-height:calc(100dvh - 16px)}
+  .app .qa-form{gap:18px}
+  .app .qa-kinds{gap:10px}
+  .app .qa-kinds :is(button,a){min-height:48px}
+  .app .qa-amount{gap:8px;padding-block:6px}
+  .app .qa-amount b{max-width:100%;font-size:clamp(30px,8vw,42px);overflow-wrap:anywhere}
+  .app .qa-keys{gap:10px}
+  .app .qa-keys button{min-height:52px}
+  .app .qa-more{display:block;min-height:44px;padding-block:12px;line-height:1.5}
+  .app .tabbar :is(a,button){min-width:0;min-height:64px;gap:5px;padding:10px 2px 12px;font-size:11px;line-height:1.3;text-align:center}
+  .app .tabbar .on .ic{padding-inline:10px}
+  .app .tabbar .plus span{margin-top:-16px;width:50px;height:50px}
+  .app .toast{bottom:calc(88px + env(safe-area-inset-bottom,0px));line-height:1.5}
+  body:has(.app) .cdlg{padding:24px;max-height:calc(100dvh - 32px);overflow-y:auto}
+  body:has(.app) .cdlg h3{line-height:1.45}
+  body:has(.app) .cdlg p{line-height:1.65;margin-top:14px}
+  body:has(.app) .cdlg-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:24px}
+  body:has(.app) .cdlg-acts .btn{min-height:48px;white-space:normal;padding-block:12px;width:100%}
+}
+
+@media(max-width:480px){
+  body:has(.app) .cdlg-acts{grid-template-columns:minmax(0,1fr)}
+}
+
+@media(max-width:640px){
+  .app .view .frow{grid-template-columns:minmax(0,1fr)}
+  .app .view .frow>.field{min-width:0!important;width:100%;flex-basis:100%!important}
+  .app .view .hero .acts>.btn{flex:1 1 auto}
+  .app .view .cf-acts{flex-basis:100%;margin-left:0}
+  .app .view .cf-acts .btn{flex:1 1 140px}
+  .app .view .kv{grid-template-columns:minmax(0,1fr);row-gap:6px}
+  .app .view .kv dt:not(:first-child){margin-top:12px}
+  .app .view .kv dd{text-align:left!important;overflow-wrap:anywhere}
+  .app .view .day-row>summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+  .app .view .day-row>summary>.grow{grid-column:1/-1}
+  .app .view .day-row>summary>b{min-width:0!important}
+  .app .view .grp-sum{gap:12px}
+}
+
+@media(max-width:359px){
+  .app .view{padding-inline:12px}
+  .app .top{gap:4px}
+  .app .view .fc{grid-template-columns:minmax(0,1fr)!important}
+  .app .view .plan-box{padding:16px}
+}
