@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      test_notification:
+        description: 'Enviar prueba de alerta: falla deliberadamente sin consultar ni modificar producción'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -10,10 +15,11 @@ concurrency:
   cancel-in-progress: false
 jobs:
   disponibilidad:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.test_notification }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
-      OPERATIONS_SECRET: ${{ secrets.CRON_SECRET }}
+      OPERATIONS_SECRET: ${{ secrets.OPERATIONS_MONITOR_SECRET }}
     steps:
       - name: Comprobar sitio, ingreso y base de datos
         shell: bash
@@ -31,5 +37,18 @@ jobs:
               "https://somosguafra.com/api/health/operaciones" -o /tmp/operations-response
             python3 -c 'import json; assert json.load(open("/tmp/operations-response"))["ok"] is True'
           else
-            echo "::warning::Falta configurar CRON_SECRET en GitHub para vigilar pagos y correos; solo se comprobó disponibilidad pública."
+            echo "::error::Falta OPERATIONS_MONITOR_SECRET. El monitoreo interno no está conectado."
+            exit 1
           fi
+      - name: Indicar dónde revisar un fallo
+        if: failure()
+        run: echo "::error::Revisar Panel interno → Sistema y seguridad / Actividad. Este control solo consulta; no ejecuta cobros ni bajas. Los logs públicos no incluyen el detalle financiero."
+  prueba-aviso:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_notification }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: PRUEBA de aviso, no incidente real
+        run: |
+          echo "::error::PRUEBA AUTORIZADA DE NOTIFICACIONES. No se consultó ni modificó producción."
+          exit 1
