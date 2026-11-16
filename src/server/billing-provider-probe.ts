@@ -18,9 +18,9 @@ export async function billingProviderProbe(db: Pick<Db, 'billingAgreement'>) {
         while (text.length < 4096) { const {done,value}=await reader.read(); if(done) break; text+=new TextDecoder().decode(value).slice(0,4096-text.length); }
         await reader.cancel();
         try {
-          const body=JSON.parse(text); const message=String(body.message??'')+' '+String(body.error??'');
+          const body=JSON.parse(text); const message=(String(body.message??'')+' '+String(body.error??'')).replaceAll(token,'').replaceAll(agreement?.providerRef??'\u0000','');
           const words=new Set('limit offset parameter parameters maximum minimum max min integer number numeric invalid required missing valid not supported exceeds greater less than between must be positive zero negative range too large small at least one filter filters pagination preapproval_id payment_id payer_id status search results found authorized payments invoice invoices no approved date start end begin_date end_date sort criteria bad request bad_request cannot and the is value values are'.split(' '));
-          technicalHint=(message.toLowerCase().match(/[a-z_]+|\d+/g)??[]).filter(w=>words.has(w)||(/limit|offset|pagination/.test(message)&&/^\d{1,3}$/.test(w))).slice(0,45).join(' ');
+          technicalHint=(message.toLowerCase().match(/[a-z0-9_]+/g)??[]).filter(w=>words.has(w)||(/limit|offset|pagination/.test(message)&&/^\d{1,3}$/.test(w))).slice(0,45).join(' ');
         } catch { /* No unstructured content leaves the probe. */ }
       } else await response.body?.cancel();
       checks.push({ operation, status, ...(technicalHint ? {technicalHint} : {}) });
