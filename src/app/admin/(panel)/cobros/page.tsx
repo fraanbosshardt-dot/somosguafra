@@ -38,7 +38,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
 
       <div className="card">
         <div className="chead"><h3>Suscripciones</h3></div>
-        {subs.length ? <div className="tw"><table>
+        {subs.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Cliente</th><th>Ciclo</th><th>Estado</th><th>Cupón</th><th>Desde</th><th /></tr></thead>
           <tbody>{subs.map((s) => { const u = who(s.workspace); return (
             <tr key={s.id}>
@@ -54,7 +54,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
 
       <div className="card">
         <div className="chead"><h3>Últimos pagos</h3><span className="sub">Las devoluciones se hacen desde Mercado Pago y se reflejan acá solas</span></div>
-        {invoices.length ? <div className="tw"><table>
+        {invoices.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Fecha</th><th>Cliente</th><th>Importe</th><th>Estado</th></tr></thead>
           <tbody>{invoices.map((i) => { const u = who(i.workspace); return (
             <tr key={i.id}><td>{fmtDate(i.paidAt ?? i.createdAt)}</td><td>{u ? <Link className="lnk" href={`/admin/usuarios/${u.id}`}>{u.email}</Link> : "—"}</td><td>{formatMoney(i.amount.toString(), i.currency)}</td>

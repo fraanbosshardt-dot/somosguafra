@@ -28,7 +28,7 @@ export default async function Activity({ searchParams }: { searchParams: Promise
         <div className="seg">{FILTERS.map(([k, l]) => <Link key={k} className={`segl ${f[0] === k ? "on" : ""}`} href={`/admin/actividad${k ? `?ver=${k}` : ""}`}>{l}</Link>)}</div>
         <form className="acts"><input type="hidden" name="ver" value={f[0]} /><input className="adm-q" name="q" defaultValue={q} placeholder="Buscar por correo" aria-label="Buscar por correo" /><button className="btn" type="submit">Buscar</button></form>
       </div>
-      <div className="card"><div className="tw"><table>
+      <div className="card"><div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
         <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué pasó</th><th>Detalle</th></tr></thead>
         <tbody>{logs.map((l) => {
           const m = (l.meta ?? {}) as Record<string, unknown>;

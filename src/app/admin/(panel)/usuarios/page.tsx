@@ -49,7 +49,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
           <select name="plan" defaultValue={sp.plan ?? ""} className="st-sel" aria-label="Filtrar"><option value="">Todos</option><option value="pro">Pro</option><option value="gratis">Gratis</option><option value="suspendidos">Suspendidos</option><option value="trial">En período gratuito</option><option value="pendientes">Intento de compra pendiente</option><option value="renovacion-off">Renovación desactivada</option><option value="internas">Internas / prueba</option><option value="inactivos">Sin actividad en 30 días</option></select>
           <button className="btn" type="submit">Buscar</button>
         </form>
-        <div className="tw"><table>
+        <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Cliente</th><th>País</th><th>Plan</th><th>Alta</th><th>Último uso</th><th>Estado</th></tr></thead>
           <tbody>{users.map((u) => {
             const ws = u.memberships[0]?.workspace;

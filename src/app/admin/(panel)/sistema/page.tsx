@@ -79,7 +79,7 @@ export default async function SystemPage() {
       </div>
       <div className="card">
         <div className="chead"><h3>Últimos problemas</h3></div>
-        {problems.length ? <div className="tw"><table>
+        {problems.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Cuándo</th><th>Qué pasó</th><th>Sobre</th><th>Conexión</th></tr></thead>
           <tbody>{problems.map((p) => <tr key={p.id}><td style={{ whiteSpace: "nowrap" }}>{when(p.createdAt)}</td><td>{actionName(p.action)}</td><td>{p.entityId ?? "—"}</td><td>{p.ip ?? "—"}</td></tr>)}</tbody>
         </table></div> : <div className="empty">Sin problemas registrados.</div>}
