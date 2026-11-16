@@ -15,9 +15,12 @@ export async function startTestDb() {
   const port = 56000 + Math.floor(Math.random() * 2000);
   const server = new PGLiteSocketServer({ db: pg, port, host: "127.0.0.1" });
   await server.start();
-  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: `postgresql://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`, max: 1 }) });
+  const connectionString = `postgresql://postgres:postgres@127.0.0.1:${port}/postgres?sslmode=disable`;
+  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 1 }) });
   return {
     db,
+    sql: pg,
+    connectionString,
     async stop() {
       await db.$disconnect();
       await server.stop();

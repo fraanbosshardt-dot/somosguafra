@@ -11,6 +11,9 @@ import { fmtDate } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
 import { supportTicketAction } from "@/app/actions/modules";
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
+import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = { title: "Ayuda" };
 
@@ -30,7 +33,7 @@ const FAQ: [string, string][] = [
   ["¿Cómo recibo avisos de vencimientos?", "Podés activar los avisos en el celular desde Configuración → General; en iPhone, primero instalá la app en la pantalla de inicio."],
   ["¿Cómo apago una función que no uso?", "En Configuración, pestaña Funciones. Lo que apagás desaparece del menú y tus datos quedan guardados."],
   ["¿Cómo confirmo mi correo?", "Tocá «Confirmar correo» en el aviso de la app. Se abre una pantalla aparte donde ingresás el código de 6 números o pedís uno nuevo. Revisá también spam. Confirmalo antes de pagar Pro o invitar a otra persona a tu espacio."],
-  ["¿Cómo paso a Pro?", "Desde la web, con la sesión iniciada, elegí por mes o por año y tocá «Suscribirme a Pro»: te llevamos a Mercado Pago para autorizar el pago. También podés hacerlo desde Configuración → Plan. Solo el dueño del espacio puede contratarlo y el correo debe estar confirmado. Pro se habilita cuando Mercado Pago confirma un pago aprobado; volver a la app por sí solo no confirma el cobro."],
+  ["¿Cómo paso a Pro?", "Desde la web, con la sesión iniciada, elegí por mes o por año y tocá «Suscribirme a Pro». Revisá el importe, la frecuencia y la fecha del primer cobro en la pantalla de contratación; después continuá a Mercado Pago para autorizar. También podés hacerlo desde Configuración → Plan. Solo el dueño del espacio puede contratarlo y el correo debe estar confirmado. Pro se habilita cuando Mercado Pago confirma un pago aprobado; volver a la app por sí solo no confirma el cobro."],
   ["¿La prueba de 14 días me cobra al terminar?", "La prueba es gratis, se activa una sola vez desde Configuración → Plan y no te pide tarjeta. Si no contratás Pro, al vencer volvés a Gratis. Si autorizás una suscripción durante la prueba, los cobros se programan para cuando termine; la fecha se informa antes de confirmar en Mercado Pago."],
   ["Ya contraté Pro, ¿por qué sigo en período gratuito?", "Conservás los días que te quedaban. En Configuración → Plan vas a ver tu acceso gratuito y, por separado, Pro mensual o anual programado con su primer cobro. Autorizar la suscripción no confirma un pago. Si programaste el mensual y querés anual, usá «Pasar a anual»: conserva la fecha de inicio y detiene el acuerdo mensual anterior."],
   ["Cerré Mercado Pago sin pagar, ¿se cancela mi plan?", "Cerrar el checkout no pide una baja. La solicitud queda pendiente para retomarla sin repetir el alta. Podés elegir mensual o anual y confirmar el reemplazo de una solicitud sin completar en la pantalla de compra. Mercado Pago puede llamar «suscripción cancelada» a esa solicitud descartada aunque no hayas pagado; eso no quita tus días gratuitos ni cancela otra suscripción activa."],
@@ -48,12 +51,17 @@ const FAQ: [string, string][] = [
   ["¿Cuándo recibimos Pro por una invitación?", "La persona invitada debe confirmar el correo, terminar la bienvenida y registrar su primer movimiento. El premio se acredita una sola vez. Si ya tenés una suscripción paga o programada, los días se guardan: no cambian tus cobros actuales y se aplican cuando ya no haya renovación ni período pago vigente."],
 ];
 
-export default async function Help() {
+export default async function Help({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const { user, plan } = await requireWorkspace();
-  const tickets = await getDb().supportTicket.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 20, include: { messages: { where: { internal: false }, orderBy: { createdAt: "asc" } } } });
+  const page = pageNumber((await searchParams).pagina);
+  const [tickets, total] = await Promise.all([
+    getDb().supportTicket.findMany({ where: { userId: user.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20, skip: (page - 1) * 20, include: { messages: { where: { internal: false }, orderBy: { createdAt: "asc" } } } }),
+    getDb().supportTicket.count({ where: { userId: user.id } }),
+  ]);
   return (
     <>
       <PageHead crumb="Ajustes" title="Ayuda" desc="Respuestas rápidas y una forma de escribirnos." />
+      <p className="sub">Atención al cliente, soporte y reclamos: {BRAND.supportHours}. Podés dejar tu consulta en cualquier momento.</p>
       <SupportGuide />
       <div className="grid g32">
         <div className="card">
@@ -71,7 +79,7 @@ export default async function Help() {
               {plan === "PRO" && <p className="sub" style={{ margin: 0 }}>Con Pro tu consulta va primero: te respondemos dentro de 1 día hábil.</p>}
             </ActionForm>
           </div>
-          {tickets.length > 0 && (
+          {total > 0 && (
             <div className="card">
               <div className="chead"><h3>Tus consultas</h3></div>
               <div className="list">
@@ -83,6 +91,7 @@ export default async function Help() {
                   </div>
                 ))}
               </div>
+              <Pagination page={page} size={20} total={total} href={p => `/app/ayuda?pagina=${p}`} label="Páginas de tus consultas" />
             </div>
           )}
         </div>

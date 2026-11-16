@@ -3,7 +3,7 @@ import type { Db } from "./ledger";
 import { UserError } from "./ledger";
 export type CaseKind = "ticket" | "contact";
 export const parentWhere = (kind: CaseKind, id: string) => kind === "ticket" ? { ticketId: id } : { contactId: id };
-const secret = () => process.env.AUTH_SECRET;
+const secret = () => process.env.AUTH_SECRET && process.env.AUTH_SECRET.length >= 32 ? process.env.AUTH_SECRET : undefined;
 export function caseToken(kind: CaseKind, id: string, email: string, expires = Math.floor(Date.now() / 1000) + 90 * 86400) {
   const key = secret(); if (!key) return null;
   const payload = `${kind === "ticket" ? "t" : "c"}.${id}.${expires.toString(36)}`;

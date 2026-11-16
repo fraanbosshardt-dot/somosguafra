@@ -36,8 +36,8 @@ export default async function SystemPage() {
   const cronAge = cron ? (Date.now() - cron.createdAt.getTime()) / 36e5 : null;
   const rateAge = lastRate ? (Date.now() - lastRate.fetchedAt.getTime()) / 36e5 : null;
   const [pendingEmails, failedEmails, uncertainCheckouts] = await Promise.all([
-    db.emailOutbox.count({ where: { sentAt: null } }),
-    db.emailOutbox.count({ where: { sentAt: null, lastError: { not: null } } }),
+    db.emailOutbox.count({ where: { sentAt: null, deliveryState: { in: ["queued", "sending"] } } }),
+    db.emailOutbox.count({ where: { sentAt: null, deliveryState: "queued", lastError: { not: null } } }),
     db.billingAgreement.count({ where: { status: { in: ["creating", "uncertain"] } } }),
   ]);
   const operations = await operationsSnapshot(db);
@@ -62,7 +62,7 @@ export default async function SystemPage() {
             <dt>Cotizaciones</dt><dd>{lastRate ? ok((rateAge ?? 99) < 36, `Del ${when(lastRate.fetchedAt)}`) : ok(false, "Sin datos")}</dd>
             <dt>Lecturas de PDF este mes</dt><dd>{int(pdf)} (límite {sys.pdfLimit} por cliente)</dd>
             <dt>Correos (Resend)</dt><dd>{ok(emailEnabled(), emailEnabled() ? "Activado" : "Falta la clave")}</dd>
-            <dt>Correos en cola</dt><dd>{pendingEmails} pendientes · {failedEmails} con error, se reintentan</dd>
+            <dt>Correos en cola</dt><dd>{pendingEmails} pendientes · {failedEmails} con reintento · {operations.uncertainEmails} con entrega incierta, requieren revisión</dd>
             <dt>Solicitudes de cobro en verificación</dt><dd>{ok(uncertainCheckouts === 0, String(uncertainCheckouts))}</dd>
             <dt>Cobros (Mercado Pago)</dt><dd>{ok(bill.enabled, bill.enabled ? "Activado" : "Falta configurar")}</dd>
             <dt>Avisos en el celular</dt><dd>{ok(pushConfig().enabled, pushConfig().enabled ? "Activado" : "Faltan las claves")}</dd>

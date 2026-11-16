@@ -1,10 +1,11 @@
 "use client";
+import { reportError } from "@/lib/diagnostics";
 // Si algo falla dentro de la app, se muestra esto en lugar de la pantalla técnica. Tus datos no se pierden.
 import Link from "next/link";
 import { useEffect } from "react";
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error(error); }, [error]);
+  useEffect(() => { reportError("operation", error); }, [error]);
   return (
     <div className="empty" role="alert" style={{ padding: "48px 24px" }}>
       <h2 style={{ margin: "0 0 8px", fontWeight: 400 }}>Algo salió mal</h2>

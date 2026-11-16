@@ -31,8 +31,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
   const today = todayIn(workspace.timezone);
   const cur = workspace.baseCurrency;
   // Lo principal primero (saldo y pendientes). El consejo y lo último cargado se muestran apenas estén, sin frenar el resto.
+  const openRequest = openObligations(db, workspace.id, today);
   const [d, open, incomeRules, expenseRules, expenses, grainSales] = await Promise.all([
-    dashboard(db, workspace.id, cur, today), openObligations(db, workspace.id, today),
+    dashboard(db, workspace.id, cur, today, openRequest), openRequest,
     db.recurringRule.count({ where: { workspaceId: workspace.id, direction: "RECEIVABLE" } }),
     db.recurringRule.count({ where: { workspaceId: workspace.id, direction: "PAYABLE" } }),
     db.transaction.count({ where: { workspaceId: workspace.id, type: "EXPENSE" } }),

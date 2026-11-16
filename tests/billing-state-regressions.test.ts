@@ -9,6 +9,7 @@ vi.mock("@/server/billing-mail", () => ({ queueBillingNotice: vi.fn(async () => 
 let local: any, remote: any, payment: any, invoice: any, agreement: any;
 let pages = false;
 let unconfirmedCancellation = false;
+let expireAfterCursor: (() => void) | null = null;
 const calls: string[] = [];
 const start = new Date("2026-11-14T12:00:00Z"), end = new Date("2026-12-14T12:00:00Z");
 const patch = (target: any, data: any) => { for (const [k, value] of Object.entries(data)) if (value !== undefined) target[k] = value; return target; };
@@ -20,7 +21,8 @@ const memory: any = {
   subscription: { findUnique: async () => local, upsert: async ({ update }: any) => patch(local, update), update: async ({ data }: any) => patch(local, data) },
   billingAgreement: {
     findUnique: async () => agreement, findMany: async ({ where }: any) => where.providerRef?.not ? [] : [agreement],
-    update: async ({ data }: any) => patch(agreement, data),
+    update: async ({ data }: any) => { const result = patch(agreement, data); if (data.reconcileOffset === 1) expireAfterCursor?.(); return result; },
+    upsert: async ({ update }: any) => patch(agreement, update),
   },
   invoice: {
     findUnique: async () => invoice,
@@ -30,7 +32,7 @@ const memory: any = {
 };
 
 beforeEach(() => {
-  paymentEvents.clear(); calls.length = 0; pages = false; invoice = null; unconfirmedCancellation = false;
+  paymentEvents.clear(); calls.length = 0; pages = false; invoice = null; unconfirmedCancellation = false; expireAfterCursor = null;
   local = { plan: "PRO", status: "ACTIVE", provider: "mercadopago", providerRef: "agreement", trialEndsAt: null, legacyPaidUntil: null, currentPeriodEnd: null, billingCycle: "monthly" };
   agreement = { id: "reservation", workspaceId: "space", providerRef: "agreement", amount: 7499, currency: "ARS", cycle: "monthly", status: "authorized", couponCode: null, couponCounted: false };
   remote = { id: "agreement", external_reference: "space||reservation", status: "authorized", next_payment_date: end.toISOString(), auto_recurring: { transaction_amount: 7499, currency_id: "ARS", frequency: 1, frequency_type: "months" } };
@@ -51,7 +53,7 @@ beforeEach(() => {
     throw new Error("Unexpected request; real network is disabled");
   }));
 });
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 const db = memory as Db;
 
 it("authorization alone does not grant a paid period", async () => {
@@ -121,4 +123,18 @@ it("workspace reconciliation follows pagination without creating or charging any
   await reconcileWorkspaceBilling(db, "space");
   expect(calls.some(path => path.includes("offset=100"))).toBe(true);
   expect(local.currentPeriodEnd).toEqual(end);
+});
+
+it("a time budget saves the committed payment cursor and the next pass resumes there", async () => {
+  pages = true;
+  const clock = vi.spyOn(Date, "now").mockReturnValue(start.getTime());
+  expireAfterCursor = () => clock.mockReturnValue(start.getTime() + 50_000);
+  await reconcileWorkspaceBilling(db, "space");
+  expect(agreement.reconcileOffset).toBe(1);
+  expect(invoice.status).toBe("approved");
+  expireAfterCursor = null;
+  await reconcileWorkspaceBilling(db, "space");
+  expect(calls.some(path => path.includes("offset=1&"))).toBe(true);
+  expect(agreement.reconcileOffset).toBe(0);
+  expect(agreement.lastReconciledAt).toBeInstanceOf(Date);
 });

@@ -2,6 +2,7 @@
 export const BRAND = {
   name: "Somos Guafra",
   tagline: "Finanzas personales en tu moneda",
+  supportHours: "Lunes a viernes, de 9 a 17 h (hora de Argentina)",
   owner: "Francisco Jesús Bosshardt",
   cuit: "20-45836722-2",
   country: "República Argentina",

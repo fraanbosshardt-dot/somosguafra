@@ -156,8 +156,9 @@ export default async function Landing() {
         <span className="lx-reco">Recomendado</span>
         <div><h3>Pro</h3><p>Para anticipar decisiones y ahorrar carga manual.</p></div>
         {pm.amount > 0 ? <div className="lx-price"><b>{price}</b><span>ARS por {period}</span></div> : <div className="lx-price"><b style={{ fontSize: 28 }}>{price}</b></div>}
-        <SubscribeCta className="ws-btn pri lx-shine" cycle={cycle === "anual" ? "yearly" : "monthly"}>Suscribirme a Pro{cycle === "anual" ? " por año" : ""}</SubscribeCta>
-        {cycle === "mensual" && py.amount > 0 && <SubscribeCta className="lx-link checkout-yearly" cycle="yearly" upgradeLabel={`Pasar a anual: ${py.text} por año`} trialLabel={`Elegir Pro anual: ${py.text} por año`}>o pagá el año: {py.text}</SubscribeCta>}
+        <SubscribeCta className="ws-btn pri lx-shine" cycle={cycle === "anual" ? "yearly" : "monthly"} amount={cycle === "anual" ? py.amount : pm.amount}>Suscribirme a Pro{cycle === "anual" ? " por año" : ""}</SubscribeCta>
+        {cycle === "mensual" && py.amount > 0 && <SubscribeCta className="lx-link checkout-yearly" cycle="yearly" amount={py.amount} upgradeLabel={`Pasar a anual: ${py.text} por año`} trialLabel={`Elegir Pro anual: ${py.text} por año`}>o pagá el año: {py.text}</SubscribeCta>}
+        <p className="ws-fine">Se renueva cada {cycle === "anual" ? "año" : "mes"} con Mercado Pago hasta que canceles desde Mi plan. Si tenés un período gratuito vigente, el primer cobro se programa al finalizarlo. <Link href="/terminos">Ver condiciones</Link>.</p>
         <ul><li>{CHECK}Todo lo de Gratis</li>{pro.map((f) => <li key={f.name}>{CHECK}<span>{f.name}{f.name.includes("desde el PDF") ? ` (hasta ${pdfLimit} por mes)` : ""}{f.beta && <> <span className="lx-beta">Beta</span></>}</span></li>)}</ul>
       </div>
     </div>

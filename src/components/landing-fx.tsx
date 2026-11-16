@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 // Número fijo, sin animación.
 export function CountUp({ to, prefix = "$ " }: { to: number; prefix?: string }) {
@@ -40,14 +40,4 @@ export function Reveal({ children, className = "", as: Tag = "div", style, tilt 
 
 export function ScrollTo({ id, children }: { id: string; children: React.ReactNode }) {
   return <button type="button" onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "auto" })}>{children}</button>;
-}
-
-export function PlanToggle({ monthly, yearly }: { monthly: React.ReactNode; yearly: React.ReactNode }) {
-  const [y, setY] = useState(false);
-  return (
-    <>
-      <div className="seg lp-yr"><button className={y ? "" : "on"} onClick={() => setY(false)}>Mensual</button><button className={y ? "on" : ""} onClick={() => setY(true)}>Anual · 2 meses gratis</button></div>
-      {y ? yearly : monthly}
-    </>
-  );
 }

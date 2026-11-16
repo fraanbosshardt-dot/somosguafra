@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/diagnostics";
 import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
@@ -56,6 +57,7 @@ export async function destroySession() {
   if (token) await getDb().session.updateMany({ where: { tokenHash: sha256(token) }, data: { revokedAt: new Date() } });
   jar.delete(COOKIE);
   jar.delete(HINT_COOKIE);
+  jar.delete("somosguafra_purchase");
 }
 
 // Exige sesión completa (con el segundo paso hecho si está activado).
@@ -72,7 +74,7 @@ export async function requireUser() {
   }
   if (s.user.referredById && !s.user.referralRewardedAt && s.user.emailVerified) {
     const { rewardReferral } = await import("@/server/referrals");
-    await rewardReferral(getDb(), s.userId).catch((e) => console.error("[referral retry]", e));
+    await rewardReferral(getDb(), s.userId).catch((e) => reportError("[referral retry]", e));
   }
   return { session: s, user: s.user };
 }

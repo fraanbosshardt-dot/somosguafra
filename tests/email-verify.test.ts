@@ -16,7 +16,7 @@ const mk = async (email: string, data: Record<string, unknown> = {}) => {
   return { u, ws: ws.id };
 };
 
-beforeAll(async () => { t = await startTestDb(); db = t.db as unknown as PrismaClient; }, 60_000);
+beforeAll(async () => { process.env.AUTH_SECRET = "test-verification-secret-at-least-32-characters"; t = await startTestDb(); db = t.db as unknown as PrismaClient; }, 60_000);
 afterAll(async () => { await t.stop(); });
 afterEach(() => { delete process.env.RESEND_API_KEY; });
 

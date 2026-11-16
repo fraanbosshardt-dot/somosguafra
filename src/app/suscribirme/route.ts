@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { publicPlan } from "@/server/public-plan";
+import { PURCHASE_COOKIE, readPurchaseIntent } from "@/server/purchase-intent";
 import { pickMembership } from "@/server/sharing";
 
 export const dynamic = "force-dynamic";
@@ -29,9 +30,14 @@ export async function GET(req: Request) {
   // El mensual puede cambiar a anual. Los demás Pro activos no se compran dos veces.
   const agreement = await getDb().billingAgreement.findFirst({ where: { workspaceId: m.workspaceId, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } });
   const offer = publicPlan(sub, true, new Date(), { agreement });
-  if (!offer.canChoosePlan && !(offer.canResumeCheckout && agreement?.cycle === (anual ? "yearly" : "monthly")) && !(anual && offer.canUpgradeAnnual)) redirect("/app/configuracion?tab=plan&yatenes=1");
-  const { needsVerifiedEmail } = await import("@/server/email-verify");
-  if (needsVerifiedEmail(s.user)) redirect("/app/configuracion?tab=plan&verificar=pro");
-  // Un enlace GET solo muestra el plan; crear una autorización requiere confirmación POST.
+  if (!offer.canSubscribe || offer.access === "paid" || offer.access === "granted") redirect("/app/configuracion?tab=plan");
+  const { needsVerifiedBillingEmail } = await import("@/server/email-verify");
+  if (needsVerifiedBillingEmail(s.user)) {
+    (await cookies()).set(AFTER_COOKIE, target, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 1800 });
+    redirect("/confirmar-correo");
+  }
+  const intent = readPurchaseIntent((await cookies()).get(PURCHASE_COOKIE)?.value);
+  // A signed intent exists only after a deliberate landing POST. GETs never create agreements.
+  if (intent && intent.cycle === (anual ? "yearly" : "monthly")) redirect("/continuar-compra");
   redirect(`/app/contratar?ciclo=${anual ? "anual" : "mensual"}`);
 }

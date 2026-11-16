@@ -1,4 +1,5 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -21,7 +22,7 @@ import type { FormState } from "./auth";
 
 const fail = (e: unknown): FormState => {
   if (e instanceof UserError) return { error: e.message };
-  console.error(e);
+  reportError("operation", e);
   return { error: "No pudimos guardar. Probá de nuevo en un momento." };
 };
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -663,7 +664,7 @@ export async function supportTicketAction(_: FormState, fd: FormData): Promise<F
     return t;
   });
   if (!ticket) return { error: "Recibimos varias consultas. Esperá nuestra respuesta para continuar." };
-  await drainEmailOutbox(db).catch(e => console.error("[support receipt queued]", e));
+  await drainEmailOutbox(db).catch(e => reportError("[support receipt queued]", e));
   revalidatePath("/app/ayuda");
   return { ok: plan === "PRO" ? "Recibimos tu consulta. Con Pro va primero: te respondemos acá mismo dentro de 1 día hábil." : "Recibimos tu consulta. Te respondemos acá mismo." };
 }
@@ -673,8 +674,8 @@ export async function supportTicketAction(_: FormState, fd: FormData): Promise<F
 export async function checkoutAction(fd: FormData) {
   const { user, workspace } = await requireOwner();
   // Para pagar, el correo tiene que estar confirmado: ahí llegan los comprobantes y los avisos de cobro.
-  const { needsVerifiedEmail } = await import("@/server/email-verify");
-  if (needsVerifiedEmail(user)) redirect("/app/configuracion?tab=plan&verificar=pro");
+  const { needsVerifiedBillingEmail } = await import("@/server/email-verify");
+  if (needsVerifiedBillingEmail(user)) redirect("/app/configuracion?tab=plan&verificar=pro");
   const { appUrl } = await import("@/lib/email");
   const { startCheckout, resumeCheckout } = await import("@/server/billing");
   if (fd.get("intent") === "resume") {
@@ -776,12 +777,13 @@ export async function readStatementPdfAction(fd: FormData): Promise<{ error?: st
   if (!(await canUse(plan, "pdf"))) return { error: "Leer el PDF es una función Pro. Podés cargar el resumen a mano." };
   const { pdfMonthlyLimit } = await import("@/server/settings");
   const limit = await pdfMonthlyLimit(getDb());
-  const now = new Date();
-  const used = await getDb().auditLog.count({ where: { workspaceId: workspace.id, action: "card.pdf_read", createdAt: { gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) } } });
-  if (used >= limit) return { error: `Ya leíste ${limit} resúmenes este mes. Cargá este a mano o esperá al mes que viene.` };
   const file = fd.get("file");
   if (!(file instanceof File) || !file.size) return { error: "Elegí el PDF del resumen." };
+  if (file.size > 5_000_000) return { error: "El PDF supera 5 MB." };
+  const { reservePdfRead, completePdfRead, releasePdfRead } = await import("@/server/pdf-quota");
+  let reservation: import("@/server/pdf-quota").PdfReservation | undefined;
   try {
+    reservation = await reservePdfRead(getDb(), workspace.id, user.id, "card", limit);
     const { readStatementPdf } = await import("@/server/statement-pdf");
     const data = await readStatementPdf(new Uint8Array(await file.arrayBuffer()));
     const cardId = str(fd, "cardId");
@@ -789,11 +791,13 @@ export async function readStatementPdfAction(fd: FormData): Promise<{ error?: st
       const { missingPurchases } = await import("@/server/cards");
       data.missing = await missingPurchases(getDb(), workspace.id, cardId, data.purchases);
     }
-    await audit("card.pdf_read", { userId: user.id, workspaceId: workspace.id, meta: { found: data.found } });
-    return { data, left: limit - used - 1 };
+    await completePdfRead(getDb(), reservation, data.found);
+    return { data, left: reservation.left };
   } catch (e) {
     const r = fail(e);
     return { error: r?.error ?? "No pudimos leer ese PDF." };
+  } finally {
+    if (reservation) await releasePdfRead(getDb(), reservation).catch(() => {});
   }
 }
 
@@ -801,20 +805,23 @@ export async function readStatementPdfAction(fd: FormData): Promise<{ error?: st
 // devuelve los datos para completar el formulario, que la persona revisa antes de guardar.
 export async function readDebtPdfAction(fd: FormData): Promise<{ error?: string; data?: import("@/lib/debt-text").ParsedContract }> {
   const { user, workspace } = await requireWorkspace();
-  const now = new Date();
-  const used = await getDb().auditLog.count({ where: { workspaceId: workspace.id, action: "debt.pdf_read", createdAt: { gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) } } });
-  if (used >= 30) return { error: "Ya leíste muchos contratos este mes. Cargá este a mano." };
   const file = fd.get("file");
   if (!(file instanceof File) || !file.size) return { error: "Elegí el PDF del contrato." };
+  if (file.size > 5_000_000) return { error: "El PDF supera 5 MB." };
+  const { reservePdfRead, completePdfRead, releasePdfRead } = await import("@/server/pdf-quota");
+  let reservation: import("@/server/pdf-quota").PdfReservation | undefined;
   try {
+    reservation = await reservePdfRead(getDb(), workspace.id, user.id, "debt", 30);
     const { pdfText } = await import("@/server/statement-pdf");
     const { parseContract } = await import("@/lib/debt-text");
     const data = parseContract(await pdfText(new Uint8Array(await file.arrayBuffer()), { maxPages: 60, what: "el préstamo" }));
-    await audit("debt.pdf_read", { userId: user.id, workspaceId: workspace.id, meta: { found: data.found } });
+    await completePdfRead(getDb(), reservation, data.found);
     return { data };
   } catch (e) {
     const r = fail(e);
     return { error: r?.error ?? "No pudimos leer ese PDF." };
+  } finally {
+    if (reservation) await releasePdfRead(getDb(), reservation).catch(() => {});
   }
 }
 

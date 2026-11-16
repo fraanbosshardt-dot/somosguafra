@@ -1,6 +1,6 @@
 // Lee el texto de un resumen de tarjeta en PDF, en el propio servidor y sin IA (gratis).
 // Nunca guarda nada: devuelve lo que encontró para que la persona lo revise y confirme.
-import { extractText, getDocumentProxy } from "unpdf";
+import { extractPdfLines } from "./pdf-worker";
 import { UserError } from "./ledger";
 
 export type ParsedStatement = {
@@ -137,43 +137,16 @@ export async function pdfText(bytes: Uint8Array, opt: { maxPages: number; what: 
 export async function pdfLines(bytes: Uint8Array, opt: { maxPages: number; what: string }): Promise<PdfLine[]> {
   if (bytes.length > 5_000_000) throw new UserError("El PDF supera 5 MB.");
   if (String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new UserError("El archivo no es un PDF.");
-  const out: PdfLine[] = [];
+  let lines: PdfLine[];
   try {
-    const pdf = await getDocumentProxy(bytes);
-    if (pdf.numPages > opt.maxPages) throw new UserError("El PDF tiene demasiadas páginas.");
-    for (let p = 1; p <= pdf.numPages; p++) {
-      const page = await pdf.getPage(p);
-      const content = await page.getTextContent();
-      type It = { str: string; x: number; y: number; w: number };
-      const items: It[] = (content.items as { str?: string; transform?: number[]; width?: number }[])
-        .filter((i) => typeof i.str === "string" && i.str.length && i.transform)
-        .map((i) => ({ str: i.str!, x: i.transform![4], y: i.transform![5], w: i.width ?? i.str!.length * 5 }));
-      // Mismo renglón: misma altura (con 3 puntos de tolerancia).
-      const rows: It[][] = [];
-      for (const it of [...items].sort((a, b) => b.y - a.y || a.x - b.x)) {
-        const row = rows.find((r) => Math.abs(r[0].y - it.y) <= 3);
-        if (row) row.push(it); else rows.push([it]);
-      }
-      for (const r of rows) {
-        r.sort((a, b) => a.x - b.x);
-        let text = "", xs: number[] = [], end = -Infinity;
-        for (const it of r) {
-          if (text && it.x - end > 1.5) { const gap = Math.max(1, Math.min(6, Math.round((it.x - end) / 4))); text += " ".repeat(gap); for (let k = 0; k < gap; k++) xs.push(end + k); }
-          const cw = it.w / Math.max(1, it.str.length);
-          for (let k = 0; k < it.str.length; k++) xs.push(it.x + k * cw);
-          text += it.str;
-          end = it.x + it.w;
-        }
-        out.push({ text, xs });
-      }
-    }
-    void extractText;
+    lines = await extractPdfLines(bytes, opt.maxPages);
   } catch (e) {
-    if (e instanceof UserError) throw e;
-    const msg = String((e as Error)?.message ?? "");
-    if (/password/i.test(msg)) throw new UserError(`El PDF tiene contraseña. Abrilo, guardalo sin contraseña o cargá ${opt.what} a mano.`);
+    const reason = (e as Error).message;
+    if (reason === "password") throw new UserError(`El PDF tiene contraseña. Abrilo y guardalo sin contraseña o cargá ${opt.what} a mano.`);
+    if (reason === "too-many-pages") throw new UserError("El PDF tiene demasiadas páginas.");
+    if (reason === "parse-timeout" || reason === "too-complex") throw new UserError("El PDF es demasiado complejo para leerlo de forma segura. Cargalo a mano.");
     throw new UserError(`No pudimos leer ese PDF. Cargá ${opt.what} a mano.`);
   }
-  if (out.map((l) => l.text).join("").replace(/\s/g, "").length < 40) throw new UserError(`El PDF no tiene texto (parece una foto o un escaneo). Cargá ${opt.what} a mano.`);
-  return out;
+  if (lines.map(l => l.text).join("").replace(/\s/g, "").length < 40) throw new UserError(`El PDF no tiene texto (parece una foto o un escaneo). Cargá ${opt.what} a mano.`);
+  return lines;
 }

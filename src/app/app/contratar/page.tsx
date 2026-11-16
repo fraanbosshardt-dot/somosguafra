@@ -13,8 +13,8 @@ import { formatMoney } from "@/lib/money";
 export const metadata = { title: "Contratar Pro" };
 export default async function Purchase({ searchParams }: { searchParams: Promise<{ ciclo?: string }> }) {
   const { workspace, user } = await requireOwner();
-  const { needsVerifiedEmail } = await import("@/server/email-verify");
-  if (needsVerifiedEmail(user)) redirect("/confirmar-correo");
+  const { needsVerifiedBillingEmail } = await import("@/server/email-verify");
+  if (needsVerifiedBillingEmail(user)) redirect("/confirmar-correo");
   const cycle = (await searchParams).ciclo === "anual" ? "yearly" : "monthly";
   const db = getDb();
   const [bill, sub, agreement] = await Promise.all([billingConfig(db), db.subscription.findUnique({ where: { workspaceId: workspace.id } }), db.billingAgreement.findFirst({ where: { workspaceId: workspace.id, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } })]);

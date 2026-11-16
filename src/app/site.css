@@ -1,5 +1,7 @@
 /* Sitio público (landing, Contacto, Quiénes somos, Seguridad, Legales). Usa los colores de globals.css,
    así respeta el modo claro y oscuro. Las franjas oscuras quedan oscuras en los dos modos. */
+.site .site-skip{position:fixed;top:12px;left:12px;z-index:1000;transform:translateY(-200%);padding:12px 18px;border:2px solid var(--ink);border-radius:12px;background:var(--surface);color:var(--fg);font-weight:600}
+.site .site-skip:focus{transform:translateY(0);outline:2px solid var(--ink);outline-offset:3px}
 .site{--ws-navy:#0B1813;--ws-navy2:#12261E;--ws-navy3:#1D382D;--ws-on-navy:#E8F1EC;--ws-navy-muted:#A9BDB3;
   --ws-r:28px;font-family:var(--font-inter),Inter,var(--f-body);font-size:16px;line-height:1.55;color:var(--fg);background:var(--bg);overflow-x:clip}
 .site h1,.site h2,.site .ws-display{font-family:var(--font-tight),"Inter Tight",var(--font-inter),sans-serif;font-weight:600;letter-spacing:-.03em;text-wrap:balance}

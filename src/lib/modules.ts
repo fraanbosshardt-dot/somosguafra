@@ -55,6 +55,4 @@ export function modulesForUses(uses: string[]): ModuleState {
   return m;
 }
 
-export const PRICE_USD = { monthly: 5, yearly: 48 };
-
 export { PLAN_FEATURES, FREE_LIMITS } from "./plan-features";

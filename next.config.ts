@@ -33,7 +33,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["pg", "unpdf"],
+  outputFileTracingIncludes: { "/app/**": ["./node_modules/unpdf/package.json", "./node_modules/unpdf/dist/**/*"] },
   // Para subir el CSV de importación y el PDF del resumen (cada uno se valida hasta 5 MB).
   experimental: { serverActions: { bodySizeLimit: "6mb" }, staleTimes: { dynamic: 30, static: 300 } },
   async headers() {

@@ -1,0 +1,36 @@
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
+import { startTestDb } from "./helpers/testdb";
+import { createWorkspaceForUser } from "@/server/workspace";
+import { deleteAccount } from "@/server/admin-accounts";
+import { recordPaymentEvents } from "@/server/payment-finance";
+import { revenueByMonth } from "@/server/admin-metrics";
+vi.mock("@/server/billing", () => ({ cancelSubscription: vi.fn(async () => {}) }));
+let t: Awaited<ReturnType<typeof startTestDb>>;
+beforeAll(async () => { t = await startTestDb(); });
+afterAll(async () => { await t?.stop(); });
+it("deleting a paying account removes private data but preserves the business ledger and original metrics exclusion", async () => {
+  const u = await t.db.user.create({ data: { email: "retention@audit.invalid", name: "Private name", passwordHash: "fixture" } });
+  const w = await createWorkspaceForUser(t.db, u.id, "Private space");
+  await t.db.account.create({ data: { workspaceId: w.id, name: "Private bank", type: "SAVINGS", currency: "ARS", initialBalance: 0, initialDate: new Date() } });
+  const now = new Date();
+  const invoice = await t.db.invoice.create({ data: { workspaceId: w.id, provider: "mercadopago", providerRef: "retained-payment", amount: 7499, currency: "ARS", status: "approved", paidAt: now } });
+  await t.db.$transaction(tx => recordPaymentEvents(tx, invoice));
+  await expect(t.db.workspace.delete({ where: { id: w.id } })).rejects.toThrow();
+  await expect(t.db.invoice.delete({ where: { id: invoice.id } })).rejects.toThrow();
+  const before = await revenueByMonth(t.db, 1, now);
+  await deleteAccount(t.db, u.id);
+  expect(await t.db.user.findUnique({ where: { id: u.id } })).toBeNull();
+  expect(await t.db.account.count({ where: { workspaceId: w.id } })).toBe(0);
+  expect(await t.db.membership.count({ where: { workspaceId: w.id } })).toBe(0);
+  expect(await t.db.subscription.count({ where: { workspaceId: w.id } })).toBe(0);
+  expect(await t.db.invoice.count({ where: { workspaceId: w.id } })).toBe(1);
+  expect(await t.db.paymentEvent.count({ where: { invoiceId: invoice.id } })).toBe(1);
+  expect(await t.db.workspace.findUnique({ where: { id: w.id } })).toMatchObject({ name: "Cuenta eliminada", archivedAt: expect.any(Date), billingDisabledAt: expect.any(Date), excludeFromMetrics: false });
+  expect(await revenueByMonth(t.db, 1, now)).toEqual(before);
+});
+it("a test account with no billing history is still removed completely", async () => {
+  const u = await t.db.user.create({ data: { email: "empty-retention@audit.invalid", name: "Fixture", passwordHash: "" } });
+  const w = await createWorkspaceForUser(t.db, u.id);
+  await deleteAccount(t.db, u.id);
+  expect(await t.db.workspace.findUnique({ where: { id: w.id } })).toBeNull();
+});

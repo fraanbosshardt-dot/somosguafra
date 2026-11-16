@@ -1,13 +1,14 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 import { TERMS_VERSION } from "@/lib/brand";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/auth/password";
 import { audit, createSession, destroySession, getSession, landingPath, markTwoFactorVerified } from "@/lib/auth/session";
-import { verifyTotp } from "@/lib/auth/totp";
-import { decryptSecret } from "@/lib/crypto";
-import { createWorkspaceForUser } from "@/server/workspace";
+import { consumeTotp } from "@/server/totp-check";
+import { createUserWithWorkspace, ensureUserWorkspace } from "@/server/workspace";
+import { authBuckets, quarterHour, reserveSecurityAttempt } from "@/server/security-limits";
 
 export type FormState = { error?: string; ok?: string } | null;
 
@@ -21,7 +22,7 @@ async function linkReferral(userId: string) {
     const { attachReferral, REF_COOKIE } = await import("@/server/referrals");
     const code = jar.get(REF_COOKIE)?.value;
     if (code) { await attachReferral(getDb(), userId, code); jar.delete(REF_COOKIE); }
-  } catch (e) { console.error("referido", e); }
+  } catch (e) { reportError("referido", e); }
 }
 
 export async function signupAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -34,40 +35,41 @@ export async function signupAction(_: FormState, fd: FormData): Promise<FormStat
   const db = getDb();
   const { headers } = await import("next/headers");
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim();
-  if (ip && (await db.auditLog.count({ where: { action: "auth.signup", ip, createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } })) >= 10) return { error: "Se crearon muchas cuentas desde esta conexión. Probá de nuevo en una hora." };
+  if (!(await reserveSecurityAttempt(db, "signup", authBuckets(parsed.data.email, ip ?? null, 3, 10, 3600_000)))) return { error: "Se crearon muchas cuentas desde esta conexión. Probá de nuevo en una hora." };
   if (await db.user.findUnique({ where: { email: parsed.data.email } })) return { error: "Ya hay una cuenta con ese correo. Iniciá sesión." };
-  const user = await db.user.create({ data: { email: parsed.data.email, name: parsed.data.name, passwordHash: await hashPassword(parsed.data.password), termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION, termsChannel: "email" } });
-  const ws = await createWorkspaceForUser(db, user.id, "Personal");
+  let created;
+  try { created = await createUserWithWorkspace(db, { email: parsed.data.email, name: parsed.data.name, passwordHash: await hashPassword(parsed.data.password), termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION, termsChannel: "email" }); }
+  catch (e) {
+    if ((e as { code?: string }).code === "P2002") return { error: "Ya hay una cuenta con ese correo. Iniciá sesión." };
+    throw e;
+  }
+  const { user, workspace: ws } = created;
   await audit("auth.signup", { userId: user.id, workspaceId: ws.id, meta: { via: "email" } });
   await linkReferral(user.id);
   const { applyProGrant } = await import("@/server/grants");
   await applyProGrant(db, user.email, ws.id);
   await createSession(user.id, { twoFactorVerified: true, remember: true });
-  try { const { sendVerifyEmail } = await import("@/server/account-mail"); await sendVerifyEmail(user, true); } catch (e) { console.error("confirmar correo", e); }
+  try { const { sendVerifyEmail } = await import("@/server/account-mail"); await sendVerifyEmail(user, true); } catch (e) { reportError("confirmar correo", e); }
   redirect(await landingPath("/bienvenida"));
 }
 
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
-  const parsed = z.object({ email, password: z.string().min(1, "Escribí tu contraseña.") }).safeParse(Object.fromEntries(fd));
+  const parsed = z.object({ email, password: z.string().min(1, "Escribí tu contraseña.").max(200, "La contraseña es demasiado larga.") }).safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const db = getDb();
-  // Freno simple a intentos repetidos: 8 fallos en 15 minutos por correo.
-  const since = new Date(Date.now() - 15 * 60 * 1000);
-  const fails = await db.auditLog.count({ where: { action: "auth.login_failed", createdAt: { gte: since }, entityId: parsed.data.email } });
-  if (fails >= 8) return { error: "Demasiados intentos. Probá de nuevo en 15 minutos." };
-  // Y por conexión: frena a quien prueba una contraseña común contra muchos correos.
   const { headers } = await import("next/headers");
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
-  if (ip && (await db.auditLog.count({ where: { action: "auth.login_failed", ip, createdAt: { gte: since } } })) >= 30) return { error: "Demasiados intentos desde esta conexión. Probá de nuevo en 15 minutos." };
+  if (!(await reserveSecurityAttempt(db, "login", authBuckets(parsed.data.email, ip, 8, 30)))) return { error: "Demasiados intentos. Probá de nuevo en 15 minutos." };
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-  const ok = user && !user.deletedAt && (await verifyPassword(parsed.data.password, user.passwordHash));
+  const ok = user && !user.deletedAt && !user.suspendedAt && (await verifyPassword(parsed.data.password, user.passwordHash));
   if (user && !user.deletedAt && !user.passwordHash && user.googleSub) return { error: "Esta cuenta entra con Google. Tocá «Continuar con Google»." };
   if (!user || !ok) {
     await audit("auth.login_failed", { entity: "email", entityId: parsed.data.email });
     return { error: "El correo o la contraseña no coinciden." };
   }
-  try { const { notifyNewDevice } = await import("@/server/account-mail"); await notifyNewDevice(db, user, h.get("user-agent"), ip); } catch (e) { console.error("aviso de ingreso", e); }
+  await ensureUserWorkspace(db, user.id);
+  try { const { notifyNewDevice } = await import("@/server/account-mail"); await notifyNewDevice(db, user, h.get("user-agent"), ip); } catch (e) { reportError("aviso de ingreso", e); }
   await createSession(user.id, { twoFactorVerified: !user.totpEnabledAt, remember: fd.get("remember") === "on" });
   await audit("auth.login", { userId: user.id });
   redirect(user.totpEnabledAt ? "/verificar" : await landingPath("/app"));
@@ -79,22 +81,21 @@ export async function verifyLoginCodeAction(_: FormState, fd: FormData): Promise
   if (!s.user.totpSecretEnc || !s.user.totpEnabledAt) redirect("/app");
   const code = String(fd.get("code") ?? "").replace(/\D/g, "");
   const db = getDb();
-  const fails = await db.auditLog.count({ where: { action: "auth.2fa_failed", userId: s.userId, createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } } });
-  if (fails >= 5) {
+  if (!(await reserveSecurityAttempt(db, "twofactor", [{ key: s.userId, limit: 5, windowMs: quarterHour }]))) {
     await destroySession();
     return { error: "Demasiados códigos incorrectos. Ingresá de nuevo en 15 minutos." };
   }
   const recovery = String(fd.get("recoveryCode") ?? "").trim();
   const { consumeRecoveryCode } = await import("@/server/recovery-codes");
-  const valid = recovery ? await consumeRecoveryCode(db, s.userId, recovery) : verifyTotp(decryptSecret(s.user.totpSecretEnc), code);
+  const valid = recovery ? await consumeRecoveryCode(db, s.userId, recovery) : await consumeTotp(db, s.userId, code);
   if (!valid) {
     await audit("auth.2fa_failed", { userId: s.userId });
-    return { error: fails >= 3 ? "El código no es correcto. Te queda un intento antes de que cerremos la sesión." : "El código no es correcto o ya venció. Probá con el que se ve ahora." };
+    return { error: "El código no es correcto, ya se usó o venció. Esperá el próximo código de tu app e intentá de nuevo." };
   }
   await markTwoFactorVerified(s.id);
   await audit(recovery ? "auth.recovery_code_used" : "auth.2fa_ok", { userId: s.userId });
   if (recovery) {
-    try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(s.user, "recovery_used"); } catch (e) { console.error("[recovery notice]", e); }
+    try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(s.user, "recovery_used"); } catch (e) { reportError("[recovery notice]", e); }
   }
   redirect(await landingPath("/app"));
 }
@@ -110,10 +111,10 @@ export async function requestResetAction(_: FormState, fd: FormData): Promise<Fo
   const parsed = email.safeParse(fd.get("email"));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const db = getDb();
-  const since = new Date(Date.now() - 15 * 60 * 1000);
-  const recent = await db.auditLog.count({ where: { action: "auth.reset_requested", createdAt: { gte: since }, entityId: parsed.data } });
   const ok: FormState = { ok: "Si hay una cuenta con ese correo, te mandamos un enlace para elegir una contraseña nueva. Vence en 1 hora." };
-  if (recent >= 3) return ok;
+  const { headers } = await import("next/headers");
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? null;
+  if (!(await reserveSecurityAttempt(db, "reset", [...authBuckets(parsed.data, ip, 3, 20), { key: "global", limit: 1000, windowMs: quarterHour }]))) return ok;
   await audit("auth.reset_requested", { entity: "email", entityId: parsed.data });
   const user = await db.user.findUnique({ where: { email: parsed.data } });
   if (!user || user.deletedAt || user.suspendedAt) return ok;
@@ -148,6 +149,6 @@ export async function resetPasswordAction(_: FormState, fd: FormData): Promise<F
     const { sendPasswordChanged } = await import("@/server/account-mail");
     const u = await db.user.findUnique({ where: { id: r.userId } });
     if (u) await sendPasswordChanged(u);
-  } catch (e) { console.error("aviso de contraseña", e); }
+  } catch (e) { reportError("aviso de contraseña", e); }
   redirect("/ingresar?nueva=1");
 }

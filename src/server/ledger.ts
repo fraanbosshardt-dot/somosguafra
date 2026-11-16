@@ -614,7 +614,7 @@ export async function openObligations(db: Db, ws: string, today: Date, opts: { u
 
 const REAL_EXPENSE = ["EXPENSE", "DEBT_PAYMENT", "CARD_PAYMENT"] as const;
 
-export async function monthSummary(db: Db, ws: string, p: string, currency: string, today: Date) {
+export async function monthSummary(db: Db, ws: string, p: string, currency: string, today: Date, requestOpen?: Promise<OpenItem[]>) {
   const from = periodStart(p), to = periodEnd(p);
   const tx = await db.transaction.findMany({
     where: { workspaceId: ws, currency, effectiveDate: { gte: from, lte: to }, type: { in: ["INCOME", ...REAL_EXPENSE] } },
@@ -627,7 +627,7 @@ export async function monthSummary(db: Db, ws: string, p: string, currency: stri
     if (t.type === "INCOME") income = t.direction === "IN" ? income.plus(v) : income.minus(v);
     else expense = t.direction === "OUT" ? expense.plus(v) : expense.minus(v);
   }
-  const open = (await openObligations(db, ws, today, { until: to })).filter((o) => o.currency === currency);
+  const open = (await (requestOpen ?? openObligations(db, ws, today, { until: to }))).filter((o) => o.currency === currency && o.dueDate <= to);
   const pendingIn = open.filter((o) => o.direction === "RECEIVABLE");
   const pendingOut = open.filter((o) => o.direction === "PAYABLE");
   const sumR = (l: OpenItem[]) => l.reduce((a, o) => a.plus(o.remaining), ZERO);
@@ -643,11 +643,11 @@ export async function monthSummary(db: Db, ws: string, p: string, currency: stri
   };
 }
 
-export async function dashboard(db: Db, ws: string, currency: string, today: Date) {
+export async function dashboard(db: Db, ws: string, currency: string, today: Date, requestOpen?: Promise<OpenItem[]>) {
   const [accounts, balances, summary] = await Promise.all([
     db.account.findMany({ where: { workspaceId: ws, active: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }),
     readBalances(db, ws, today.getTime()),
-    monthSummary(db, ws, period(today), currency, today),
+    monthSummary(db, ws, period(today), currency, today, requestOpen),
   ]);
   const inBase = accounts.filter((a) => a.currency === currency);
   // Lo invertido no es dinero disponible, y la tarjeta es una deuda, no dinero.

@@ -1,4 +1,5 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 // Las consultas llegan al panel interno. La persona recibe su número de trámite por correo.
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
@@ -21,10 +22,10 @@ export async function contactAction(_: ContactState, fd: FormData): Promise<Cont
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || null;
   const session = await getSession().catch(() => null);
   const db = getDb();
-  const r = await createContactMessage(db, { ...input, ip, userId: session?.user?.id ?? null });
+  const r = await createContactMessage(db, { ...input, ip, userId: session?.user?.id ?? null, management: s(fd, "management") === "cancellation" ? "cancellation" : undefined });
   if ("error" in r) return { error: r.error };
   const m = r.message;
 
-  await drainEmailOutbox(db).catch((e) => console.error("[contact receipt queued]", e));
+  await drainEmailOutbox(db).catch((e) => reportError("[contact receipt queued]", e));
   return { code: m.code, area: m.area };
 }

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Somos Guafra: finanzas personales y planificación patrimonial",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",

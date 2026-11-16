@@ -6,12 +6,16 @@ import { Icon } from "@/components/icons";
 import { requireUser } from "@/lib/auth/session";
 import { resendVerifyAction, verifyEmailCodeAction } from "@/app/actions/app";
 import { emailEnabled } from "@/server/email-verify";
+import { cookies } from "next/headers";
+import { PURCHASE_COOKIE, readPurchaseIntent } from "@/server/purchase-intent";
 
 export const metadata: Metadata = { title: "Confirmar correo", robots: { index: false, follow: false } };
 
 export default async function ConfirmEmailPage() {
   const { user } = await requireUser();
   const verified = !!user.emailVerified;
+  const intent = readPurchaseIntent((await cookies()).get(PURCHASE_COOKIE)?.value);
+  const next = intent ? `/suscribirme?ciclo=${intent.cycle === "yearly" ? "anual" : "mensual"}` : "/app";
   const enabled = emailEnabled();
   return (
     <AuthShell>
@@ -21,7 +25,7 @@ export default async function ConfirmEmailPage() {
         {verified ? (
           <>
             <p className="sub">Listo, tu cuenta ya tiene el correo confirmado. Podés seguir usando somosguafra.</p>
-            <Link href="/app" className="btn pri auth-btn">Volver a la app</Link>
+            <Link href={next} className="btn pri auth-btn">{intent ? "Continuar con mi plan" : "Volver a la app"}</Link>
           </>
         ) : enabled ? (
           <>

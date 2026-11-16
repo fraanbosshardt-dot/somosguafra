@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/diagnostics";
 import { getDb } from "@/lib/db";
 import { applyNotification, validSignature } from "@/server/billing";
 
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   try {
     await applyNotification(getDb(), type, id);
   } catch (e) {
-    console.error("[mercadopago]", e);
+    reportError("[mercadopago]", e);
     return new Response("Error", { status: 500 }); // Mercado Pago reintenta
   }
   return new Response("ok");

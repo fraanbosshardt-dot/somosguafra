@@ -28,7 +28,8 @@ export async function exportAccountData(db: PrismaClient, userId: string) {
     spaces.push({
       workspace: await db.workspace.findUnique({ where: { id: m.workspaceId } }),
       role: m.role,
-      subscription: await db.subscription.findUnique({ where }),
+      // El invitado puede consultar los datos compartidos, pero no la facturación del dueño.
+      subscription: m.role === "OWNER" ? await db.subscription.findUnique({ where }) : undefined,
       accounts: await db.account.findMany({ where }),
       categories: await db.category.findMany({ where }),
       transactions: await db.transaction.findMany({ where }),
@@ -45,12 +46,12 @@ export async function exportAccountData(db: PrismaClient, userId: string) {
       scenarios: await db.scenario.findMany({ where }),
       grainStocks: await db.grainStock.findMany({ where }),
       importBatches: await db.importBatch.findMany({ where }),
-      invoices: await db.invoice.findMany({ where }),
+      invoices: m.role === "OWNER" ? await db.invoice.findMany({ where }) : undefined,
     });
   }
-  const tickets = await db.supportTicket.findMany({ where: { userId } });
-  const contactMessages = await db.contactMessage.findMany({ where: { userId } });
-  return { version: 2, exportedAt: new Date().toISOString(), user, spaces, supportTickets: tickets, contactMessages };
+  const tickets = await db.supportTicket.findMany({ where: { userId }, include: { messages: { where: { internal: false }, select: { id: true, role: true, body: true, createdAt: true }, orderBy: { createdAt: "asc" } } } });
+  const contactMessages = await db.contactMessage.findMany({ where: { userId }, include: { messages: { where: { internal: false }, select: { id: true, role: true, body: true, createdAt: true }, orderBy: { createdAt: "asc" } } } });
+  return { version: 3, exportedAt: new Date().toISOString(), user, spaces, supportTickets: tickets, contactMessages };
 }
 
 // ---------- Borrar una cuenta ----------
@@ -83,7 +84,25 @@ export async function deleteAccount(db: PrismaClient, userId: string) {
       await tx.account.deleteMany({ where });
       await tx.category.deleteMany({ where: { workspaceId: ws, parentId: { not: null } } });
       await tx.category.deleteMany({ where });
-      await tx.workspace.delete({ where: { id: ws } });
+      const retained = await tx.invoice.count({ where }) || await tx.billingAgreement.count({ where });
+      if (retained) {
+        // Preserve only the business ledger and its opaque correlation key. No member can access it.
+        // A Workspace tombstone keeps existing provider references/FKs compatible and permits late refunds.
+        await tx.grainStock.deleteMany({ where });
+        await tx.scenario.deleteMany({ where });
+        await tx.exchangeRate.deleteMany({ where });
+        await tx.workspaceInvite.deleteMany({ where });
+        await tx.membership.deleteMany({ where });
+        await tx.subscription.deleteMany({ where });
+        await tx.emailOutbox.deleteMany({ where });
+        await tx.auditLog.updateMany({ where, data: { workspaceId: null } });
+        await tx.workspace.update({ where: { id: ws }, data: {
+          name: "Cuenta eliminada", archivedAt: new Date(), modules: {}, extraCurrencies: [],
+          onboardedAt: null, housekeptAt: null, referralCreditDays: 0,
+        } });
+      } else {
+        await tx.workspace.delete({ where: { id: ws } });
+      }
     }
     await tx.productActivity.deleteMany({ where: { userId } });
     await tx.user.delete({ where: { id: userId } });

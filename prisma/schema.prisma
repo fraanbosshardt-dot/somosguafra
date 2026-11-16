@@ -97,6 +97,7 @@ model Workspace {
   housekeptAt     DateTime? // última vez que se generaron pendientes recurrentes y resúmenes cerrados
   referralCreditDays Int @default(0)
   billingDisabledAt DateTime? // cierra nuevas autorizaciones durante la eliminación
+  archivedAt      DateTime? // solo queda el ledger empresarial sin miembros ni datos personales
   excludeFromMetrics Boolean @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -825,7 +826,7 @@ model PasswordReset {
 model Invoice {
   id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   provider    String // "mercadopago"
   providerRef String    @unique
   amount      Decimal   @db.Decimal(18, 2)
@@ -854,7 +855,7 @@ model Invoice {
 model BillingAgreement {
   id String @id @default(cuid())
   workspaceId String
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   providerRef String? @unique
   checkoutUrl String?
   cycle String
@@ -865,9 +866,14 @@ model BillingAgreement {
   status String @default("creating")
   startsAt DateTime?
   providerUpdatedAt DateTime?
+  reconcileOffset Int @default(0)
+  lastReconciledAt DateTime?
+  cancelRequestedAt DateTime?
+  cancelReason String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([workspaceId, status])
+  @@index([lastReconciledAt])
 }
 
 model EmailOutbox {
@@ -879,6 +885,9 @@ model EmailOutbox {
   text String
   purpose String
   attempts Int @default(0)
+  firstAttemptAt DateTime?
+  deliveryState String @default("queued")
+  deliveryToken String?
   nextAttemptAt DateTime @default(now())
   sentAt DateTime?
   providerId String?
@@ -886,6 +895,7 @@ model EmailOutbox {
   lastError String?
   createdAt DateTime @default(now())
   @@index([sentAt, nextAttemptAt])
+  @@index([deliveryState, nextAttemptAt])
 }
 
 // ---------- Panel interno ----------
@@ -1011,7 +1021,7 @@ model SupportMessage {
 model PaymentEvent {
   id String @id @default(cuid())
   invoiceId String
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   key String @unique
   kind String
   amount Decimal @db.Decimal(18, 2)
