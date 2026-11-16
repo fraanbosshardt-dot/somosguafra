@@ -66,7 +66,9 @@ export function GuafraChat({
   const panel = useRef<HTMLElement>(null),
     launch = useRef<HTMLButtonElement>(null),
     draft = useRef<{ text: string; nonce: string } | null>(null),
-    newCase = useRef(false),
+    newCase = useRef(!token),
+    screenVersion = useRef(0),
+    queuedLoad = useRef<{ code?: string } | null>(null),
     generation = useRef(0),
     inFlight = useRef(false),
     selected = useRef<ChatView | null>(null),
@@ -130,7 +132,10 @@ export function GuafraChat({
   );
   const load = useCallback(
     async (code?: string, silent = false) => {
-      if (inFlight.current) return;
+      if (inFlight.current) {
+        queuedLoad.current = { code };
+        return;
+      }
       const seq = ++generation.current;
       if (!silent) {
         setLoading(true);
@@ -178,9 +183,11 @@ export function GuafraChat({
   }, []);
   useEffect(() => {
     const handler = (e: Event) => {
+      if (token) return;
       const code = (e as CustomEvent<string>).detail;
+      fresh();
       requestedCode.current = code;
-      newCase.current = false;
+      newCase.current = !code;
       if (open) void load(code);
       else {
         setLoading(true);
@@ -189,7 +196,7 @@ export function GuafraChat({
     };
     window.addEventListener("guafra:open", handler);
     return () => window.removeEventListener("guafra:open", handler);
-  }, [load, open]);
+  }, [load, open, token]);
   useEffect(() => {
     if (!open) return;
     void load(requestedCode.current);
@@ -208,7 +215,7 @@ export function GuafraChat({
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panel.current?.querySelector<HTMLElement>("button")?.focus();
+    panel.current?.focus({ preventScroll: true });
     return () => {
       document.body.style.overflow = overflow;
       if (previous && previous !== document.body && previous.isConnected)
@@ -225,6 +232,7 @@ export function GuafraChat({
   async function act(data: Record<string, unknown>, after?: () => void) {
     if (inFlight.current) return;
     inFlight.current = true;
+    const screen = screenVersion.current;
     generation.current++;
     setBusy(true);
     setError("");
@@ -236,16 +244,21 @@ export function GuafraChat({
       if (data.before && current && response.current) {
         response.current = mergeChatHistory(current, response.current, true);
       }
-      accept(response);
-      after?.();
+      if (screen === screenVersion.current) {
+        accept(response);
+        after?.();
+      }
     } catch (e) {
-      setError(
+      if (screen === screenVersion.current) setError(
         e instanceof Error ? e.message : "No pudimos guardar el mensaje.",
       );
     } finally {
       inFlight.current = false;
       setBusy(false);
       setLoading(false);
+      const queued = queuedLoad.current;
+      queuedLoad.current = null;
+      if (queued) void load(queued.code);
     }
   }
   function send(value = text, topic?: string) {
@@ -273,6 +286,8 @@ export function GuafraChat({
     );
   }
   function fresh() {
+    screenVersion.current++;
+    queuedLoad.current = null;
     generation.current++;
     selected.current = null;
     setCurrent(null);
@@ -284,9 +299,15 @@ export function GuafraChat({
     draft.current = null;
     nearBottom.current = true;
   }
+  function close() {
+    fresh();
+    setCaseCode("");
+    setOpen(false);
+    setLoading(false);
+  }
   function keyDown(e: React.KeyboardEvent<HTMLElement>) {
     if (e.key === "Escape" && !inline) {
-      setOpen(false);
+      close();
       return;
     }
     if (e.key === "Tab" && !inline) {
@@ -313,7 +334,7 @@ export function GuafraChat({
         <div
           className={styles.backdrop}
           aria-hidden="true"
-          onClick={() => setOpen(false)}
+          onClick={close}
         />
       )}
       {!inline && !open && (
@@ -325,6 +346,7 @@ export function GuafraChat({
           aria-expanded={open}
           aria-controls={id}
           onClick={() => {
+            fresh();
             setLoading(true);
             setOpen(true);
           }}
@@ -352,6 +374,7 @@ export function GuafraChat({
           role={inline ? "region" : "dialog"}
           aria-modal={inline ? undefined : true}
           aria-label="Chat Guafra"
+          tabIndex={-1}
           onKeyDown={keyDown}
         >
           <header className={styles.header}>
@@ -369,31 +392,13 @@ export function GuafraChat({
             {!inline && (
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 aria-label="Cerrar chat"
               >
                 ×
               </button>
             )}
           </header>
-          {!token && (
-            <nav className={styles.toolbar} aria-label="Conversaciones">
-              <button
-                type="button"
-                onClick={() => setHistory(!history)}
-                aria-expanded={history}
-              >
-                Mis conversaciones
-              </button>
-              <button
-                type="button"
-                onClick={fresh}
-                disabled={busy || loading || !!token}
-              >
-                Nueva consulta
-              </button>
-            </nav>
-          )}
           {history && !loading && (
             <div className={styles.history}>
               <p>Tus conversaciones quedan guardadas acá, también las resueltas.</p>
@@ -438,7 +443,7 @@ export function GuafraChat({
                   >
                     <div className={styles.historyMeta}>
                       <b>{c.code}</b>
-                      <em>{CASE_STATUS[c.status] ?? (c.status === "BOT" ? "Con Guafra" : c.status)}</em>
+                      <em>{c.kind === "chat" && c.status === "CLOSED" ? "Finalizada" : CASE_STATUS[c.status] ?? (c.status === "BOT" ? "Con Guafra" : c.status)}</em>
                     </div>
                     <span>{c.subject}</span>
                     <time dateTime={c.at}>
@@ -454,7 +459,7 @@ export function GuafraChat({
           {current && !loading && !history && (
             <p className={styles.case}>
               {current.code} ·{" "}
-              {CASE_STATUS[current.status] ??
+              {current.inactive ? "Finalizada por inactividad" : CASE_STATUS[current.status] ??
                 (current.status === "BOT" ? "Con Guafra" : current.status)}
             </p>
           )}
@@ -587,7 +592,7 @@ export function GuafraChat({
                       </button>
                     )}
                     {current.resolved && (
-                      <span>¡Qué bueno que lo resolviste!</span>
+                      <span>{current.inactive ? "Esta consulta automática terminó por inactividad. Podés retomarla escribiendo o empezar otra desde Inicio." : "Tu consulta quedó resuelta y guardada en Mis conversaciones."}</span>
                     )}
                   </div>
                 )}
@@ -708,6 +713,18 @@ export function GuafraChat({
                 {busy ? "…" : "↑"}
               </button>
             </form>
+          )}
+          {!token && (
+            <nav className={styles.toolbar} aria-label="Navegación del chat">
+              <button type="button" aria-current={!current && !history ? "page" : undefined}
+                disabled={busy || loading} onClick={() => { fresh(); void load(); }}>
+                Inicio
+              </button>
+              <button type="button" aria-current={history ? "page" : undefined}
+                disabled={busy || loading} onClick={() => { setHistory(true); setHandoff(false); void load(); }}>
+                Mis conversaciones
+              </button>
+            </nav>
           )}
           <footer className={styles.foot}>
             No compartas contraseñas, códigos ni datos de tarjeta.{" "}

@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { Db } from "./ledger";
 import { CASE_OPEN, CASE_STATUS } from "@/lib/chat-help";
+import { BOT_CHAT_IDLE_MS } from "@/lib/chat-session";
 export async function unifiedInbox(
   db: Db,
   input: {
@@ -23,7 +24,7 @@ export async function unifiedInbox(
           ? [state]
           : CASE_OPEN;
   const filter = Prisma.sql`WHERE ((kind<>'bot' AND status IN (${Prisma.join(statuses)})) OR (${input.channel === "bot"} AND kind='bot')) AND (${!q} OR strpos(lower(code||' '||subject||' '||name||' '||email),lower(${q}))>0) AND (${!input.channel || input.channel === "all"} OR kind=${input.channel ?? ""}) AND (${!input.assigned} OR assigned=${input.assigned ?? ""}) AND (${!input.area} OR area=${input.area ?? ""})`;
-  const union = Prisma.sql`WITH cases AS (SELECT t.id,'ticket'::text kind,t.code,t.subject,u.name,u.email,t.status,t.priority,'soporte'::text area,t."assignedTo" assigned,t."updatedAt" at FROM "SupportTicket" t JOIN "User" u ON u.id=t."userId" UNION ALL SELECT c.id,'contact',c.code,c.subject,c.name,c.email,c.status,c.priority,c.area,c."assignedTo",c."updatedAt" FROM "ContactMessage" c UNION ALL SELECT b.id,'bot',b.code,'Conversación automática',coalesce(u.name,'Visitante'),coalesce(u.email,''),CASE WHEN b."botResolved" THEN 'RESOLVED' ELSE 'BOT' END,'LOW','soporte',NULL,b."updatedAt" FROM "ChatSession" b LEFT JOIN "User" u ON u.id=b."userId" WHERE b."contactId" IS NULL)`;
+  const union = Prisma.sql`WITH cases AS (SELECT t.id,'ticket'::text kind,t.code,t.subject,u.name,u.email,t.status,t.priority,'soporte'::text area,t."assignedTo" assigned,t."updatedAt" at FROM "SupportTicket" t JOIN "User" u ON u.id=t."userId" UNION ALL SELECT c.id,'contact',c.code,c.subject,c.name,c.email,c.status,c.priority,c.area,c."assignedTo",c."updatedAt" FROM "ContactMessage" c UNION ALL SELECT b.id,'bot',b.code,'Conversación automática',coalesce(u.name,'Visitante'),coalesce(u.email,''),CASE WHEN b."botResolved" THEN 'RESOLVED' WHEN b."updatedAt" <= ${new Date(Date.now() - BOT_CHAT_IDLE_MS)} THEN 'CLOSED' ELSE 'BOT' END,'LOW','soporte',NULL,b."updatedAt" FROM "ChatSession" b LEFT JOIN "User" u ON u.id=b."userId" WHERE b."contactId" IS NULL)`;
   const [rows, count] = await Promise.all([
     db.$queryRaw<
       {

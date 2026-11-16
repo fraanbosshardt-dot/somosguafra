@@ -30,15 +30,18 @@
   opacity: 0.55;
 }
 .root :focus-visible {
-  outline: 3px solid #4e9e7b;
+  outline: 2px solid var(--chat-text);
   outline-offset: 3px;
+}
+.root .panel:focus-visible {
+  outline: none;
 }
 .launch {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 48px;
-  border: 1px solid #7bb197;
+  border: 1px solid transparent;
   border-radius: 30px;
   padding: 10px 16px;
   background: #16493a;
@@ -101,17 +104,23 @@
 .toolbar {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 4px 14px;
-  border-bottom: 1px solid var(--chat-line);
+  gap: 6px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--chat-line);
 }
 .toolbar button {
   background: transparent;
   border: 0;
-  color: var(--ink, #16493a);
-  padding: 6px 0;
-  min-height: 32px;
+  color: var(--chat-text);
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  min-height: 40px;
   font-size: 12px;
+}
+.toolbar button[aria-current="page"] {
+  background: var(--chat-soft);
+  font-weight: 700;
 }
 .feed {
   flex: 1;
@@ -168,6 +177,8 @@
   margin: 0 0 18px !important;
 }
 .message {
+  width: fit-content;
+  min-height: 0;
   max-width: 92%;
   padding: 10px 12px;
   margin: 0 0 10px;
@@ -206,14 +217,22 @@
   margin-top: 7px;
 }
 .customer {
+  max-width: 86%;
+  padding: 8px 10px;
   margin-left: auto;
   background: #16493a;
   color: #fff;
-  border-color: var(--ink, #16493a);
+  border-color: transparent;
   border-radius: 16px 16px 4px 16px;
 }
 .customer small {
-  color: #c7e1d0;
+  display: none;
+}
+.customer p {
+  line-height: 1.45 !important;
+}
+.customer time {
+  margin-top: 4px;
 }
 .options {
   display: flex;
@@ -320,8 +339,8 @@
   font-size: 12px;
 }
 .history button[aria-current="true"] {
-  border-color: #7bb197;
-  box-shadow: inset 3px 0 #7bb197;
+  background: var(--chat-soft);
+  border-color: var(--chat-line);
 }
 .historyMeta {
   display: flex;

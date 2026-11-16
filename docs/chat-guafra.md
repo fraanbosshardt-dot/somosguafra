@@ -8,6 +8,10 @@ Se presenta como Guafra en las páginas públicas, acceso y app. El cliente cons
 
 ## Modelo
 
+El widget abre siempre en Inicio. Cerrar vuelve a la bienvenida y no borra ni resuelve ningún caso. Mis conversaciones permite abrir explícitamente el historial; un enlace de correo o una apertura por código conserva el acceso directo al caso indicado. GET sin código lista los casos propios pero no selecciona el último. Una consulta nueva desde Inicio lleva `newCase: true` para evitar adjuntarla accidentalmente a un caso previo.
+
+Después de 30 minutos sin mensajes, una sesión exclusivamente automática se presenta como finalizada por inactividad (CLOSED), sin afirmar que fue resuelta. El estado se calcula en el servidor y coincide en historial, lectura y bandeja; no necesita un proceso del navegador ni modifica los mensajes. Escribir explícitamente en esa conversación la retoma. Los casos derivados al equipo conservan su estado humano y no se cierran por este plazo.
+
 ChatSession identifica la conversación automática y su propietario (cuenta o hash de cookie aleatoria HttpOnly). Al derivar, se crea un ContactMessage existente con el mismo código. SupportMessage guarda mensajes públicos, del bot, del equipo y notas internas. Las bandejas no crean otro caso al responder.
 
 Estados humanos: OPEN → IN_PROGRESS / WAITING_INTERNAL → ANSWERED → RESOLVED / CLOSED. Un nuevo mensaje del cliente reabre OPEN. Los cambios administrativos verifican la versión para impedir cerrar una consulta que recibió mensajes mientras se revisaba. La resolución del bot no puede cerrar un caso humano.

@@ -84,9 +84,7 @@ export async function GET(req: NextRequest) {
     const code = req.nextUrl.searchParams.get("case");
     const current = code
       ? await loadChatByCode(db, a.actor, code)
-      : cases[0]
-        ? await readChat(db, a.actor, cases[0])
-        : null;
+      : null;
     return cookie(
       json({
         cases,

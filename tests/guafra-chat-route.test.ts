@@ -48,7 +48,7 @@ it("GET es privado, no crea casos y entrega solo una cookie técnica HttpOnly", 
   expect(await t.db.chatSession.count()).toBe(0);
 });
 
-it("reabrir el widget recupera el último chat incluso resuelto, sin crear otro caso", async () => {
+it("reabrir el widget muestra Inicio y conserva los resueltos para abrirlos explícitamente", async () => {
   const visitor = "P".repeat(43);
   const actor = { user: null, visitorHash: chatHash(visitor), ip: null };
   const chat = await sendChatMessage(t.db, actor, {
@@ -59,13 +59,18 @@ it("reabrir el widget recupera el último chat incluso resuelto, sin crear otro 
     headers: { cookie: `somosguafra_chat=${visitor}` },
   }));
   const opened = await (await reopen()).json();
-  expect(opened.current.code).toBe(chat.code);
-  expect(opened.current.resolved).toBe(false);
+  expect(opened.current).toBeNull();
+  expect(opened.cases).toEqual(expect.arrayContaining([expect.objectContaining({ code: chat.code, status: "BOT" })]));
   await resolveBotChat(t.db, actor, chat);
   const saved = await (await reopen()).json();
-  expect(saved.current.code).toBe(chat.code);
-  expect(saved.current.resolved).toBe(true);
-  expect(saved.current.messages).toEqual(opened.current.messages);
+  expect(saved.current).toBeNull();
+  const explicit = await GET(new NextRequest(`https://example.invalid/api/soporte/chat?case=${chat.code}`, {
+    headers: { cookie: `somosguafra_chat=${visitor}` },
+  }));
+  const retained = (await explicit.json()).current;
+  expect(retained.code).toBe(chat.code);
+  expect(retained.resolved).toBe(true);
+  expect(retained.messages).toEqual(chat.messages);
   expect(saved.cases).toEqual(expect.arrayContaining([expect.objectContaining({ code: chat.code, status: "RESOLVED", subject: "Cómo agrego movimientos" })]));
   expect(await t.db.chatSession.count()).toBe(count);
   await t.db.chatSession.delete({ where: { id: chat.id } });
