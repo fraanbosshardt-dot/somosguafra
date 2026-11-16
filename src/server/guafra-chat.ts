@@ -244,6 +244,12 @@ export async function chatCases(db: Db, a: ChatActor) {
         botResolved: true,
         updatedAt: true,
         contact: { select: { status: true, subject: true } },
+        messages: {
+          where: { role: "customer", internal: false },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: 1,
+          select: { body: true },
+        },
       },
     }),
     a.user
@@ -281,7 +287,7 @@ export async function chatCases(db: Db, a: ChatActor) {
       id: c.id,
       code: c.code,
       status: c.contact?.status ?? (c.botResolved ? "RESOLVED" : "BOT"),
-      subject: c.contact?.subject ?? "Conversación con Guafra",
+      subject: c.contact?.subject ?? c.messages[0]?.body.replace(/\s+/g, " ").slice(0, 120) ?? "Conversación con Guafra",
       at: c.updatedAt.toISOString(),
     })),
     ...tickets.map((c) => ({
