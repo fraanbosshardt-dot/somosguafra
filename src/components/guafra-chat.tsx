@@ -5,6 +5,15 @@ import type { ChatSelection, ChatView } from "@/server/guafra-chat";
 import styles from "./guafra-chat.module.css";
 import { LogoMark } from "./logo-mark";
 import { mergeChatHistory } from "@/lib/chat-history";
+
+const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> = {
+  start: "Primeros pasos",
+  plans: "Planes y precios",
+  trial: "Prueba gratuita",
+  pending: "Pagos pendientes",
+  cancel: "Cancelar renovación",
+  moves: "Movimientos",
+};
 type Case = ChatSelection & { code: string; subject: string; status: string };
 type Payload = {
   current: ChatView | null;
@@ -484,7 +493,7 @@ export function GuafraChat({
                       disabled={busy || loading}
                       onClick={() => send(t.title, t.id)}
                     >
-                      {t.title}
+                      {QUICK_LABELS[t.id] ?? t.title}
                       <span aria-hidden="true">↗</span>
                     </button>
                   ))}
@@ -662,7 +671,7 @@ export function GuafraChat({
               </label>
               <textarea
                 id={`${id}-text`}
-                rows={2}
+                rows={1}
                 maxLength={3000}
                 placeholder={
                   current?.human
