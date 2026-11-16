@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "fix/auditoria-integral-20261115": false,
-      "fix/alertas-operativas": false
+      "fix/alertas-operativas": false,
+      "fix/diagnostico-conciliacion": false
     }
   },
   "regions": [
