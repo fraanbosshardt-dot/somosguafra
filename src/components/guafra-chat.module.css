@@ -54,7 +54,7 @@
   right: 0;
   bottom: 70px;
   width: 350px;
-  height: min(520px, calc(100dvh - 80px));
+  height: min(560px, calc(100dvh - 80px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -92,6 +92,12 @@
   font-weight: bold;
 }
 .header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
   margin-left: auto;
   border: 0;
   border-radius: 50%;
@@ -99,7 +105,11 @@
   height: 36px;
   background: #ffffff14;
   color: #fff;
-  font-size: 26px;
+}
+.header button svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 .toolbar {
   display: flex;
@@ -403,7 +413,7 @@
   position: relative;
   inset: auto;
   width: 100%;
-  height: 520px;
+  height: 560px;
   max-height: 85dvh;
 }
 .sr {
@@ -445,7 +455,7 @@
     inset: auto 10px calc(76px + env(safe-area-inset-bottom));
     width: auto;
     height: min(
-      560px,
+      600px,
       calc(
         100dvh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
       )
@@ -455,7 +465,7 @@
   .app .panel {
     bottom: calc(140px + env(safe-area-inset-bottom));
     height: min(
-      560px,
+      600px,
       calc(
         100dvh - 162px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
       )
@@ -470,7 +480,7 @@
   .inline .panel {
     position: relative;
     inset: auto;
-    height: 520px;
+    height: 560px;
     max-height: 85dvh;
   }
   .inline {
@@ -523,7 +533,7 @@
   .app:has(.backdrop) .panel {
     bottom: calc(12px + env(safe-area-inset-bottom));
     height: min(
-      560px,
+      600px,
       calc(
         100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
       )
