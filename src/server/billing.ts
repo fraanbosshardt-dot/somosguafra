@@ -98,7 +98,7 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
         return pending;
       }
       if (pending.id !== replacePendingId || !remote || remote.id !== pending.providerRef || remote.status !== "pending" || remote.external_reference !== `${ws}|${pending.couponCode ?? ""}|${pending.id}` || sub?.providerRef === pending.providerRef) throw new UserError("Ya hay una solicitud pendiente con otras condiciones. Revisá y confirmá su reemplazo antes de continuar; no se creó otra suscripción.");
-      const payments = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
+      const payments = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}`);
       if (!Array.isArray(payments.results) || payments.results.length || payments.paging?.total) throw new UserError("La solicitud ya tiene actividad de cobro. No se reemplazará automáticamente; revisá Mi plan.");
       // Guardar intención y confirmar el commit antes del PUT. La intención de
       // reemplazo sólo autoriza descartar pending, nunca un contrato autorizado.
@@ -117,7 +117,7 @@ export async function startCheckout(db: Db, ws: string, payerEmail: string, cycl
       throw error;
     }
     await applyPreapproval(db, pending.providerRef!);
-    const after = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}&limit=1`);
+    const after = await mp<{ results: AuthorizedPayment[]; paging?: { total: number } }>(`/authorized_payments/search?preapproval_id=${identifier(pending.providerRef!)}`);
     if (!Array.isArray(after.results) || after.results.length || after.paging?.total) { await reconcileWorkspaceBilling(db, ws); throw new UserError("Mercado Pago registró actividad durante el cambio. Actualizamos tu plan; no se inició otra suscripción."); }
     return startCheckout(db, ws, payerEmail, cycle, backUrl, discount, startDate, undefined, expectedAmount);
   }
@@ -446,15 +446,20 @@ async function reconcileAgreement(db: Db, id: string, deadline: number) {
   if (!agreement) return true;
   let offset = agreement.reconcileOffset ?? 0;
   while (offset < 10000) {
-    const page = await mp<{ paging?: { total: number }; results: AuthorizedPayment[] }>(`/authorized_payments/search?preapproval_id=${identifier(id)}&offset=${offset}&limit=100`, {}, deadline);
+    // This endpoint rejects explicit limit values. Advance by committed records,
+    // using its reported total or an empty page, never an assumed page size.
+    const page = await mp<{ paging?: { total: number }; results: AuthorizedPayment[] }>(`/authorized_payments/search?preapproval_id=${identifier(id)}&offset=${offset}`, {}, deadline);
     if (!Array.isArray(page.results)) throw new UserError("No se pudieron consultar los pagos.");
+    const total = page.paging?.total;
+    if (total !== undefined && (!Number.isSafeInteger(total) || total < 0)) throw new UserError("El proveedor informó una paginación inválida.");
+    if (!page.results.length && total !== undefined && offset < total) throw new UserError("El proveedor devolvió un historial incompleto. La conciliación queda pendiente.");
     for (const p of page.results) {
       remaining(deadline);
       await applyPayment(db, String(p.id), deadline);
       offset++;
       await db.billingAgreement.update({ where: { id: agreement.id }, data: { reconcileOffset: offset } });
     }
-    if (page.results.length < 100 || (page.paging && offset >= page.paging.total)) {
+    if (!page.results.length || (total !== undefined && offset >= total)) {
       await db.billingAgreement.update({ where: { id: agreement.id }, data: { reconcileOffset: 0, lastReconciledAt: new Date() } });
       return true;
     }

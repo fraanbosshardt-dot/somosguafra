@@ -3,12 +3,13 @@ import {billingProviderProbe} from '@/server/billing-provider-probe';
 afterEach(()=>{vi.unstubAllEnvs();vi.unstubAllGlobals();});
 it('uses only fixed GETs and returns codes without exposing bodies, keys or references',async()=>{
   vi.stubEnv('MP_ACCESS_TOKEN','private-token');
-  const fetchMock=vi.fn(async (_url:string, init:any)=>{expect(init.method).toBe('GET');return Response.json({private:'customer-data'},{status:fetchMock.mock.calls.length===2?400:200});});
+  const fetchMock=vi.fn(async (url:string, init:any)=>{expect(init.method).toBe('GET');expect(new URL(url).searchParams.has('limit')).toBe(false);return Response.json({private:'customer-data'},{status:200});});
   vi.stubGlobal('fetch',fetchMock);
   const db:any={billingAgreement:{findFirst:async()=>({providerRef:'private-reference'})}};
   const result=await billingProviderProbe(db);
-  expect(result.checks.map(c=>c.status)).toEqual([200,400,200,200]);
-  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(result.checks.map(c=>c.status)).toEqual([200,200]);
+  expect(result.ok).toBe(true);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(JSON.stringify(result)).not.toMatch(/private-|customer-data/);
 });
 it('filters provider error text through a fixed vocabulary',async()=>{
