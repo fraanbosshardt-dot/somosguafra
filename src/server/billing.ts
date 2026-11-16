@@ -9,6 +9,7 @@ import { effectivePlan, paidUntil, planSettings } from "./plans";
 import { queueBillingNotice, drainEmailOutbox } from "./billing-mail";
 
 import { paymentFinancialFields, recordPaymentEvents, type ProviderPayment } from "./payment-finance";
+import { BillingProviderHttpError, billingFailureMetadata } from "./billing-failure";
 
 const API = "https://api.mercadopago.com";
 type Tx = Prisma.TransactionClient;
@@ -36,7 +37,7 @@ async function mp<T>(path: string, init: RequestInit = {}, deadline?: number): P
   const token = process.env.MP_ACCESS_TOKEN;
   if (!token) throw new UserError("Los cobros todavía no están activados.");
   const r = await fetch(`${API}${path}`, { ...init, headers: { authorization: `Bearer ${token}`, "content-type": "application/json", ...(init.headers ?? {}) }, signal: AbortSignal.timeout(remaining(deadline)), redirect: "error", cache: "no-store" });
-  if (!r.ok) throw new UserError("Mercado Pago no respondió. Probá de nuevo en un momento.");
+  if (!r.ok) throw new BillingProviderHttpError(r.status, path, init.method ?? "GET");
   return await r.json() as T;
 }
 
@@ -497,7 +498,7 @@ export async function reconcileBilling(db: Db, limit = 30, timeBudgetMs = 60_000
   for (const a of agreements) {
     if (Date.now() >= deadline) break;
     try { if (await reconcileAgreement(db, a.providerRef!, deadline)) n++; }
-    catch (e) { await db.auditLog.create({ data: { workspaceId: a.workspaceId, action: "billing.reconcile_failed", entityId: a.providerRef, meta: { error: String(e).slice(0, 300) } } }); }
+    catch (e) { await db.auditLog.create({ data: { workspaceId: a.workspaceId, action: "billing.reconcile_failed", entityId: a.providerRef, meta: { error: String(e).slice(0, 300), ...billingFailureMetadata(e) } } }); }
     finally { await db.billingAgreement.updateMany({ where: { id: a.id }, data: { updatedAt: new Date() } }); }
   }
   return n;
