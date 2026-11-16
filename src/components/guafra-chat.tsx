@@ -45,7 +45,7 @@ export function GuafraChat({
     [cases, setCases] = useState<Case[]>([]),
     [text, setText] = useState(""),
     [busy, setBusy] = useState(false),
-    [loading, setLoading] = useState(false),
+    [loading, setLoading] = useState(inline),
     [error, setError] = useState(""),
     [handoff, setHandoff] = useState(false),
     [history, setHistory] = useState(false),
@@ -163,6 +163,7 @@ export function GuafraChat({
     const code = new URLSearchParams(window.location.search).get("chat");
     if (code) {
       requestedCode.current = code;
+      setLoading(true);
       setOpen(true);
     }
   }, []);
@@ -201,7 +202,9 @@ export function GuafraChat({
     panel.current?.querySelector<HTMLElement>("button")?.focus();
     return () => {
       document.body.style.overflow = overflow;
-      previous?.focus();
+      if (previous && previous !== document.body && previous.isConnected)
+        previous.focus();
+      else launch.current?.focus();
     };
   }, [open, inline]);
   useEffect(() => {

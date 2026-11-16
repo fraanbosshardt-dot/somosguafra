@@ -134,3 +134,34 @@ it("los errores de infraestructura no exponen datos, stack, mensajes ni tokens",
     spy.mockRestore();
   }
 });
+
+it("un mensaje desde un enlace privado sin selección sigue el mismo caso", async () => {
+  const { handoffChat } = await import("@/server/guafra-chat");
+  const { caseToken } = await import("@/server/support-thread");
+  const a = { user: null, visitorHash: chatHash("signed-inline"), ip: null };
+  const c = await sendChatMessage(t.db, a, {
+    text: "Hablar con equipo",
+    nonce: crypto.randomUUID(),
+  });
+  await handoffChat(t.db, a, c, {
+    name: "Fixture",
+    email: "inline@audit.invalid",
+    area: "soporte",
+  });
+  const contact = await t.db.contactMessage.findUniqueOrThrow({
+    where: { code: c.code },
+  });
+  const count = await t.db.chatSession.count();
+  const token = caseToken("contact", contact.id, contact.email)!;
+  const response = await POST(
+    req({
+      action: "message",
+      text: "Continúo mi consulta por el enlace",
+      token,
+      nonce: crypto.randomUUID(),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).current.code).toBe(c.code);
+  expect(await t.db.chatSession.count()).toBe(count);
+});

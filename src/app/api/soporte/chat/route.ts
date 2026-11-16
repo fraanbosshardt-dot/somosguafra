@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
     const token = typeof data.token === "string" ? data.token : undefined;
     if (token && token.length > 400)
       throw new UserError("El enlace no es válido.");
-    if (data.action === "load" && token && !s) {
+    if (token && !s) {
       const c = await resolveCaseToken(db, token);
       if (!c) throw new UserError("El enlace venció o no es válido.");
       s = { kind: c.kind, id: c.id };
