@@ -39,15 +39,17 @@ export async function arsConverter(db: PrismaClient, currencies: Iterable<string
 const businessUser = { deletedAt: null, memberships: { some: { role: "OWNER" as const, workspace: { excludeFromMetrics: false } } } };
 export async function overview(db: PrismaClient, _prices: { monthly: number; yearly: number }, now = new Date()) {
   const from = new Date(now.getTime() - 30 * DAY);
-  const [users, newWeek, newMonth, dau, mau, spaces, openTickets] = await Promise.all([
+  const [users, newWeek, newMonth, dau, mau, spaces, ticketPending, contactPending] = await Promise.all([
     db.user.count({ where: businessUser }),
     db.user.count({ where: { ...businessUser, createdAt: { gte: new Date(now.getTime() - 7 * DAY) } } }),
     db.user.count({ where: { ...businessUser, createdAt: { gte: from } } }),
     db.user.count({ where: { ...businessUser, lastSeenAt: { gte: new Date(now.getTime() - DAY) } } }),
     db.user.count({ where: { ...businessUser, lastSeenAt: { gte: from } } }),
     db.workspace.findMany({ where: { excludeFromMetrics: false }, select: { archivedAt: true, subscription: true, invoices: { where: { periodEnd: { gt: from }, paidAt: { lte: now } }, select: { status: true, amount: true, paidAt: true, periodStart: true, periodEnd: true, financialEvents: { select: { kind: true, amount: true, occurredAt: true } } } }, billingAgreements: { where: { status: { in: ["authorized", "paused", "pending", "creating", "uncertain"] } }, orderBy: { createdAt: "desc" }, select: { providerRef: true, status: true, amount: true, cycle: true, startsAt: true } } } }),
-    db.supportTicket.count({ where: { status: "OPEN" } }),
+    db.supportTicket.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } }),
+    db.contactMessage.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } }),
   ]);
+  const openTickets=ticketPending+contactPending;
   let mrrUnknown = 0;
   let paid = 0, gifted = 0, trials = 0, mrr = 0, startingPaid = 0, lostPaid = 0, renewalOff = 0, pending = 0, unverifiable = 0;
   for (const w of spaces) {

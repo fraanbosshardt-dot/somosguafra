@@ -20,8 +20,8 @@ export async function resolveCaseToken(db: Db, token: string) {
   if (!expected || token.length !== expected.length || !timingSafeEqual(Buffer.from(token), Buffer.from(expected))) return null;
   return { kind, id, email, item };
 }
-export function caseLinks(kind: CaseKind, id: string, email: string, baseUrl: string) {
-  const token = caseToken(kind, id, email);
+export function caseLinks(kind: CaseKind, id: string, email: string, baseUrl: string, ttlDays=90) {
+  const token = caseToken(kind, id, email,Math.floor(Date.now()/1000)+Math.max(1,Math.min(90,ttlDays))*86400);
   const domain = process.env.SUPPORT_RECEIVING_DOMAIN;
   return { url: token ? `${baseUrl}/consulta/${token}` : `${baseUrl}/contacto`, replyTo: token && domain && /^[a-z0-9.-]+$/i.test(domain) && process.env.SUPPORT_INBOUND_ENABLED === "true" ? `${token}@${domain}` : undefined };
 }
@@ -35,10 +35,12 @@ export async function customerReply(db: Db, kind: CaseKind, id: string, input: s
     const key = providerDedupe ?? `customer/${kind}/${id}/${nonce}`;
     if (await tx.supportMessage.findUnique({ where: { dedupeKey: key } })) return;
     const recent = await tx.supportMessage.count({ where: { ...where, role: "customer", createdAt: { gte: new Date(Date.now() - 864e5) } } });
-    if (recent >= 20) throw new UserError("Recibimos varios mensajes hoy. Esperá nuestra respuesta para continuar.");
+    const chat = kind === "contact" ? await tx.chatSession.findUnique({where:{contactId:id},select:{id:true}}) : null;
+    if (recent >= (chat ? 100 : 20)) throw new UserError("Recibimos varios mensajes hoy. Esperá nuestra respuesta para continuar.");
     await tx.supportMessage.create({ data: { ...where, role: "customer", body, dedupeKey: key } });
     if (kind === "ticket") await tx.supportTicket.update({ where: { id }, data: { status: "OPEN" } });
     else await tx.contactMessage.update({ where: { id }, data: { status: "OPEN" } });
+    if(chat)await tx.chatSession.update({where:{id:chat.id},data:{updatedAt:new Date()}});
   });
 }
 export const replyKey = (kind: CaseKind, id: string, text: string, lastCustomerId: string) => `reply/${kind}/${id}/${createHash("sha256").update(`${lastCustomerId}:${text}`).digest("hex")}`;

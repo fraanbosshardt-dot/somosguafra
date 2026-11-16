@@ -15,7 +15,7 @@ const SECTIONS: { href: string; label: string; icon: string; perm: Perm }[] = [
   { href: "/admin", label: "Resumen", icon: "chart", perm: "view" },
   { href: "/admin/usuarios", label: "Clientes", icon: "user", perm: "view" },
   { href: "/admin/cobros", label: "Cobros y cupones", icon: "card", perm: "view" },
-  { href: "/admin/soporte", label: "Soporte", icon: "help", perm: "view" },
+  { href: "/admin/soporte", label: "Conversaciones", icon: "help", perm: "support" },
   { href: "/admin/consultas", label: "Consultas del sitio", icon: "info", perm: "view" },
   { href: "/admin/comunicaciones", label: "Comunicaciones", icon: "bell", perm: "view" },
   { href: "/admin/finanzas", label: "Finanzas", icon: "wallet", perm: "owner" },
@@ -28,8 +28,8 @@ const SECTIONS: { href: string; label: string; icon: string; perm: Perm }[] = [
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
   const db = getDb();
-  const [inquiries, support] = await Promise.all([db.contactMessage.count({ where: { status: "OPEN" } }), db.supportTicket.count({ where: { status: "OPEN" } })]);
-  const items = SECTIONS.filter((s) => can(admin.role, s.perm)).map(({ href, label, icon }) => ({ href, label: `${label}${href === "/admin/consultas" && inquiries ? ` (${inquiries})` : href === "/admin/soporte" && support ? ` (${support})` : ""}`, icon }));
+  const [inquiries, support] = await Promise.all([db.contactMessage.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } }), db.supportTicket.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } })]);
+  const items = SECTIONS.filter((s) => can(admin.role, s.perm)).map(({ href, label, icon }) => ({ href, label: `${label}${href === "/admin/consultas" && inquiries ? ` (${inquiries})` : href === "/admin/soporte" && (support+inquiries) ? ` (${support+inquiries})` : ""}`, icon }));
   return (
     <div className="adm">
       <header className="adm-top">

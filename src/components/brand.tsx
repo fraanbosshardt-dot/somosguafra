@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "./icons";
 import { BRAND } from "@/lib/brand";
+import { GuafraChat } from "./guafra-chat";
 import { LogoMark } from "@/components/logo-mark";
 
 export function Brand({ href = "/" }: { inverse?: boolean; href?: string }) {
@@ -15,7 +16,7 @@ export function Brand({ href = "/" }: { inverse?: boolean; href?: string }) {
 // Pantallas de registro, ingreso y verificación: una tarjeta blanca centrada, sin animaciones.
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="nx auth">
+    <><div className="nx auth">
       <div className="auth-card">
         <main className="auth-main">
           <Brand />
@@ -41,6 +42,6 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <p className="auth-safe"><Icon name="lock" /><span>Nunca te pedimos la clave de tu banco.</span></p>
         </aside>
       </div>
-    </div>
+    </div><GuafraChat /></>
   );
 }

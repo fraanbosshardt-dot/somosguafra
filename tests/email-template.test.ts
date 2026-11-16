@@ -35,3 +35,8 @@ describe("diseño de los correos", () => {
     expect(html).not.toContain("TU CÓDIGO DE VERIFICACIÓN");
   });
 });
+
+it("el aviso del chat destaca el caso y abre la conversación correcta",()=>{
+ const html=renderEmail({purpose:"support",subject:"Tu caso SG-AB1234567890 tiene una respuesta",text:`El equipo respondió. Abrí ${base}/soporte/abrir?caso=SG-AB1234567890`},base);
+ expect(html).toContain("Abrir mi conversación");expect(html).toContain(`${base}/soporte/abrir?caso=SG-AB1234567890`);expect(html).toContain("SG-AB1234567890");
+});

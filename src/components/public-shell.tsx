@@ -7,6 +7,7 @@ import { contactSettings } from "@/server/contact";
 import { inter, tight } from "@/lib/site-fonts";
 // Medición de visitas de Vercel: sin cookies y sin datos personales. Solo en la web pública, nunca en la app.
 import { Analytics } from "@vercel/analytics/next";
+import { GuafraChat } from "./guafra-chat";
 import { RefCapture } from "./referral";
 // Estilos del sitio público: solo se descargan en estas páginas, no en la app.
 import "@/app/site.css";
@@ -22,7 +23,7 @@ export function PublicShell({ children, logged = false }: { children: React.Reac
       <main id="contenido" tabIndex={-1}>{children}</main>
       <SiteFooter />
       <Analytics />
-      <RefCapture />
+      <RefCapture /><GuafraChat />
     </div>
   );
 }

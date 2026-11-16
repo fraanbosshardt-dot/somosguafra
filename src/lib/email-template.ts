@@ -31,9 +31,10 @@ export function renderEmail(content: EmailContent, base: string): string {
   let label = content.action?.label || theme.action;
   if (!content.action && actionUrl.pathname.startsWith("/verificar-correo/")) label = "Confirmar mi correo";
   if (!content.action && actionUrl.pathname === "/app/ayuda") label = "Ver mi consulta";
+  if (!content.action && (actionUrl.pathname.startsWith("/consulta/") || actionUrl.pathname === "/soporte/abrir")) label = "Abrir mi conversación";
   if (!content.action && actionUrl.pathname.startsWith("/admin/")) label = "Abrir en el panel";
   const code = ["welcome", "verification"].includes(content.purpose) ? text.match(/código[^\n]*?:\s*(\d{6})\b/i)?.[1] : undefined;
-  const ticket = content.purpose === "support" ? (content.subject.match(/\bC-[A-Z0-9]{4,12}\b/) ?? text.match(/\bC-[A-Z0-9]{4,12}\b/))?.[0] : undefined;
+  const ticket = content.purpose === "support" ? (content.subject.match(/\b(?:C-[A-Z0-9]{4,12}|SG-[A-Z0-9-]{6,40})\b/) ?? text.match(/\b(?:C-[A-Z0-9]{4,12}|SG-[A-Z0-9-]{6,40})\b/))?.[0] : undefined;
   const inline = (value: string) => {
     // Solo convierte enlaces del propio sitio. Todo contenido aportado por usuarios se escapa.
     const parts = value.split(/(https?:\/\/[^\s<>]+)/g);

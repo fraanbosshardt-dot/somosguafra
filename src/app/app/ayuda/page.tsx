@@ -10,7 +10,7 @@ import { getDb } from "@/lib/db";
 import { fmtDate } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
-import { supportTicketAction } from "@/app/actions/modules";
+import { ChatOpen } from "@/components/guafra-chat";
 import { Pagination } from "@/components/pagination";
 import { pageNumber } from "@/lib/pagination";
 import { BRAND } from "@/lib/brand";
@@ -43,7 +43,7 @@ const FAQ: [string, string][] = [
   ["Pagué y todavía no aparece Pro", "Esperá la confirmación de Mercado Pago y revisá Configuración → Plan. No repitas el pago si ya figura aprobado: escribinos desde Ayuda o Contacto → Planes y pagos para que podamos revisarlo."],
   ["¿Cómo pido un reembolso?", "Tenés 10 días corridos desde la contratación para pedir la devolución total según nuestra política. Usá el Botón de arrepentimiento del sitio o Contacto → Arrepentimiento, indicando el correo de tu cuenta. Recibís un número de trámite. La acreditación depende de Mercado Pago y del banco o tarjeta."],
   ["¿Qué correos me mandan?", "Enviamos correos de bienvenida y confirmación de cuenta, recuperación y seguridad del acceso, pagos y respuestas a consultas. No enviamos campañas de marketing ni resúmenes de tus finanzas por correo. Los avisos de vencimientos se consultan en la app o se activan como notificaciones en el dispositivo."],
-  ["¿Dónde veo la respuesta a mi consulta?", "Si escribiste desde Ayuda, aparece en «Tus consultas», en esta misma pantalla. Si usaste Contacto, recibís por correo un número de trámite y un enlace privado para ver y continuar la conversación."],
+  ["¿Dónde veo la respuesta a mi consulta?", "En el chat Guafra abrí Mis conversaciones. Cuando el equipo responda te llega un correo para volver al mismo caso. Las consultas anteriores de Ayuda siguen disponibles en esta pantalla."],
   ["¿Cómo descargo mis datos o borro mi cuenta?", "En Configuración → Importar y exportar descargás tus movimientos; el respaldo completo está en Configuración → Tus datos. Para borrar la cuenta, entrá a Configuración → Seguridad. Si tenés una suscripción paga activa, primero cancelala para detener los cobros. La eliminación es definitiva."],
   ["¿Se conecta con mi banco?", "No. Cargás tus movimientos o importás el extracto del banco o de Mercado Pago (CSV; con Pro también Excel y OFX), desde Configuración → Importar y exportar. Nunca te pedimos la clave del banco."],
   ["¿Qué hago si pierdo el teléfono del segundo factor?", "Guardá previamente tus códigos de recuperación desde Configuración → Seguridad. Al ingresar, elegí Usar un código de recuperación. Cada uno sirve una sola vez. Si no tenés códigos ni acceso a tu autenticador, contactanos: verificamos la identidad antes de recuperar el acceso."],
@@ -72,12 +72,9 @@ export default async function Help({ searchParams }: { searchParams: Promise<{ p
           <div className="card">
             <div className="chead"><h3>Escribinos</h3></div>
             <p className="sub" style={{ marginBottom: 12 }}>Para reembolsos, bajas o privacidad también podés usar <Link className="lnk" href="/contacto">Contacto</Link>. Consultá <Link className="lnk" href="/terminos">Términos</Link>, <Link className="lnk" href="/privacidad">Privacidad</Link>, <Link className="lnk" href="/reembolsos">Reembolsos</Link> y <Link className="lnk" href="/cookies">Cookies</Link>.</p>
-            <ActionForm action={supportTicketAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <label className="field">Asunto<input name="subject" maxLength={140} required /></label>
-              <label className="field">Contanos qué pasó<textarea name="body" rows={5} maxLength={4000} required /></label>
-              <div><Submit pending="Enviando…">Enviar</Submit></div>
-              {plan === "PRO" && <p className="sub" style={{ margin: 0 }}>Con Pro tu consulta va primero: te respondemos dentro de 1 día hábil.</p>}
-            </ActionForm>
+            <p className="sub">Guafra responde consultas frecuentes. Si necesitás una persona, le pasamos todo el historial y te avisamos por correo cuando responda.</p>
+            <ChatOpen>Abrir chat Guafra</ChatOpen>
+            {plan === "PRO" && <p className="sub">Con Pro tu consulta va primero: respuesta dentro de 1 día hábil.</p>}
           </div>
           {total > 0 && (
             <div className="card">
