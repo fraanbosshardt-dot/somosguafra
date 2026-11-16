@@ -8,6 +8,10 @@ on:
         description: 'Enviar prueba de alerta: falla deliberadamente sin consultar ni modificar producción'
         type: boolean
         default: false
+      diagnose_provider:
+        description: 'Consultar diagnóstico de Mercado Pago: solo GET, sin procesar pagos ni imprimir datos privados'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -20,11 +24,20 @@ jobs:
     timeout-minutes: 3
     env:
       OPERATIONS_SECRET: ${{ secrets.OPERATIONS_MONITOR_SECRET }}
+      DIAGNOSE_PROVIDER: ${{ github.event_name == 'workflow_dispatch' && inputs.diagnose_provider }}
     steps:
       - name: Comprobar sitio, ingreso y base de datos
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$DIAGNOSE_PROVIDER" = "true" ]; then
+            test -n "$OPERATIONS_SECRET"
+            curl --fail --silent --show-error --max-time 30 \
+              -H "Authorization: Bearer $OPERATIONS_SECRET" \
+              "https://somosguafra.com/api/health/operaciones?diagnostic=provider" -o /tmp/provider-diagnostic
+            python3 -c 'import json; d=json.load(open("/tmp/provider-diagnostic")); print(json.dumps(d)); assert isinstance(d.get("checks"),list)'
+            exit 0
+          fi
           for path in / /ingresar /api/health; do
             curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 5 "https://somosguafra.com${path}" -o /tmp/health-response
             if [ "$path" = "/api/health" ]; then
