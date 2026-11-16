@@ -266,6 +266,26 @@ describe("ciclo completo de suscripción", () => {
     expect(effectivePlan(await sub())).toBe("PRO");
     expect(effectivePlan(await sub(), until)).toBe("FREE");
   });
+  it("la acción y el webhook de una misma baja crean un solo aviso", async () => {
+    const id = await checkout(); await authorize(id); await pay("deduped-cancel", id);
+    await cancelSubscription(t.db, ws);
+    await applyNotification(t.db, "subscription_preapproval", id);
+    await applyNotification(t.db, "subscription_preapproval", id);
+    const notices = await t.db.emailOutbox.findMany({ where: { workspaceId: ws, OR: [{ dedupeKey: { endsWith: "-cancelled" } }, { dedupeKey: { startsWith: `billing/${ws}/cancel-` } }] } });
+    expect(notices).toHaveLength(1);
+    expect(notices[0].dedupeKey).toBe(`billing/${ws}/subscription-${id}-cancelled`);
+  });
+  it("la intención de baja sobrevive a un fallo del proveedor y puede recuperarse", async () => {
+    const id = await checkout(); await authorize(id); failCancel = id;
+    await expect(cancelSubscription(t.db, ws)).rejects.toThrow("Mercado Pago");
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } })).cancelRequestedAt).not.toBeNull();
+    await expect(checkout()).rejects.toThrow("cancelación anterior");
+    failCancel = "";
+    await applyNotification(t.db, "subscription_preapproval", id);
+    expect(agreements.get(id)!.status).toBe("cancelled");
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } })).cancelRequestedAt).toBeNull();
+    expect((await sub()).status).toBe("CANCELED");
+  });
   it("la renovación duplicada no suma dos meses", async () => {
     const id = await checkout(); await authorize(id);
     const start = new Date(); await pay("renew", id, "approved", start);
@@ -280,6 +300,16 @@ describe("ciclo completo de suscripción", () => {
     await pay("bad", id, "rejected", until);
     expect((await sub()).currentPeriodEnd).toEqual(until);
     expect(effectivePlan(await sub(), until)).toBe("FREE");
+  });
+  it("un pago todavía pendiente impide contratar de nuevo incluso después de cancelar el contrato", async () => {
+    const id = await checkout(); await authorize(id); await pay("still-pending", id, "in_process");
+    await cancelSubscription(t.db, ws);
+    const posts = calls.filter(c => c.method === "POST").length;
+    await expect(checkout()).rejects.toThrow("pago pendiente");
+    expect(calls.filter(c => c.method === "POST")).toHaveLength(posts);
+    payments.get("still-pending")!.payment.status = "rejected";
+    await applyNotification(t.db, "subscription_authorized_payment", "still-pending");
+    expect(await checkout()).not.toBe(id);
   });
   it("una devolución total revoca su período", async () => {
     const id = await checkout(); await authorize(id); await pay("refund", id);
@@ -335,8 +365,12 @@ describe("ciclo completo de suscripción", () => {
     const yearly = await checkout("yearly"); failCancel = monthly;
     await expect(authorize(yearly)).rejects.toThrow("Mercado Pago");
     expect((await sub()).providerRef).toBe(monthly);
-    failCancel = ""; await authorize(yearly);
-    expect((await sub()).providerRef).toBe(yearly);
+    expect(agreements.get(monthly)!.status).toBe("authorized");
+    expect(agreements.get(yearly)!.status).toBe("cancelled");
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: monthly } })).cancelRequestedAt).toBeNull();
+    // A cancelled provider contract is terminal. Retry with a new request, never revive the old ID.
+    failCancel = ""; const retry = await checkout("yearly"); await authorize(retry);
+    expect((await sub()).providerRef).toBe(retry);
   });
   it("un webhook viejo no revive un acuerdo cancelado", async () => {
     const id = await checkout(); await authorize(id); await cancelSubscription(t.db, ws);
@@ -344,6 +378,35 @@ describe("ciclo completo de suscripción", () => {
     await applyNotification(t.db, "subscription_preapproval", id);
     expect(agreements.get(id)!.status).toBe("cancelled");
     expect((await sub()).status).toBe("CANCELED");
+  });
+  it("recupera una baja si la base falla después del PUT confirmado sin duplicar el período ni los eventos", async () => {
+    const id = await checkout(); await authorize(id); await pay("crash-after-cancel", id);
+    const until = (await sub()).currentPeriodEnd;
+    const original = t.db.$transaction.bind(t.db);
+    const transaction = vi.spyOn(t.db, "$transaction");
+    transaction.mockImplementationOnce(original as any).mockRejectedValueOnce(new Error("fixture database outage after provider PUT"));
+    try { await expect(cancelSubscription(t.db, ws)).rejects.toThrow("fixture database outage"); }
+    finally { transaction.mockRestore(); }
+    expect(agreements.get(id)!.status).toBe("cancelled");
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } })).cancelRequestedAt).not.toBeNull();
+    await applyNotification(t.db, "subscription_preapproval", id);
+    expect((await sub()).status).toBe("CANCELED");
+    expect((await sub()).currentPeriodEnd).toEqual(until);
+    expect((await t.db.billingAgreement.findUniqueOrThrow({ where: { providerRef: id } })).cancelRequestedAt).toBeNull();
+    expect(await t.db.invoice.count({ where: { workspaceId: ws } })).toBe(1);
+  });
+  it("un reembolso tardío actualiza el ledger archivado sin recrear acceso ni enviar avisos al usuario eliminado", async () => {
+    const id = await checkout(); await authorize(id); await pay("archived-refund", id);
+    await deleteAccount(t.db, userId);
+    expect(await t.db.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect((await t.db.workspace.findUniqueOrThrow({ where: { id: ws } })).archivedAt).not.toBeNull();
+    payments.get("archived-refund")!.payment.status = "refunded";
+    payments.get("archived-refund")!.refunded = 7499;
+    await applyNotification(t.db, "subscription_authorized_payment", "archived-refund");
+    expect((await t.db.invoice.findUniqueOrThrow({ where: { providerRef: "archived-refund" } })).status).toBe("refunded");
+    expect(await t.db.paymentEvent.count({ where: { invoice: { workspaceId: ws } } })).toBe(2);
+    expect(await t.db.subscription.findUnique({ where: { workspaceId: ws } })).toBeNull();
+    expect(await t.db.emailOutbox.count({ where: { workspaceId: ws } })).toBe(0);
   });
   it("verifica importe y moneda antes de habilitar Pro", async () => {
     const id = await checkout(); await authorize(id);

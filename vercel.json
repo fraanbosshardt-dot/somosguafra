@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "fix/auditoria-integral-20261115": false
+    }
+  },
   "regions": [
     "sfo1"
   ],

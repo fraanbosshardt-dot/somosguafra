@@ -23,12 +23,14 @@ import { ShareLink } from "@/components/referral";
 import { SharingTab } from "./sharing-tab";
 import { PushToggle } from "@/components/push-toggle";
 import { pushConfig } from "@/server/push";
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Configuración" };
 
 const TABS = [["general", "General"], ["funciones", "Funciones"], ["compartir", "Compartir"], ["seguridad", "Seguridad"], ["plan", "Plan"], ["datos", "Tus datos"]] as const;
 
-export default async function Settings({ searchParams }: { searchParams: Promise<{ tab?: string; pago?: string; pagoerror?: string; prueba?: string; ciclo?: string; cancelado?: string; cupon?: string; soloduenio?: string; yatenes?: string; verificar?: string; solicituddescartada?: string }> }) {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ tab?: string; pago?: string; pagoerror?: string; prueba?: string; ciclo?: string; cancelado?: string; cupon?: string; soloduenio?: string; yatenes?: string; verificar?: string; solicituddescartada?: string; pagos?: string; seguridaderror?: string }> }) {
   const { user, workspace, modules, plan, session, membership } = await requireWorkspace();
   const sp = await searchParams;
   const asked = sp.tab;
@@ -82,6 +84,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
     const others = sessions.filter((x) => x.id !== session.id).length;
     body = (
       <>
+        {sp.seguridaderror && <p className="notice r" role="alert">{sp.seguridaderror.slice(0, 300)}</p>}
         <div className="card sec-sum">
           <div className="chead"><div><h3>Estado de tu cuenta</h3><p className="sub">Lo importante para que nadie más pueda entrar.</p></div></div>
           <div className="sec-items">
@@ -177,7 +180,11 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   if (t === "plan") {
     const sub = workspace.subscription;
     const bill = await billingConfig(getDb());
-    const invoices = await getDb().invoice.findMany({ where: { workspaceId: workspace.id }, orderBy: { createdAt: "desc" }, take: 24 });
+    const paymentPage = pageNumber(sp.pagos);
+    const [invoices, invoiceTotal] = await Promise.all([
+      getDb().invoice.findMany({ where: { workspaceId: workspace.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 24, skip: (paymentPage - 1) * 24 }),
+      getDb().invoice.count({ where: { workspaceId: workspace.id } }),
+    ]);
     const agreement = await getDb().billingAgreement.findFirst({ where: { workspaceId: workspace.id, status: { not: "cancelled" } }, orderBy: { createdAt: "desc" } });
     const lastPayment = await getDb().invoice.findFirst({ where: { workspaceId: workspace.id }, orderBy: [{ periodStart: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }], select: { status: true } });
     const view = publicPlan(sub, membership.role === "OWNER", new Date(), { agreement, lastPaymentStatus: lastPayment?.status });
@@ -201,11 +208,11 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           {refStats.left === 0 && <p className="sub" style={{ margin: "10px 0 0" }}>Llegaste al máximo de premios por invitar. ¡Gracias por recomendarnos!</p>}
         </div>
         <div className="card"><div className="chead"><h3>Qué suma Pro</h3></div><div className="list">{features.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></div>
-        {invoices.length > 0 && (
+        {invoiceTotal > 0 && (
           <div className="card"><div className="chead"><h3>Historial de pagos</h3></div><div className="tw"><table>
             <thead><tr><th>Fecha</th><th>Detalle</th><th>Estado</th><th className="n">Importe</th></tr></thead>
             <tbody>{invoices.map((i) => <tr key={i.id}><td>{new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "medium" }).format(i.paidAt ?? i.createdAt)}</td><td>somosguafra Pro</td><td><span className={`pill ${i.status === "approved" ? "g" : i.status === "rejected" ? "r" : ""}`}>{i.status === "approved" ? Number(i.refundedAmount) > 0 ? "Pagado · devolución parcial" : "Pagado" : i.status === "rejected" ? "Rechazado" : i.status === "refunded" ? "Reembolsado" : i.status === "charged_back" ? "Contracargo" : i.status === "cancelled" ? "Cancelado" : "En verificación"}</span></td><td className="n">{formatMoney(i.amount, i.currency)}{Number(i.refundedAmount) > 0 && <div className="sub">Devuelto: {formatMoney(i.refundedAmount, i.currency)}</div>}</td></tr>)}</tbody>
-          </table></div></div>
+          </table></div><Pagination page={paymentPage} size={24} total={invoiceTotal} href={p => `/app/configuracion?tab=plan&pagos=${p}`} label="Páginas del historial de pagos" /></div>
         )}
       </>
     );

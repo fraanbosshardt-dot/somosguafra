@@ -1,9 +1,8 @@
 "use client";
 // Botones de la web pública: Gratis va al pago de Pro; Pro vuelve a la app.
 // Se decide en el navegador, así la página se sirve igual para todos (y rápido, desde caché).
-import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { checkoutAction } from "@/app/actions/modules";
+import { landingCheckoutAction } from "@/app/actions/purchase";
 import type { SubscriptionView } from "@/server/public-plan";
 import { OnceButton } from "./forms";
 
@@ -14,16 +13,22 @@ export function useHasSession() {
 }
 
 export type PublicPlan = Partial<SubscriptionView> & { logged: boolean; timeZone?: string };
+let planRequest: Promise<PublicPlan> | undefined;
+function requestPublicPlan() {
+  // All CTAs mounted together share only the in-flight request, never a persistent account cache.
+  if (!planRequest) planRequest = fetch("/api/mi-plan", { cache: "no-store" }).then(r => {
+    if (!r.ok) throw new Error("Plan no disponible");
+    return r.json() as Promise<PublicPlan>;
+  }).finally(() => { planRequest = undefined; });
+  return planRequest;
+}
 
 export function usePublicPlan() {
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   useEffect(() => {
     if (!/(?:^|; )somosguafra_in=1/.test(document.cookie)) return;
     let active = true;
-    fetch("/api/mi-plan", { cache: "no-store" }).then((r) => {
-      if (!r.ok) throw new Error("Plan no disponible");
-      return r.json();
-    }).then((value: PublicPlan) => { if (active) setPlan(value); }).catch(() => {});
+    requestPublicPlan().then((value: PublicPlan) => { if (active) setPlan(value); }).catch(() => {});
     return () => { active = false; };
   }, []);
   return plan;
@@ -34,25 +39,22 @@ export function AppCta({ className, label, href = "/registro", logged = false, n
   const plan = usePublicPlan();
   const on = plan ? plan.logged : hasSession || logged;
   if (on && navigation) return <a className={className} href="/app">Ir a la app</a>;
-  const app = !plan?.canChoosePlan || plan?.owner === false;
-  const target = !on ? href : plan?.access === "trial" && plan.canChoosePlan ? "/#planes" : plan?.billing === "past_due" ? "/app/configuracion?tab=plan" : app ? "/app" : "/suscribirme?ciclo=mensual";
-  const text = !on ? label : plan?.access === "trial" && plan.canChoosePlan ? "Elegir plan Pro" : plan?.billing === "past_due" ? "Revisar mi pago" : app ? "Ir a la app" : plan ? "Pasar a Pro" : "Continuar";
-  if (on && !app && plan?.logged && plan.access !== "trial") return <CheckoutButton className={className} cycle="monthly">Pasar a Pro</CheckoutButton>;
+  const app = !plan?.canSubscribe || plan?.owner === false;
+  const target = !on ? href : plan?.billing === "pending" || plan?.billing === "past_due" || plan?.canceling ? "/app/configuracion?tab=plan" : app ? "/app" : "/#planes";
+  const text = !on ? label : target.includes("tab=plan") ? "Ver mi plan" : app ? "Ir a la app" : "Elegir plan Pro";
   return <a className={className} href={target}>{text}</a>;
 }
 
-function CheckoutButton({ className, cycle, children }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode }) {
-  return <a className={className} href={`/suscribirme?ciclo=${cycle === "yearly" ? "anual" : "mensual"}`} data-plan-cta="" data-billing-cycle={cycle}>{children}</a>;
+function CheckoutButton({ className, cycle, amount, children }: { className: string; cycle: "monthly" | "yearly"; amount: number; children: ReactNode }) {
+  return <form action={landingCheckoutAction} className="landing-checkout-form">
+    <input type="hidden" name="cycle" value={cycle} />
+    <input type="hidden" name="expectedAmount" value={amount} />
+    <OnceButton className={className} pending="Verificando y continuando…">{children}</OnceButton>
+  </form>;
 }
 
-export function SubscribeCta({ className, cycle, children, upgradeLabel = "Pasar a anual", trialLabel }: { className: string; cycle: "monthly" | "yearly"; children: ReactNode; upgradeLabel?: string; trialLabel?: string }) {
-  const logged = useHasSession();
+export function SubscribeCta({ className, cycle, amount, children, trialLabel }: { className: string; cycle: "monthly" | "yearly"; amount: number; children: ReactNode; upgradeLabel?: string; trialLabel?: string }) {
   const plan = usePublicPlan();
-  if (plan?.logged) {
-    if (cycle === "yearly" && plan.canUpgradeAnnual) return <CheckoutButton className={className} cycle="yearly">{upgradeLabel}</CheckoutButton>;
-    if (!plan.canSubscribe && !plan.canResumeCheckout) return <a className={className} href="/app/configuracion?tab=plan">Administrar mi plan</a>;
-    return <CheckoutButton className={className} cycle={cycle}>{plan.access === "trial" ? trialLabel ?? `Elegir Pro ${cycle === "yearly" ? "anual" : "mensual"}` : children}</CheckoutButton>;
-  }
-  if (!plan && logged) return <CheckoutButton className={className} cycle={cycle}>{children}</CheckoutButton>;
-  return <Link className={className} href={`/suscribirme?ciclo=${cycle === "yearly" ? "anual" : "mensual"}`} data-plan-cta="" data-billing-cycle={cycle}>{children}</Link>;
+  if (plan?.logged && (!plan.canSubscribe || plan.access === "paid" || plan.access === "granted")) return <a className={className} href="/app/configuracion?tab=plan">Ver mi plan</a>;
+  return <CheckoutButton className={className} cycle={cycle} amount={amount}>{plan?.access === "trial" ? trialLabel ?? `Elegir Pro ${cycle === "yearly" ? "anual" : "mensual"}` : children}</CheckoutButton>;
 }

@@ -52,3 +52,13 @@ it("shared members cannot purchase, upgrade or cancel", () => {
   expect(html).toContain("las administra el dueño del espacio");
   expect(html).not.toContain("<form");
 });
+
+it("a cancellation awaiting provider confirmation never claims future charges are already stopped", () => {
+  const sub = { ...trial, provider: "mercadopago", providerRef: "canceling-contract", billingCycle: "monthly", nextPaymentAt: end };
+  const html = render(publicPlan(sub, true, now, { agreement: { status: "authorized", cycle: "monthly", providerRef: "canceling-contract", amount: 7499, cancelRequestedAt: now } }));
+  expect(html).toContain("Cancelación en verificación");
+  expect(html).toContain("Todavía no podemos asegurar que se hayan detenido los cobros");
+  expect(html).not.toContain("Renovación cancelada");
+  expect(html).not.toContain("Pasar a anual");
+  expect(html).not.toContain("Elegir Pro");
+});

@@ -1,4 +1,5 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -7,10 +8,12 @@ import { lockWorkspace } from "@/server/workspace-lock";
 import { resourceQuotaAvailable } from "@/server/resource-quota";
 import { getDb } from "@/lib/db";
 import { audit, canUse, requireUser, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
+import { quarterHour, reserveSecurityAttempt } from "@/server/security-limits";
+import { consumeTotp } from "@/server/totp-check";
 import { parseAmount } from "@/lib/money";
 import { parseDate, todayIn } from "@/lib/dates";
 import { MODULES, modulesForUses, readModules, FREE_LIMITS } from "@/lib/modules";
-import { generateTotpSecret, otpauthUrl, verifyTotp } from "@/lib/auth/totp";
+import { generateTotpSecret, otpauthUrl } from "@/lib/auth/totp";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import { adjustBalance, cancelObligation, createAccount, reorderAccounts, deleteMovement, deleteObligation, linkToPending, matchingPending, updateObligation, payObligation, recordMovement, recordTransfer, updateMovement, UserError } from "@/server/ledger";
 import type { FormState } from "./auth";
@@ -25,7 +28,7 @@ const ACCOUNT_TYPES = ["CASH", "SAVINGS", "CHECKING", "WALLET", "FOREIGN", "INVE
 
 function fail(e: unknown): FormState {
   if (e instanceof UserError) return { error: e.message };
-  console.error(e);
+  reportError("operation", e);
   return { error: "No pudimos guardar. Probá de nuevo en un momento." };
 }
 const money = (v: FormDataEntryValue | null, label: string) => {
@@ -59,7 +62,7 @@ export async function finishOnboardingAction(_: FormState, fd: FormData): Promis
       const { rewardReferral } = await import("@/server/referrals");
       const r = await rewardReferral(db, user.id);
       if (r.rewarded) await audit("referral.rewarded", { userId: user.id, workspaceId: workspace.id, meta: { referrerId: r.referrerId, referrerGets: r.referrerGets } });
-    } catch (e) { console.error("referido", e); }
+    } catch (e) { reportError("referido", e); }
     const accName = String(fd.get("accountName") ?? "").trim();
     if (accName) {
       const type = z.enum(ACCOUNT_TYPES).catch("SAVINGS").parse(fd.get("accountType"));
@@ -358,14 +361,17 @@ export async function saveModulesAction(_: FormState, fd: FormData): Promise<For
 }
 
 export async function start2faAction() {
-  const { user } = await requireUser();
+  const { user, session } = await requireUser();
   if (user.totpEnabledAt) return;
+  if (Date.now() - session.createdAt.getTime() > quarterHour) redirect(`/app/configuracion?tab=seguridad&seguridaderror=${encodeURIComponent("Por seguridad, cerrá sesión e ingresá de nuevo antes de activar la verificación.")}`);
+  if (!await reserveSecurityAttempt(getDb(), "twofactor-setup", [{ key: user.id, limit: 3, windowMs: quarterHour }])) redirect(`/app/configuracion?tab=seguridad&seguridaderror=${encodeURIComponent("Demasiados intentos. Probá de nuevo en 15 minutos.")}`);
   await getDb().user.update({ where: { id: user.id }, data: { totpSecretEnc: encryptSecret(generateTotpSecret()) } });
   revalidatePath("/app/configuracion");
 }
 
 export async function twoFactorQr(): Promise<{ qr: string; secret: string } | null> {
-  const { user } = await requireUser();
+  const { user, session } = await requireUser();
+  if (Date.now() - session.createdAt.getTime() > quarterHour) return null;
   if (!user.totpSecretEnc || user.totpEnabledAt) return null;
   const secret = decryptSecret(user.totpSecretEnc);
   return { qr: await QRCode.toDataURL(otpauthUrl(secret, user.email), { margin: 1, width: 200 }), secret };
@@ -373,27 +379,43 @@ export async function twoFactorQr(): Promise<{ qr: string; secret: string } | nu
 
 export async function confirm2faAction(_: FormState, fd: FormData): Promise<FormState> {
   const { user, session } = await requireUser();
+  if (user.totpEnabledAt) return { ok: "La verificación en dos pasos ya está activada." };
+  if (Date.now() - session.createdAt.getTime() > quarterHour) return { error: "Por seguridad, cerrá sesión e ingresá de nuevo antes de activar la verificación en dos pasos." };
   if (!user.totpSecretEnc) return { error: "Primero tocá Activar." };
-  if (!verifyTotp(decryptSecret(user.totpSecretEnc), String(fd.get("code") ?? ""))) return { error: "El código no es correcto. Probá con el que se ve ahora en la app." };
+  if (!(await reserveSecurityAttempt(getDb(), "twofactor", [{ key: user.id, limit: 5, windowMs: quarterHour }]))) return { error: "Demasiados intentos. Probá en 15 minutos." };
+  if (!(await consumeTotp(getDb(), user.id, String(fd.get("code") ?? "")))) {
+    await audit("auth.2fa_failed", { userId: user.id });
+    return { error: "El código no es correcto, ya se usó o venció. Esperá el próximo código de tu app." };
+  }
   const db = getDb();
-  await db.user.update({ where: { id: user.id }, data: { totpEnabledAt: new Date() } });
-  await db.session.update({ where: { id: session.id }, data: { twoFactorVerified: true } });
+  await db.$transaction([
+    db.user.update({ where: { id: user.id }, data: { totpEnabledAt: new Date() } }),
+    db.session.update({ where: { id: session.id }, data: { twoFactorVerified: true } }),
+    // Las sesiones previas se crearon sin exigir segundo factor.
+    db.session.deleteMany({ where: { userId: user.id, id: { not: session.id } } }),
+  ]);
   await audit("auth.2fa_enabled", { userId: user.id });
-  try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(user, "2fa_on"); } catch (e) { console.error("aviso 2fa", e); }
+  try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(user, "2fa_on"); } catch (e) { reportError("aviso 2fa", e); }
   revalidatePath("/app/configuracion");
   return { ok: "Verificación en dos pasos activada." };
 }
 
 export async function disable2faAction(_: FormState, fd: FormData): Promise<FormState> {
-  const { user } = await requireUser();
+  const { user, session } = await requireUser();
   if (!user.totpSecretEnc || !user.totpEnabledAt) return { error: "No está activada." };
-  if (!verifyTotp(decryptSecret(user.totpSecretEnc), String(fd.get("code") ?? ""))) return { error: "Para desactivarla, escribí un código válido." };
+  if (Date.now() - session.createdAt.getTime() > quarterHour) return { error: "Por seguridad, cerrá sesión e ingresá de nuevo antes de desactivar la verificación en dos pasos." };
+  if (!(await reserveSecurityAttempt(getDb(), "twofactor", [{ key: user.id, limit: 5, windowMs: quarterHour }]))) return { error: "Demasiados intentos. Probá en 15 minutos." };
+  if (!(await consumeTotp(getDb(), user.id, String(fd.get("code") ?? "")))) {
+    await audit("auth.2fa_failed", { userId: user.id });
+    return { error: "Para desactivarla, escribí un código nuevo y válido de tu app de autenticación." };
+  }
   await getDb().$transaction([
     getDb().user.update({ where: { id: user.id }, data: { totpEnabledAt: null, totpSecretEnc: null } }),
     getDb().recoveryCode.deleteMany({ where: { userId: user.id } }),
+    getDb().session.deleteMany({ where: { userId: user.id, id: { not: session.id } } }),
   ]);
   await audit("auth.2fa_disabled", { userId: user.id });
-  try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(user, "2fa_off"); } catch (e) { console.error("aviso 2fa", e); }
+  try { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(user, "2fa_off"); } catch (e) { reportError("aviso 2fa", e); }
   revalidatePath("/app/configuracion");
   return { ok: "Verificación en dos pasos desactivada." };
 }
@@ -534,9 +556,10 @@ export async function resendVerifyAction(_: FormState, __?: FormData): Promise<F
   const { user } = await requireUser();
   if (user.emailVerified) return { ok: "Tu correo ya está confirmado." };
   const db = getDb();
-  if ((await db.auditLog.count({ where: { action: "auth.verify_sent", userId: user.id, createdAt: { gte: new Date(Date.now() - 3600_000) } } })) >= 3) return { error: "Ya te mandamos varios códigos. Revisá también en spam o probá en una hora." };
+  if (!(await reserveSecurityAttempt(db, "verify-send", [{ key: user.id, limit: 3, windowMs: 3600_000 }]))) return { error: "Ya te mandamos varios códigos. Revisá también en spam o probá en una hora." };
   const { sendVerifyEmail } = await import("@/server/account-mail");
-  await sendVerifyEmail(user);
+  const result = await sendVerifyEmail(user);
+  if (!result.sent) return { error: "No pudimos enviar el código en este momento. Probá más tarde o escribinos desde Contacto." };
   await audit("auth.verify_sent", { userId: user.id });
   return { ok: `Te mandamos un código nuevo a ${user.email}.` };
 }
@@ -546,7 +569,7 @@ export async function verifyEmailCodeAction(_: FormState, fd: FormData): Promise
   const { user } = await requireUser();
   if (user.emailVerified) return { ok: "Tu correo ya está confirmado." };
   const db = getDb();
-  if ((await db.auditLog.count({ where: { action: "auth.verify_code_failed", userId: user.id, createdAt: { gte: new Date(Date.now() - 15 * 60_000) } } })) >= 5) return { error: "Demasiados códigos incorrectos. Probá de nuevo en 15 minutos." };
+  if (!(await reserveSecurityAttempt(db, "verify-code", [{ key: user.id, limit: 5, windowMs: quarterHour }]))) return { error: "Demasiados códigos incorrectos. Probá de nuevo en 15 minutos." };
   const { checkVerifyCode } = await import("@/server/email-verify");
   if (!checkVerifyCode(user.id, user.email, String(fd.get("code") ?? ""))) {
     await audit("auth.verify_code_failed", { userId: user.id });
@@ -556,6 +579,10 @@ export async function verifyEmailCodeAction(_: FormState, fd: FormData): Promise
   await audit("auth.email_verified", { userId: user.id, meta: { via: "code" } });
   revalidatePath("/app", "layout");
   revalidatePath("/confirmar-correo");
+  const { cookies } = await import("next/headers");
+  const { PURCHASE_COOKIE, readPurchaseIntent } = await import("@/server/purchase-intent");
+  const intent = readPurchaseIntent((await cookies()).get(PURCHASE_COOKIE)?.value);
+  if (intent) redirect(`/suscribirme?ciclo=${intent.cycle === "yearly" ? "anual" : "mensual"}`);
   return { ok: "Listo, tu correo quedó confirmado." };
 }
 

@@ -3,9 +3,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { verifyCode } from "./email-verify";
+import { requireAuthSecret } from "@/lib/auth/secret";
 
 const DAYS = 7;
-const sign = (payload: string) => createHmac("sha256", `${process.env.AUTH_SECRET ?? ""}|verify-email`).update(payload).digest("base64url");
+const sign = (payload: string) => createHmac("sha256", `${requireAuthSecret()}|verify-email`).update(payload).digest("base64url");
 
 export function verifyToken(userId: string, email: string, now = Date.now()) {
   const exp = Math.floor(now / 1000) + DAYS * 86400;

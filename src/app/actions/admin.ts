@@ -1,4 +1,5 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 // Acciones del panel interno. Cada una exige su permiso (ver src/server/admin-team.ts) y queda en la auditoría
 // con el correo de quien la hizo.
 import { revalidatePath } from "next/cache";
@@ -192,7 +193,7 @@ export async function adminReplyTicketAction(_: FormState, fd: FormData): Promis
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
   await replyToTicket(db, id, reply, appUrl());
-  await drainEmailOutbox(db).catch((e) => console.error("[support reply queued]", e));
+  await drainEmailOutbox(db).catch((e) => reportError("[support reply queued]", e));
   await adminAudit(a, "admin.ticket_answered", { entity: "ticket", entityId: id, meta: { queued: true } });
   refresh();
   return { ok: "Respuesta guardada en Ayuda y preparada para enviar por correo. Los fallos de envío se reintentan." };
@@ -384,7 +385,7 @@ export async function adminReplyContactAction(_: FormState, fd: FormData): Promi
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
   const m = await replyToContact(db, id, reply, appUrl());
-  await drainEmailOutbox(db).catch((e) => console.error("[contact reply queued]", e));
+  await drainEmailOutbox(db).catch((e) => reportError("[contact reply queued]", e));
   await adminAudit(a, "admin.contact_answered", { entity: "contact", entityId: id, meta: { queued: true, area: m.area } });
   refresh();
   return { ok: "Respuesta guardada y preparada para enviar por correo. Si el proveedor falla, se reintenta automáticamente." };

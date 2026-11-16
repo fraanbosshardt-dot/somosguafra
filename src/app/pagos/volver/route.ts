@@ -1,3 +1,4 @@
+import { reportError } from "@/lib/diagnostics";
 import { after } from "next/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
       if (recent) return;
       await db.auditLog.create({ data: { action: "billing.return_sync", userId: session.userId, workspaceId: ws } });
       await reconcileWorkspaceBilling(db, ws);
-    } catch (error) { console.error("[billing return]", error); }
+    } catch (error) { reportError("[billing return]", error); }
   });
   redirect("/app?pago=recibido");
 }

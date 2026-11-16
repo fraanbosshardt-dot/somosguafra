@@ -23,6 +23,18 @@ export async function toArs(db: PrismaClient, amount: number, currency: string) 
   return r && ars ? (amount / r) * ars : null;
 }
 
+// Cotizaciones por informe, no por fila. Nunca se comparte información entre peticiones.
+export async function arsConverter(db: PrismaClient, currencies: Iterable<string>) {
+  const keys = [...new Set(currencies)].filter(c => c !== "ARS");
+  const rates = new Map<string, number | null>();
+  if (keys.length) await Promise.all([...new Set([...keys, "ARS"])].map(async c => rates.set(c, await usdRate(db, c))));
+  return (amount: number, currency: string): number | null => {
+    if (currency === "ARS") return amount;
+    const rate = rates.get(currency), ars = rates.get("ARS");
+    return rate && ars ? amount / rate * ars : null;
+  };
+}
+
 // Estadísticas de cuenta y de suscripción mantienen unidades explícitas.
 const businessUser = { deletedAt: null, memberships: { some: { role: "OWNER" as const, workspace: { excludeFromMetrics: false } } } };
 export async function overview(db: PrismaClient, _prices: { monthly: number; yearly: number }, now = new Date()) {
@@ -33,15 +45,20 @@ export async function overview(db: PrismaClient, _prices: { monthly: number; yea
     db.user.count({ where: { ...businessUser, createdAt: { gte: from } } }),
     db.user.count({ where: { ...businessUser, lastSeenAt: { gte: new Date(now.getTime() - DAY) } } }),
     db.user.count({ where: { ...businessUser, lastSeenAt: { gte: from } } }),
-    db.workspace.findMany({ where: { excludeFromMetrics: false }, include: { subscription: true, invoices: { include: { financialEvents: true } }, billingAgreements: { orderBy: { createdAt: "desc" }, take: 1 } } }),
+    db.workspace.findMany({ where: { excludeFromMetrics: false }, select: { archivedAt: true, subscription: true, invoices: { where: { periodEnd: { gt: from }, paidAt: { lte: now } }, select: { status: true, amount: true, paidAt: true, periodStart: true, periodEnd: true, financialEvents: { select: { kind: true, amount: true, occurredAt: true } } } }, billingAgreements: { where: { status: { in: ["authorized", "paused", "pending", "creating", "uncertain"] } }, orderBy: { createdAt: "desc" }, select: { providerRef: true, status: true, amount: true, cycle: true, startsAt: true } } } }),
     db.supportTicket.count({ where: { status: "OPEN" } }),
   ]);
   let mrrUnknown = 0;
   let paid = 0, gifted = 0, trials = 0, mrr = 0, startingPaid = 0, lostPaid = 0, renewalOff = 0, pending = 0, unverifiable = 0;
   for (const w of spaces) {
     const sub = w.subscription;
-    const agreement = w.billingAgreements[0];
+    // Una solicitud nueva nunca reemplaza el contrato vigente al medir ingreso recurrente.
+    const agreement = w.billingAgreements.find(a => a.providerRef && a.providerRef === sub?.providerRef) ?? w.billingAgreements[0];
     const state = customerState(sub, w.invoices, now, agreement);
+    if (w.archivedAt) {
+      if (hasPaidCoverage(w.invoices, from)) { startingPaid++; lostPaid++; }
+      continue; // conservar historia de ingresos/cohorte, nunca contabilizar acceso de una cuenta eliminada
+    }
     if (state.paid) { paid++; if (state.billing === "active" || state.billing === "scheduled") {
       const amount = Number(agreement?.amount ?? 0);
       if (amount > 0 && agreement?.providerRef === sub?.providerRef) mrr += amount / (agreement.cycle === "yearly" ? 12 : 1);
@@ -51,11 +68,11 @@ export async function overview(db: PrismaClient, _prices: { monthly: number; yea
     else if (state.access === "granted") gifted++;
     else if (state.access === "unverified") unverifiable++;
     if (state.paid && state.billing === "canceled") renewalOff++;
-    if (state.billing === "pending") pending++;
+    if (w.billingAgreements.some(a => ["pending", "creating", "uncertain"].includes(a.status))) pending++;
     if (hasPaidCoverage(w.invoices, from)) { startingPaid++; if (!state.paid) lostPaid++; }
   }
   const churn = startingPaid ? lostPaid / startingPaid * 100 : null;
-  return { users, newWeek, newMonth, dau, mau, paid, gifted, trials, mrr, mrrUnknown, conversion: spaces.length ? paid / spaces.length * 100 : 0, churn, startingPaid, lostPaid, renewalOff, pending, unverifiable, openTickets };
+  return { users, newWeek, newMonth, dau, mau, paid, gifted, trials, mrr, mrrUnknown, conversion: spaces.some(w => !w.archivedAt) ? paid / spaces.filter(w => !w.archivedAt).length * 100 : 0, churn, startingPaid, lostPaid, renewalOff, pending, unverifiable, openTickets };
 }
 
 export async function signupsByDay(db: PrismaClient, days = 30, now = new Date()) {
@@ -73,11 +90,12 @@ export async function revenueByMonth(db: PrismaClient, months = 6, now = new Dat
   const inv = await db.paymentEvent.findMany({ where: { occurredAt: { gte: from }, invoice: { workspace: { excludeFromMetrics: false } } } });
   const keys = Array.from({ length: months }, (_, i) => ym(new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + i, 1))));
   const out = keys.map((key) => ({ key, n: 0, count: 0 }));
+  const convert = await arsConverter(db, inv.map(i => i.currency));
   for (const i of inv) {
     const row = out.find((o) => o.key === ym(i.occurredAt));
     if (!row) continue;
     row.count++;
-    const v = await toArs(db, Number(i.amount) * (["gross", "recovery"].includes(i.kind) ? 1 : -1), i.currency);
+    const v = convert(Number(i.amount) * (["gross", "recovery"].includes(i.kind) ? 1 : -1), i.currency);
     if (v !== null) row.n += v;
   }
   return out.map((o) => ({ ...o, n: Math.round(o.n * 100) / 100 }));
@@ -98,16 +116,17 @@ export async function retention(db: PrismaClient, now = new Date()) {
   const since = typeof setting?.value === "string" ? new Date(setting.value) : now;
   const users = await db.user.findMany({ where: { ...businessUser, createdAt: { gte: since } }, select: { id: true, createdAt: true } });
   const activity = await db.productActivity.findMany({ where: { userId: { in: users.map(u => u.id) } }, select: { userId: true, day: true } });
+  const activeDays = new Set(activity.map(a => `${a.userId}|${Math.floor(a.day.getTime() / DAY)}`));
   const localDay = (date: Date) => Math.floor(Date.parse(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).format(date) + "T00:00:00Z") / DAY);
   return [7, 30].map(days => {
     const eligible = users.filter(u => localDay(now) > localDay(u.createdAt) + days);
-    const returned = eligible.filter(u => activity.some(a => a.userId === u.id && Math.floor(a.day.getTime() / DAY) === localDay(u.createdAt) + days)).length;
+    const returned = eligible.filter(u => activeDays.has(`${u.id}|${localDay(u.createdAt) + days}`)).length;
     return { days, eligible: eligible.length, returned, rate: eligible.length ? returned / eligible.length * 100 : null };
   });
 }
 
 export async function byCountry(db: PrismaClient, top = 6) {
-  const g = await db.workspace.groupBy({ by: ["country"], where: { excludeFromMetrics: false }, _count: { _all: true } });
+  const g = await db.workspace.groupBy({ by: ["country"], where: { excludeFromMetrics: false, archivedAt: null }, _count: { _all: true } });
   const sorted = g.map((x) => ({ key: x.country, n: x._count._all })).sort((a, b) => b.n - a.n);
   const head = sorted.slice(0, top);
   const rest = sorted.slice(top).reduce((t, x) => t + x.n, 0);
@@ -127,9 +146,10 @@ export async function signupMethods(db: PrismaClient, days = 30, now = new Date(
 export async function monthlyCosts(db: PrismaClient) {
   const costs = await db.companyCost.findMany({ where: { active: true } });
   let total = 0, unknown = 0;
+  const convert = await arsConverter(db, costs.map(c => c.currency));
   for (const c of costs) {
     const perMonth = Number(c.amount) / (c.period === "yearly" ? 12 : 1);
-    const v = await toArs(db, perMonth, c.currency);
+    const v = convert(perMonth, c.currency);
     if (v === null) unknown++; else total += v;
   }
   return { total: Math.round(total * 100) / 100, unknown, items: costs };

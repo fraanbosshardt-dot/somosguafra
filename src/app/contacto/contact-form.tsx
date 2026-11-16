@@ -15,7 +15,7 @@ export function ContactForm({ area: initial, email: initialEmail = "", name: ini
       <h2>¡Recibimos tu consulta!</h2>
       <p>Tu número de trámite es</p>
       <span className="ws-code">{state.code}</span>
-      <p>Te respondemos por correo, normalmente en menos de 48 horas hábiles. {area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento." : "Si escribís de nuevo, mencioná este número."}</p>
+      <p>{cancellation || area === "arrepentimiento" ? "Tu solicitud tiene atención prioritaria. El número confirma que la recibimos; te informamos la resolución por separado." : "Te respondemos por correo, normalmente en menos de 48 horas hábiles."} {area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento." : "Si escribís de nuevo, mencioná este número."}</p>
       <Link className="ws-btn" href="/">Volver al inicio</Link>
     </div>
   );
@@ -25,6 +25,7 @@ export function ContactForm({ area: initial, email: initialEmail = "", name: ini
     // Se envía con onSubmit para que, si falta algo, no se borre lo escrito.
     <form className="ws-form" method="post" noValidate onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(() => run(fd)); }}>
       <h2>{cancellation ? "Dar de baja Pro" : "Escribinos"}</h2>
+      {cancellation && <input type="hidden" name="management" value="cancellation" />}
       {cancellation && <p className="sub">El pedido detiene las renovaciones una vez verificada la cuenta. Conservás el acceso ya pagado. No necesitás indicar un motivo ni contratar otro plan.</p>}
       <fieldset className="ws-areas">
         <legend>¿Sobre qué es tu consulta?</legend>

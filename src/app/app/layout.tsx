@@ -96,7 +96,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         );
       })()}
       {sys.maintenance && <div className="notice a app-ann" role="status"><Icon name="info" /><span>Modo mantenimiento activo: las personas ven la pantalla de “Volvemos enseguida”. Vos entrás porque sos del equipo.</span></div>}
-      {sharedReadOnly && <p className="notice a" role="status">Este espacio está en modo de solo lectura para vos. El dueño puede activar Pro para habilitar la edición compartida; los datos se conservan.</p>}
       {children}
     </Shell></>
   );

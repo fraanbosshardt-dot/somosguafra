@@ -1,8 +1,9 @@
+import { reportError } from "@/lib/diagnostics";
 // Paso 2: Google vuelve acá con un código. Se cambia por los datos de la cuenta y se abre la sesión.
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
-import { checkIdToken, exchangeCode, GOOGLE_COOKIE, googleEnabled, readStart } from "@/lib/auth/google";
+import { verifyGoogleIdToken, exchangeCode, GOOGLE_COOKIE, googleEnabled, readStart } from "@/lib/auth/google";
 import { audit, createSession, landingPath } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { appUrl } from "@/lib/email";
@@ -10,6 +11,7 @@ import { findOrCreateGoogleUser } from "@/server/google-auth";
 import { applyProGrant } from "@/server/grants";
 import { createAdminSession } from "@/lib/auth/admin";
 import { roleFor } from "@/server/admin-team";
+import { authBuckets, reserveSecurityAttempt } from "@/server/security-limits";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export async function GET(req: NextRequest) {
   } catch {
     idToken = null;
   }
-  const profile = idToken ? checkIdToken(idToken, { clientId: process.env.GOOGLE_CLIENT_ID ?? "", nonce: st.nonce }) : null;
+  const profile = idToken ? await verifyGoogleIdToken(idToken, { clientId: process.env.GOOGLE_CLIENT_ID ?? "", nonce: st.nonce }) : null;
   if (!profile) redirect(`${back}?google=fallo`);
 
   const db = getDb();
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
   if (!exists) {
     // Mismo freno que el registro con correo: 10 cuentas por hora por conexión.
     const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim();
-    if (ip && (await db.auditLog.count({ where: { action: "auth.signup", ip, createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } })) >= 10) redirect(`${back}?google=muchas`);
+    if (!(await reserveSecurityAttempt(db, "signup", authBuckets(profile.email, ip ?? null, 3, 10, 3600_000)))) redirect(`${back}?google=muchas`);
   }
 
   const r = await findOrCreateGoogleUser(db, profile);
@@ -65,20 +67,20 @@ export async function GET(req: NextRequest) {
       const { attachReferral, REF_COOKIE } = await import("@/server/referrals");
       const code = jar.get(REF_COOKIE)?.value;
       if (code) { await attachReferral(db, r.userId, code); jar.delete(REF_COOKIE); }
-    } catch (e) { console.error("referido", e); }
+    } catch (e) { reportError("referido", e); }
   }
   if (r.linked) await audit("auth.google_linked", { userId: r.userId, meta: { passwordCleared: r.passwordCleared } });
 
   const user = await db.user.findUniqueOrThrow({ where: { id: r.userId } });
   if (r.created) {
-    try { const { sendWelcomeEmail } = await import("@/server/account-mail"); await sendWelcomeEmail(user); } catch (e) { console.error("bienvenida", e); }
+    try { const { sendWelcomeEmail } = await import("@/server/account-mail"); await sendWelcomeEmail(user); } catch (e) { reportError("bienvenida", e); }
   }
   if (!r.created) {
     try {
       const h = await headers();
       const { notifyNewDevice } = await import("@/server/account-mail");
       await notifyNewDevice(db, user, h.get("user-agent"), h.get("x-forwarded-for")?.split(",")[0].trim() ?? null);
-    } catch (e) { console.error("aviso de ingreso", e); }
+    } catch (e) { reportError("aviso de ingreso", e); }
   }
   await createSession(user.id, { twoFactorVerified: !user.totpEnabledAt, remember: true });
   await audit("auth.login", { userId: user.id, meta: { via: "google" } });

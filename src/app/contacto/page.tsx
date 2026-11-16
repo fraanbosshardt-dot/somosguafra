@@ -36,6 +36,7 @@ export default async function Contact({ searchParams }: { searchParams: Promise<
             <SupportGuide />
             <div className="ws-card">
               <h3>Lo que tenés que saber</h3>
+              <p><b>Atención al cliente, soporte y reclamos:</b> {BRAND.supportHours}. Podés enviar tu consulta en cualquier momento.</p>
               <ul className="ws-list">
                 <li>{check}<span>Respondemos en menos de 48 horas hábiles.</span></li>
                 <li>{check}<span>Nunca te vamos a pedir tu contraseña ni la clave del banco.</span></li>

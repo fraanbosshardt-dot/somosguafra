@@ -17,8 +17,9 @@ import "@/app/motion.css";
 export function PublicShell({ children, logged = false }: { children: React.ReactNode; logged?: boolean }) {
   return (
     <div className={`lp site ${inter.variable} ${tight.variable}`}>
+      <a className="site-skip" href="#contenido">Saltar al contenido</a>
       <PublicNav logged={logged} />
-      <main id="contenido">{children}</main>
+      <main id="contenido" tabIndex={-1}>{children}</main>
       <SiteFooter />
       <Analytics />
       <RefCapture />
@@ -65,7 +66,7 @@ async function SiteFooter() {
         </div>
         <div className="ws-foot-legal">
           <Link href="/arrepentimiento">Botón de arrepentimiento</Link>
-          <Link href="/contacto?area=pagos&gestion=baja">Baja del servicio</Link>
+          <Link href="/contacto?area=pagos&gestion=baja">Botón de baja de servicio</Link>
           <a href={BRAND.consumerUrl} target="_blank" rel="noopener noreferrer">Defensa del Consumidor · Reclamos</a>
         </div>
         <div className="ws-foot-bot">

@@ -1,4 +1,5 @@
 "use server";
+import { reportError } from "@/lib/diagnostics";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -77,7 +78,7 @@ export async function acceptInviteAction(_: FormState, fd: FormData): Promise<Fo
     try {
       const owner = await getDb().membership.findFirst({ where: { workspaceId: ws, role: "OWNER" }, include: { user: { select: { email: true, name: true } } } });
       if (owner) { const { sendSecurityNotice } = await import("@/server/account-mail"); await sendSecurityNotice(owner.user, "member_joined", `${user.name} (${user.email})`); }
-    } catch (e) { console.error("aviso compartir", e); }
+    } catch (e) { reportError("aviso compartir", e); }
   } catch (e) { return fail(e); }
   (await cookies()).delete(INVITE_COOKIE);
   revalidatePath("/app", "layout");

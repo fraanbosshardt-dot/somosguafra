@@ -9,32 +9,32 @@ import { formatMoney } from "@/lib/money";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
 import { Stats, int } from "@/components/admin-ui";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
+import { paymentLabel, subscriptionLabel } from "@/lib/payment-labels";
+import { adminBillingReport, BILLING_PAGE_SIZE } from "@/server/admin-billing-report";
 import { adminCancelSubAction, adminCreateCouponAction, adminToggleCouponAction } from "@/app/actions/admin";
 
 export const metadata: Metadata = { title: "Cobros y cupones" };
 
-export default async function Billing({ searchParams }: { searchParams: Promise<{ pagoerror?: string }> }) {
-  const { pagoerror } = await searchParams;
+export default async function Billing({ searchParams }: { searchParams: Promise<{ pagoerror?: string; suscripciones?: string; pagos?: string }> }) {
+  const { pagoerror, suscripciones, pagos } = await searchParams;
+  const subPage = pageNumber(suscripciones), paymentPage = pageNumber(pagos);
   const admin = await requireAdmin();
   const owner = can(admin.role, "owner");
   const db = getDb();
-  const soon = new Date(Date.now() + 7 * 864e5);
-  const [subs, invoices, coupons] = await Promise.all([
-    db.subscription.findMany({ where: { provider: "mercadopago" }, include: { workspace: { include: { members: { take: 1, include: { user: { select: { id: true, name: true, email: true } } } } } } }, orderBy: { updatedAt: "desc" }, take: 200 }),
-    db.invoice.findMany({ include: { workspace: { include: { members: { take: 1, include: { user: { select: { id: true, email: true } } } } } } }, orderBy: { createdAt: "desc" }, take: 50 }),
-    db.coupon.findMany({ orderBy: { createdAt: "desc" } }),
-  ]);
+  const [report, coupons] = await Promise.all([adminBillingReport(db, subPage, paymentPage), db.coupon.findMany({ orderBy: { createdAt: "desc" } })]);
+  const { subs, invoices, subTotal, invoiceTotal, active, pastDue, renewing, rejected } = report;
   const bill = await billingConfig(db);
-  const active = subs.filter((s) => s.status === "ACTIVE"), pastDue = subs.filter((s) => s.status === "PAST_DUE");
-  const renewing = active.filter((s) => s.nextPaymentAt && s.nextPaymentAt > new Date() && s.nextPaymentAt <= soon).length;
-  const rejected = invoices.filter((i) => i.status === "rejected").length;
+  const href = (s: number, p: number) => `/admin/cobros?suscripciones=${s}&pagos=${p}`;
   const who = (w: { members: { user: { id: string; name?: string; email: string } }[] }) => w.members[0]?.user;
   return (
     <>
       {pagoerror && <p className="notice r" role="alert">{pagoerror.slice(0, 300)}</p>}
       <PageHead title="Cobros y cupones" desc="Suscripciones de Mercado Pago, pagos y descuentos." actions={owner ? <a className="btn" href="/admin/export/pagos">Descargar pagos (Excel)</a> : undefined} />
       {!bill.enabled && <p className="notice a">Los cobros con Mercado Pago todavía no están activados: faltan MP_ACCESS_TOKEN y MP_WEBHOOK_SECRET en Vercel, o el precio de Pro en pesos en Ajustes. Mientras tanto, podés regalar Pro desde Clientes.</p>}
-      <Stats items={[["Suscripciones activas", int(active.length)], ["Con pago pendiente", int(pastDue.length)], ["Renuevan en 7 días", int(renewing)], ["Pagos rechazados", int(rejected), "en los últimos 50"]]} />
+      <Stats items={[["Suscripciones activas", int(active)], ["Con pago pendiente", int(pastDue)], ["Renuevan en 7 días", int(renewing)], ["Pagos rechazados", int(rejected), "últimos 30 días · todos los registros"]]} />
 
       <div className="card">
         <div className="chead"><h3>Suscripciones</h3></div>
@@ -44,12 +44,13 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             <tr key={s.id}>
               <td>{u ? <Link className="lnk" href={`/admin/usuarios/${u.id}`}>{u.email}</Link> : "—"}</td>
               <td>{s.billingCycle === "yearly" ? "Anual" : "Mensual"}</td>
-              <td><span className={`pill ${s.status === "ACTIVE" ? "g" : s.status === "PAST_DUE" ? "r" : ""}`}>{s.status === "ACTIVE" ? "Al día" : s.status === "PAST_DUE" ? "Pago pendiente" : "Cancelada"}</span></td>
+              <td><span className={`pill ${s.status === "ACTIVE" ? "g" : s.status === "PAST_DUE" ? "r" : ""}`}>{subscriptionLabel(s.status)}</span></td>
               <td>{s.couponCode ?? "—"}</td>
               <td>{fmtDate(s.createdAt)}</td>
-              <td>{owner && s.status !== "CANCELED" && <form action={adminCancelSubAction}><input type="hidden" name="workspaceId" value={s.workspaceId} /><button className="btn ghost sm" type="submit">Cancelar</button></form>}</td>
+              <td>{owner && s.status !== "CANCELED" && <form action={adminCancelSubAction}><input type="hidden" name="workspaceId" value={s.workspaceId} /><ConfirmSubmit className="btn ghost sm" question={`¿Cancelar la renovación de ${u?.email ?? "esta cuenta"}? Se solicita la baja de futuros cobros a Mercado Pago. El acceso ya cubierto se conserva${s.currentPeriodEnd ? ` hasta el ${fmtDate(s.currentPeriodEnd)}` : ""}. No genera un reembolso.`} yes="Cancelar renovación">Cancelar renovación</ConfirmSubmit></form>}</td>
             </tr>); })}</tbody>
         </table></div> : <div className="empty">Todavía no hay suscripciones pagas.</div>}
+        <Pagination page={subPage} size={BILLING_PAGE_SIZE} total={subTotal} href={p => href(p, paymentPage)} label="Páginas de suscripciones" />
       </div>
 
       <div className="card">
@@ -58,8 +59,9 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
           <thead><tr><th>Fecha</th><th>Cliente</th><th>Importe</th><th>Estado</th></tr></thead>
           <tbody>{invoices.map((i) => { const u = who(i.workspace); return (
             <tr key={i.id}><td>{fmtDate(i.paidAt ?? i.createdAt)}</td><td>{u ? <Link className="lnk" href={`/admin/usuarios/${u.id}`}>{u.email}</Link> : "—"}</td><td>{formatMoney(i.amount.toString(), i.currency)}</td>
-              <td><span className={`pill ${i.status === "approved" ? "g" : "r"}`}>{i.status === "approved" ? "Aprobado" : i.status === "refunded" ? "Devuelto" : "Rechazado"}</span></td></tr>); })}</tbody>
+              <td><span className={`pill ${i.status === "approved" ? "g" : ["rejected", "charged_back"].includes(i.status) ? "r" : ""}`}>{paymentLabel(i.status)}</span></td></tr>); })}</tbody>
         </table></div> : <div className="empty">Sin pagos todavía.</div>}
+        <Pagination page={paymentPage} size={BILLING_PAGE_SIZE} total={invoiceTotal} href={p => href(subPage, p)} label="Páginas de pagos" />
       </div>
 
       <div className="card">

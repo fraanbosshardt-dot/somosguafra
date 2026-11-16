@@ -1,7 +1,7 @@
 // Contacto del sitio: correos por área, redes sociales y las consultas que llegan desde el formulario.
 import { caseLinks } from "./support-thread";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { AREAS, SOCIALS, type AreaKey, type SocialKey } from "@/lib/brand";
+import { AREAS, SOCIALS, BRAND, type AreaKey, type SocialKey } from "@/lib/brand";
 import { writeSetting } from "./settings";
 
 export type ContactSettings = { emails: Partial<Record<AreaKey, string>>; socials: Partial<Record<SocialKey, string>> };
@@ -50,7 +50,7 @@ export function ticketCode(rand: () => number = Math.random) {
   return `C-${c}`;
 }
 
-export type ContactInput = { area: string; name: string; email: string; subject: string; body: string; ip: string | null; userId: string | null };
+export type ContactInput = { area: string; name: string; email: string; subject: string; body: string; ip: string | null; userId: string | null; management?: "cancellation" };
 
 export function validateContact(i: Omit<ContactInput, "ip" | "userId">): string | null {
   if (!isArea(i.area)) return "Elegí el área de tu consulta.";
@@ -73,10 +73,11 @@ export async function createContactMessage(db: PrismaClient, i: ContactInput) {
           const recent = await tx.contactMessage.count({ where: { ip: i.ip, createdAt: { gt: new Date(Date.now() - 3600e3) } } });
           if (recent >= HOURLY_LIMIT) return { error: "Recibimos varias consultas seguidas desde tu conexión. Probá de nuevo en un rato." } as const;
         }
-        const m = await tx.contactMessage.create({ data: { code: ticketCode(), area: i.area, name: i.name.slice(0, 120), email: i.email.toLowerCase().slice(0, 200), subject: i.subject.slice(0, 160), body: i.body.slice(0, 5000), ip: i.ip, userId: i.userId } });
+        const urgent = i.area === "arrepentimiento" || i.area === "pagos" && i.management === "cancellation";
+        const m = await tx.contactMessage.create({ data: { code: ticketCode(), area: i.area, name: i.name.slice(0, 120), email: i.email.toLowerCase().slice(0, 200), subject: i.subject.slice(0, 160), body: i.body.slice(0, 5000), ip: i.ip, userId: i.userId, priority: urgent ? "HIGH" : "NORMAL" } });
         // La constancia queda en la misma transacción. Un fallo de Resend no pierde ni duplica el trámite.
         const links = caseLinks("contact", m.id, m.email, (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, ""));
-        await tx.emailOutbox.create({ data: { replyTo: links.replyTo, dedupeKey: `contact/${m.id}/received`, to: m.email, purpose: "support", subject: `Recibimos tu consulta (${m.code})`, text: `Hola ${m.name.split(" ")[0]}:\n\nRecibimos tu consulta sobre "${m.subject}" (${areaName(m.area)}). Tu número de trámite es ${m.code}.\nTe respondemos por correo: soporte Pro tiene prioridad dentro de 1 día hábil; las demás consultas, normalmente en menos de 48 horas hábiles.\n\n${m.area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento.\n\n" : ""}Podés ver y continuar esta consulta desde tu enlace privado: ${links.url}\n\nSomos Guafra` } });
+        await tx.emailOutbox.create({ data: { replyTo: links.replyTo, dedupeKey: `contact/${m.id}/received`, to: m.email, purpose: "support", subject: `Recibimos tu consulta (${m.code})`, text: `Hola ${m.name.split(" ")[0]}:\n\nRecibimos tu consulta sobre "${m.subject}" (${areaName(m.area)}). Tu número de trámite es ${m.code}.\n${BRAND.supportHours}. ${urgent ? "Tu solicitud tiene atención prioritaria. Este número confirma la recepción; la baja o devolución se confirma por separado." : "Soporte Pro tiene prioridad dentro de 1 día hábil; las demás consultas, normalmente en menos de 48 horas hábiles."}\n\n${m.area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento.\n\n" : ""}Podés ver y continuar esta consulta desde tu enlace privado: ${links.url}\n\nSomos Guafra` } });
         return { message: m } as const;
       });
     } catch (e) {

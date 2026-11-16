@@ -17,7 +17,7 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, fea
   const purchase = bill.enabled && view.canChoosePlan;
   const days = view.freeUntil ? Math.max(1, Math.ceil((Date.parse(view.freeUntil) - Date.now()) / 864e5)) : 0;
   return <div className="card">
-    <BillingRefresh waiting={view.billing === "pending"} />
+    <BillingRefresh waiting={view.billing === "pending" || view.canceling} />
     {purchase ? <div className="plan-up">
       <div className="plan-why">
         {summary}
@@ -48,7 +48,7 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, fea
       {view.canCancel && <form action={cancelPlanAction}><ConfirmSubmit className="btn" question={view.coverageUntil ? `¿Cancelar la suscripción y las solicitudes pendientes? Se detienen las renovaciones y conservás Pro hasta el ${planDate(view.coverageUntil, timeZone)}.` : "¿Cancelar la suscripción y las solicitudes pendientes? No se programarán nuevas renovaciones."} yes="Sí, cancelar">Cancelar suscripción</ConfirmSubmit></form>}
       {!bill.enabled && view.canSubscribe && <p className="sub">Los cobros no están disponibles en este momento. Volvé a intentar más tarde.</p>}
       {!bill.enabled && view.canStartTrial && <form action={startTrialAction}><OnceButton>Probar 14 días gratis</OnceButton></form>}
-      {(view.paymentIssue || view.billing === "past_due" || view.billing === "pending") && <Link className="lnk" href="/contacto?area=pagos">Necesito ayuda con el pago</Link>}
+      {(view.paymentIssue || view.billing === "past_due" || view.billing === "pending" || view.canceling) && <Link className="lnk" href="/contacto?area=pagos">Necesito ayuda con el pago</Link>}
     </div></>}
   </div>;
 }

@@ -6,15 +6,18 @@
 // - El código vale entre 30 y 60 minutos, va firmado con AUTH_SECRET (no se guarda) y tiene límite de intentos.
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { requireAuthSecret } from "@/lib/auth/secret";
 
 export const emailEnabled = () => !!process.env.RESEND_API_KEY;
 
 // ¿Hay que pedirle que confirme el correo antes de seguir?
 export const needsVerifiedEmail = (user: { emailVerified: Date | null }) => !user.emailVerified && emailEnabled();
+// Billing cannot bypass ownership of the mailbox merely because email delivery is temporarily disabled.
+export const needsVerifiedBillingEmail = (user: { emailVerified: Date | null }) => !user.emailVerified;
 
 const WINDOW = 30 * 60_000;
 function codeFor(userId: string, email: string, slot: number) {
-  const h = createHmac("sha256", `${process.env.AUTH_SECRET ?? ""}|verify-code`).update(`${userId}.${email.toLowerCase()}.${slot}`).digest();
+  const h = createHmac("sha256", `${requireAuthSecret()}|verify-code`).update(`${userId}.${email.toLowerCase()}.${slot}`).digest();
   return String(h.readUInt32BE(0) % 1_000_000).padStart(6, "0");
 }
 

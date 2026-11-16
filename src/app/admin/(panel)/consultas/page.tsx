@@ -13,14 +13,17 @@ import { ActionForm, Submit } from "@/components/forms";
 import { Stats, when } from "@/components/admin-ui";
 import { adminContactStatusAction, adminReplyContactAction } from "@/app/actions/admin";
 import { ReplyBox } from "../soporte/reply-box";
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
 
 export const metadata: Metadata = { title: "Consultas del sitio" };
 const ST: Record<string, [string, string]> = { OPEN: ["Sin responder", "r"], ANSWERED: ["Respondida", "g"], CLOSED: ["Cerrada", ""] };
 
-export default async function Inquiries({ searchParams }: { searchParams: Promise<{ ver?: string; area?: string; q?: string }> }) {
+export default async function Inquiries({ searchParams }: { searchParams: Promise<{ ver?: string; area?: string; q?: string; pagina?: string }> }) {
   const admin = await requireAdmin();
   const support = can(admin.role, "support");
-  const { ver = "abiertas", area = "", q = "" } = await searchParams;
+  const { ver = "abiertas", area = "", q = "", pagina } = await searchParams;
+  const page = pageNumber(pagina);
   const db = getDb();
   const status = ver === "cerradas" ? ["CLOSED"] : ver === "respondidas" ? ["ANSWERED"] : ver === "todas" ? ["OPEN", "ANSWERED", "CLOSED"] : ["OPEN"];
   const term = q.trim().slice(0, 80);
@@ -30,12 +33,13 @@ export default async function Inquiries({ searchParams }: { searchParams: Promis
     ...(term ? { OR: [{ code: { contains: term.toUpperCase() } }, { email: { contains: term.toLowerCase() } }, { name: { contains: term, mode: "insensitive" as const } }, { subject: { contains: term, mode: "insensitive" as const } }] } : {}),
   };
   const weekAgo = new Date(Date.now() - 7 * 864e5);
-  const [list, byStatus, byArea, week, replies] = await Promise.all([
-    db.contactMessage.findMany({ where, include: { messages: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: ver === "abiertas" ? "asc" : "desc" }, take: 100 }),
+  const [list, byStatus, byArea, week, replies, total] = await Promise.all([
+    db.contactMessage.findMany({ where, include: { messages: { orderBy: { createdAt: "asc" } } }, orderBy: [{ createdAt: ver === "abiertas" ? "asc" : "desc" }, { id: "asc" }], take: 25, skip: (page - 1) * 25 }),
     db.contactMessage.groupBy({ by: ["status"], _count: { _all: true } }),
     db.contactMessage.groupBy({ by: ["area"], where: { status: "OPEN" }, _count: { _all: true } }),
     db.contactMessage.count({ where: { createdAt: { gt: weekAgo } } }),
     savedReplies(db),
+    db.contactMessage.count({ where }),
   ]);
   const c = (s: string) => byStatus.find((x) => x.status === s)?._count._all ?? 0;
   const openIn = (a: string) => byArea.find((x) => x.area === a)?._count._all ?? 0;
@@ -92,6 +96,7 @@ export default async function Inquiries({ searchParams }: { searchParams: Promis
           </div>
         );
       }) : <div className="empty">{term ? "No hay consultas que coincidan." : "No hay consultas acá."}</div>}
+      <Pagination page={page} size={25} total={total} href={p => href({ pagina: String(p) })} label="Páginas de consultas del sitio" />
     </>
   );
 }

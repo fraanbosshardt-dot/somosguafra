@@ -12,24 +12,27 @@ import { ActionForm, Submit } from "@/components/forms";
 import { when } from "@/components/admin-ui";
 import { adminCloseTicketAction, adminDeleteReplyAction, adminReplyTicketAction, adminSaveReplyAction, adminTicketPriorityAction } from "@/app/actions/admin";
 import { ReplyBox } from "./reply-box";
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
+import { supportPage } from "@/server/support-listing";
 
 export const metadata: Metadata = { title: "Soporte" };
 const PRI: Record<string, [string, string]> = { HIGH: ["Alta", "r"], NORMAL: ["Normal", ""], LOW: ["Baja", "a"] };
 
-export default async function Support({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
+export default async function Support({ searchParams }: { searchParams: Promise<{ ver?: string; pagina?: string }> }) {
   const admin = await requireAdmin();
   const support = can(admin.role, "support");
-  const ver = (await searchParams).ver ?? "abiertas";
+  const params = await searchParams;
+  const ver = params.ver ?? "abiertas", page = pageNumber(params.pagina);
   const db = getDb();
   const status = ver === "cerradas" ? ["CLOSED"] : ver === "respondidas" ? ["ANSWERED"] : ver === "todas" ? ["OPEN", "ANSWERED", "CLOSED"] : ["OPEN"];
   const [tickets, replies, counts] = await Promise.all([
-    db.supportTicket.findMany({ where: { status: { in: status } }, include: { messages: { orderBy: { createdAt: "asc" } }, user: { select: { id: true, name: true, email: true } } }, take: 100 }),
+    supportPage(db, status, page),
     savedReplies(db),
     db.supportTicket.groupBy({ by: ["status"], _count: { _all: true } }),
   ]);
-  const order = { HIGH: 0, NORMAL: 1, LOW: 2 } as Record<string, number>;
-  tickets.sort((a, b) => (order[a.priority] ?? 1) - (order[b.priority] ?? 1) || a.createdAt.getTime() - b.createdAt.getTime());
   const c = (s: string) => counts.find((x) => x.status === s)?._count._all ?? 0;
+  const total = status.reduce((n, s) => n + c(s), 0);
   return (
     <>
       <PageHead title="Soporte" desc="Consultas de los clientes, de la más urgente a la más vieja." />
@@ -61,6 +64,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
           )}
         </div>
       )) : <div className="empty">No hay consultas acá.</div>}
+      <Pagination page={page} size={25} total={total} href={p => `/admin/soporte?ver=${encodeURIComponent(ver)}&pagina=${p}`} label="Páginas de consultas de soporte" />
 
       {support && (
         <div className="card">

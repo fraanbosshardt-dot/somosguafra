@@ -728,3 +728,5 @@
 .checkout-cta{display:contents}
 .checkout-cta>button:disabled{opacity:.65;cursor:wait}
 .checkout-yearly{background:none;border:0;padding:0;text-align:center;font:inherit;font-size:14px;cursor:pointer}
+.landing-checkout-form{display:contents}
+.landing-checkout-form>button{cursor:pointer;font:inherit}
