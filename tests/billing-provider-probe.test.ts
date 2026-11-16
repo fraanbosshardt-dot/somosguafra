@@ -7,9 +7,16 @@ it('uses only fixed GETs and returns codes without exposing bodies, keys or refe
   vi.stubGlobal('fetch',fetchMock);
   const db:any={billingAgreement:{findFirst:async()=>({providerRef:'private-reference'})}};
   const result=await billingProviderProbe(db);
-  expect(result.checks.map(c=>c.status)).toEqual([200,400,200]);
-  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(result.checks.map(c=>c.status)).toEqual([200,400,200,200]);
+  expect(fetchMock).toHaveBeenCalledTimes(4);
   expect(JSON.stringify(result)).not.toMatch(/private-|customer-data/);
+});
+it('filters provider error text through a fixed vocabulary',async()=>{
+  vi.stubEnv('MP_ACCESS_TOKEN','APP_USR-private-token-123');
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json({message:'Invalid limit parameter max 10 private-reference-456 customer@private.invalid APP_USR-private-token-123'},{status:400})));
+  const r=await billingProviderProbe({billingAgreement:{findFirst:async()=>({providerRef:'private-reference-456'})}} as any);
+  expect(r.checks[0].technicalHint).toContain('limit');
+  expect(JSON.stringify(r)).not.toMatch(/private|customer|app_usr|123|456/);
 });
 it('does not search payments when agreement authentication fails',async()=>{
   vi.stubEnv('MP_ACCESS_TOKEN','private-token');
