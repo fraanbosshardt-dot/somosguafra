@@ -21,7 +21,7 @@
   .adm .adm-wrap{grid-template-columns:minmax(0,1fr);width:100%;min-width:0}
   .adm .adm-nav{display:none}
   .adm .adm-nav-mobile{display:block;min-width:0;position:sticky;top:calc(var(--adm-header-height) + env(safe-area-inset-top,0px));z-index:15;align-self:start;background:var(--bg);border-bottom:1px solid var(--line)}
-  .adm .adm-nav-mobile summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px max(16px,env(safe-area-inset-left,0px));cursor:pointer;touch-action:manipulation}
+  .adm .adm-nav-mobile summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));cursor:pointer;touch-action:manipulation}
   .adm .adm-nav-mobile summary::-webkit-details-marker{display:none}
   .adm .adm-nav-mobile summary>svg{width:22px;height:22px;flex:none;color:var(--ink-txt)}
   .adm .adm-mobile-section{display:grid;gap:3px;min-width:0;flex:1}
@@ -29,7 +29,7 @@
   .adm .adm-mobile-section b{font-size:15px;line-height:1.3;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .adm .adm-nav-mobile summary>.adm-menu-chevron{width:18px;height:18px;color:var(--muted)}
   .adm .adm-nav-mobile[open] .adm-menu-chevron{transform:rotate(180deg)}
-  .adm .adm-nav-mobile>nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 12px 14px;max-height:60svh;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
+  .adm .adm-nav-mobile>nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 max(12px,env(safe-area-inset-right,0px)) 14px max(12px,env(safe-area-inset-left,0px));max-height:60svh;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
   .adm .adm-nav-mobile nav a{display:flex;align-items:center;gap:9px;padding:11px 10px;min-height:48px;min-width:0;color:var(--fg);font-size:13px;line-height:1.35;text-decoration:none;border-radius:12px;overflow-wrap:anywhere}
   .adm .adm-nav-mobile nav a svg{width:18px;height:18px;flex:none}
   .adm .adm-nav-mobile nav a.on{background:var(--ink-soft);color:var(--ink-txt);font-weight:500}
