@@ -11,6 +11,7 @@ import {
 import { reserveSecurityAttempt } from "./security-limits";
 import { BRAND } from "@/lib/brand";
 import { effectivePlan } from "./plans";
+import { botChatStatus } from "@/lib/chat-session";
 
 type Store = Prisma.TransactionClient;
 export type ChatActor = {
@@ -31,6 +32,7 @@ export type ChatView = ChatSelection & {
   status: string;
   human: boolean;
   resolved: boolean;
+  inactive?: boolean;
   area: string;
   needsHuman: boolean;
   messages: ChatMessageView[];
@@ -130,11 +132,11 @@ async function view(
       include: { contact: true },
     });
     code = c.code;
-    status = c.contact?.status ?? (c.botResolved ? "RESOLVED" : "BOT");
+    status = c.contact?.status ?? botChatStatus(c.botResolved, c.updatedAt);
     human = !!c.contactId;
     resolved = c.contact
       ? ["RESOLVED", "CLOSED"].includes(c.contact.status)
-      : c.botResolved;
+      : status !== "BOT";
     area = c.contact?.area ?? "soporte";
     where = {
       OR: [
@@ -214,6 +216,7 @@ async function view(
     status,
     human,
     resolved,
+    inactive: !human && status === "CLOSED",
     area,
     messages,
     hasOlder,
@@ -286,7 +289,7 @@ export async function chatCases(db: Db, a: ChatActor) {
       kind: "chat" as const,
       id: c.id,
       code: c.code,
-      status: c.contact?.status ?? (c.botResolved ? "RESOLVED" : "BOT"),
+      status: c.contact?.status ?? botChatStatus(c.botResolved, c.updatedAt),
       subject: c.contact?.subject ?? c.messages[0]?.body.replace(/\s+/g, " ").slice(0, 120) ?? "Conversación con Guafra",
       at: c.updatedAt.toISOString(),
     })),

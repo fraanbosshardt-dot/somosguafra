@@ -15,6 +15,7 @@ import { replyToContact } from "@/server/support-replies";
 import { caseToken } from "@/server/support-thread";
 import { unifiedInbox } from "@/server/support-inbox";
 import { exportAccountData, deleteAccount } from "@/server/admin-accounts";
+import { BOT_CHAT_IDLE_MS, botChatStatus } from "@/lib/chat-session";
 let t: Awaited<ReturnType<typeof startTestDb>>;
 const guest = (n: string): ChatActor => ({
   user: null,
@@ -60,6 +61,28 @@ it("el código no es credencial: visitante y otra cuenta no acceden al historial
   await expect(readChat(t.db, a, own)).rejects.toThrow();
   await expect(readChat(t.db, actor, c)).rejects.toThrow();
   expect((await chatCases(t.db, actor)).map((x) => x.code)).toEqual([own.code]);
+});
+
+it("la inactividad finaliza solo consultas automáticas, conserva mensajes y permite retomarlas", async () => {
+  const now = Date.now(), updated = new Date(now - BOT_CHAT_IDLE_MS);
+  expect(botChatStatus(false, updated, now - 1)).toBe("BOT");
+  expect(botChatStatus(false, updated, now)).toBe("CLOSED");
+  expect(botChatStatus(true, updated, now)).toBe("RESOLVED");
+  const a = guest("idle"), c = await message(a);
+  await t.db.chatSession.update({ where: { id: c.id }, data: { updatedAt: updated } });
+  const expired = await readChat(t.db, a, c);
+  expect(expired).toMatchObject({ status: "CLOSED", inactive: true, resolved: true });
+  expect(expired.messages).toEqual(c.messages);
+  expect((await chatCases(t.db, a))[0].status).toBe("CLOSED");
+  const inbox = await unifiedInbox(t.db, { channel: "bot", status: "all", page: 1, query: c.code });
+  expect(inbox.rows[0].status).toBe("CLOSED");
+  const reopened = await message(a, "Cómo cargo una cuenta", { selection: c });
+  expect(reopened).toMatchObject({ id: c.id, status: "BOT", inactive: false });
+  expect(reopened.messages).toHaveLength(c.messages.length + 2);
+  await handoffChat(t.db, a, c, { name: "Fixture", email: "idle@audit.invalid", area: "soporte" });
+  await t.db.chatSession.update({ where: { id: c.id }, data: { updatedAt: updated } });
+  expect(await readChat(t.db, a, c)).toMatchObject({ status: "OPEN", human: true, inactive: false, resolved: false });
+  expect((await chatCases(t.db, a))[0].status).toBe("OPEN");
 });
 it("reintentos concurrentes no duplican mensajes ni derivaciones y conservan todo el historial", async () => {
   const a = guest("dedupe"),
