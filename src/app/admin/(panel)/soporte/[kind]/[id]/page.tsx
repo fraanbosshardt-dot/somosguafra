@@ -10,7 +10,7 @@ import {
   adminReplyTicketAction,
 } from "@/app/actions/admin";
 import { adminChatStateAction } from "@/app/actions/chat-admin";
-import { CASE_STATUS } from "@/lib/chat-help";
+import { ADMIN_CASE_STATUS } from "@/lib/chat-help";
 import { SupportComposer } from "@/components/support-composer";
 import { activeSupportTeam } from "@/server/support-operations";
 import { SupportRefresh } from "@/components/support-refresh";
@@ -96,6 +96,8 @@ export default async function Conversation({
             ? "Cuenta vinculada; verificá identidad antes de cambios sensibles."
             : "Visitante: el correo indicado no acredita identidad."}
         </p>
+        <nav className="adm-case-nav" aria-label="Secciones de la conversación"><a className="btn sm" href="#historial">Historial</a><a className="btn sm" href="#respuesta">Responder</a><a className="btn sm" href="#estado-caso">Estado y cierre</a></nav>
+        <h2 className="adm-section-title" id="historial">Historial de la conversación</h2>
         <SupportThread
           body={c.body}
           reply={c.reply}
@@ -109,10 +111,13 @@ export default async function Conversation({
           assignedTo={c.assignedTo}
           revision={c.updatedAt.toISOString()} me={admin.email} team={await activeSupportTeam(db)}
         />
+        <h2 className="adm-section-title" id="respuesta">Responder al cliente</h2>
         <div>{editing&&<p className="notice">{editing.ownerEmail} está preparando una respuesta. La reserva es temporal.</p>}</div>
         <SupportComposer key={`composer/${kind}/${id}`} kind={kind as "contact"|"ticket"} id={id} revision={c.updatedAt.toISOString()}
           name={name.split(" ")[0]} code={c.code} area={"area" in c && c.area!=="soporte" ? c.area : /contrase|correo|acceso|sesión/i.test(c.subject)?"acceso":"soporte"} replies={await savedReplies(db)}/>
         <hr style={{ margin: "28px 0" }} />
+        <h2 className="adm-section-title" id="estado-caso">Estado y cierre del caso</h2>
+        <p className="sub adm-state-help">Al responder, el caso queda esperando al cliente. Si el equipo todavía está investigando, elegí «En revisión interna». Marcá «Resuelto» cuando hayas solucionado la consulta, o «Cerrado» para finalizar su atención. El historial se conserva; si el cliente vuelve a escribir, el caso se reabre. Una nota interna no se envía al cliente.</p>
         <ActionForm
           key={`${c.status}/${c.priority}`}
           action={adminChatStateAction}
@@ -133,7 +138,7 @@ export default async function Conversation({
           <label className="field">
             Estado
             <select name="status" defaultValue={c.status}>
-              {Object.entries(CASE_STATUS).map(([k, v]) => (
+              {Object.entries(ADMIN_CASE_STATUS).map(([k, v]) => (
                 <option value={k} key={k}>
                   {v}
                 </option>
@@ -148,7 +153,7 @@ export default async function Conversation({
               <option value="LOW">Baja</option>
             </select>
           </label>
-          <Submit>Actualizar caso</Submit>
+          <Submit>Guardar estado y prioridad</Submit>
         </ActionForm>
       </div>
     </>
