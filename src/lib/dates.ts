@@ -45,3 +45,6 @@ export function fmtPeriod(p: string): string {
   const t = `${MES[s.getUTCMonth()]} ${s.getUTCFullYear()}`;
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+
+// Validación de períodos usados en enlaces y filtros.
+export const validPeriod = (value: unknown): value is string => typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);

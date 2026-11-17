@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { accountBalances, listMovements } from "@/server/ledger";
+import { accountBalances } from "@/server/ledger";
+import { accountActivity } from "@/server/financial-summaries";
 import { formatMoney, ZERO } from "@/lib/money";
 import { fmtDate, fmtDayMonth, period, todayIn } from "@/lib/dates";
 import { Empty, PageHead } from "@/components/page";
@@ -36,18 +37,16 @@ function BalanceLine({ data, currency }: { data: { label: string; value: number 
   );
 }
 
-export default async function AccountDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function AccountDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ pagina?: string }> }) {
   const { id } = await params;
   const { workspace } = await requireWorkspace();
   const db = getDb();
   const a = await db.account.findFirst({ where: { id, workspaceId: workspace.id } });
   if (!a) notFound();
-  const [balances, mv] = await Promise.all([accountBalances(db, workspace.id, todayIn(workspace.timezone)), listMovements(db, workspace.id, { accountId: a.id, take: 100 })]);
+  const requestedPage = Number((await searchParams).pagina) || 1;
+  const [balances, activity] = await Promise.all([accountBalances(db, workspace.id, todayIn(workspace.timezone)), accountActivity(db, workspace.id, a.id, todayIn(workspace.timezone), requestedPage)]);
+  const mv = activity.movements, ent = activity.incoming, sal = activity.outgoing;
   const bal = balances.get(a.id) ?? ZERO;
-  const p = period(todayIn(workspace.timezone));
-  const mes = mv.filter((t) => period(t.effectiveDate) === p);
-  const ent = mes.filter((t) => t.direction === "IN").reduce((s, t) => s.plus(t.amount.toString()), ZERO);
-  const sal = mes.filter((t) => t.direction === "OUT").reduce((s, t) => s.plus(t.amount.toString()), ZERO);
   // Cómo fue el saldo: al cierre de cada uno de los últimos 6 meses (y hoy). Saldo de hoy menos lo que se movió después.
   const today = todayIn(workspace.timezone);
   const ends = Array.from({ length: 6 }, (_, k) => new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 5 + k, 0)));
@@ -75,7 +74,7 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
         </div>
       )}
       <div className="card">
-        <div className="chead"><h3>Movimientos</h3><span className="sub">{mv.length} {mv.length === 1 ? "movimiento" : "movimientos"}</span></div>
+        <div className="chead"><h3>Movimientos</h3><span className="sub">{activity.total} movimientos · Página {activity.page} de {activity.pages}</span></div>
         {mv.length ? <div className="list">{mv.map((t) => (
           <Link className="li" key={t.id} href={`/app/movimientos/${t.id}`} style={{ color: "inherit", ...(t.reversedBy || t.reversalOfId ? { opacity: 0.6 } : {}) }}>
             <div className="dchip"><b>{t.effectiveDate.getUTCDate()}</b><span>{fmtDayMonth(t.effectiveDate).split(" ")[1]}</span></div>
@@ -83,6 +82,7 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
             <b className={`num ${t.direction === "IN" ? "pos" : ""}`}>{formatMoney(t.direction === "IN" ? t.amount : t.amount.neg(), a.currency, { sign: true })}</b>
           </Link>))}</div> : <Empty>Todavía no hay movimientos en esta cuenta.</Empty>}
       </div>
+      {activity.pages > 1 && <nav className="acts" aria-label="Páginas de movimientos">{activity.page > 1 && <Link className="btn" href={`/app/cuentas/${a.id}?pagina=${activity.page - 1}`}>Anterior</Link>}{activity.page < activity.pages && <Link className="btn" href={`/app/cuentas/${a.id}?pagina=${activity.page + 1}`}>Siguiente</Link>}</nav>}
       <div className="card">
         <details className="more" open={bal.isNegative() && a.type !== "INVESTMENT"}><summary>¿No coincide con tu banco? Corregir el saldo</summary>
           <ActionForm action={reconcileAction} style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 10, maxWidth: 520 }}>

@@ -126,3 +126,6 @@
   .app .view .fc{grid-template-columns:minmax(0,1fr)!important}
   .app .view .plan-box{padding:16px}
 }
+
+.app .mobile-chat-open{display:none}
+@media(max-width:900px){.app .mobile-chat-open{display:grid;min-width:40px;min-height:44px;flex-shrink:0}.app .mobile-chat-open svg{width:21px;height:21px}}

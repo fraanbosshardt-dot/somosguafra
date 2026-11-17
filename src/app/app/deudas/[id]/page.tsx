@@ -56,7 +56,7 @@ export default async function DebtPage({ params, searchParams }: { params: Promi
           <div className="hrow"><span>Te prestaron</span><b>{fm(debt.principal)}</b></div>
         </div>
       </div>
-      {active && det.futureSum.gt(det.remainingCapital) && <div className="notice g"><div>Si la cancelás hoy pagando el capital que falta, te ahorrás <b>{fm(det.futureSum.minus(det.remainingCapital))}</b> en intereses (sin contar comisiones).</div></div>}
+      {active && det.futureSum.gt(det.remainingCapital) && <div className="notice g"><div>Según el cronograma, al cancelar el capital pendiente el ahorro estimado sería <b>{fm(det.futureSum.minus(det.remainingCapital))}</b> en intereses y cargos futuros. Confirmá el saldo y las comisiones con el acreedor.</div></div>}
       <div className="card">
         {active && (det.rows.length ? (<>
           {/* Pagar una parte antes: elegís si baja la cuota o el plazo */}
@@ -76,7 +76,7 @@ export default async function DebtPage({ params, searchParams }: { params: Promi
           <details className="more"><summary>Cancelar total</summary>
             <ActionForm action={cancelDebtAction} style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 10, maxWidth: 560 }}>
               <input type="hidden" name="debtId" value={debt.id} />
-              <p className="sub">Pedile al acreedor el saldo para cancelar (capital, interés del período y comisión, si hay). Si no la tenés, usamos el capital que falta.</p>
+              <p className="sub">Pedile al acreedor el saldo para cancelar (capital, interés del período y comisión, si hay). El valor propuesto es una estimación del capital según tu cronograma. Si hubo pagos parciales con intereses o cargos, se estiman proporcionalmente; ingresá el saldo confirmado por el acreedor.</p>
               <div className="frow"><label className="field">Importe a pagar hoy<input name="amount" inputMode="decimal" defaultValue={det.remainingCapital.toFixed(2).replace(".", ",")} /></label><label className="field">Fecha<input name="date" type="date" defaultValue={isoDate(today)} /></label></div>
               <label className="field">Sale de<select name="accountId">{accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
               <div><ConfirmSubmit className="btn pri" question="¿Cancelar la deuda con este pago? Se borran las cuotas que quedan." yes="Sí, cancelar">Confirmar cancelación</ConfirmSubmit></div>

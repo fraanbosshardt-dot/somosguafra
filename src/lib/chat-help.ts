@@ -207,7 +207,7 @@ export const CHAT_TOPICS = [
     ],
     area: "soporte",
     answer:
-      "En Objetivos cargá una meta, su importe, moneda y fecha. Registrá tus aportes para ver el progreso y el monto que falta. En «Editar objetivo» podés cambiar nombre, meta, fecha y aporte previsto sin alterar la moneda ni los aportes guardados. El simulador del aporte muestra cómo cambia la fecha estimada; no mueve dinero ni garantiza rendimientos.",
+      "En Objetivos cargá una meta, su importe, moneda y fecha. Usá «Registrar ahorro» para anotar dinero que ya separaste: no hace transferencias ni cambia saldos. En «Editar objetivo» podés cambiar nombre, meta, fecha y aporte previsto sin alterar la moneda ni los aportes guardados. El simulador del aporte muestra cómo cambia la fecha estimada; no mueve dinero ni garantiza rendimientos.",
     link: "/app/objetivos",
     linkLabel: "Ver Objetivos",
   },

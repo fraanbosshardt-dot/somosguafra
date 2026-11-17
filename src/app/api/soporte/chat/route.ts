@@ -17,6 +17,7 @@ import {
   type ChatSelection,
 } from "@/server/guafra-chat";
 import { resolveCaseToken } from "@/server/support-thread";
+import { chatCasePage } from "@/server/chat-case-page";
 import { drainEmailOutbox } from "@/server/billing-mail";
 export const dynamic = "force-dynamic";
 const COOKIE = "somosguafra_chat";
@@ -78,8 +79,12 @@ function selection(input: Record<string, unknown>): ChatSelection | undefined {
 }
 export async function GET(req: NextRequest) {
   try {
-    const a = await actor(req),
-      db = getDb(),
+    const a = await actor(req);
+    if (req.nextUrl.searchParams.get("history") === "1") {
+      const result = await chatCasePage(getDb(), a.actor, { page: Number(req.nextUrl.searchParams.get("page")) || 1, q: req.nextUrl.searchParams.get("q") ?? "" });
+      return cookie(json(result), a);
+    }
+    const db = getDb(),
       cases = await chatCases(db, a.actor);
     const code = req.nextUrl.searchParams.get("case");
     const current = code

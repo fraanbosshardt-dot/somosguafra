@@ -1399,3 +1399,5 @@ input[list]{appearance:none;-webkit-appearance:none}
 .budget-status{margin:0;line-height:1.5}.budget-project-preview{display:block;font-size:12px;line-height:1.5;margin-top:4px}
 .budget-project>span{min-width:0}.bdg .acts{flex-wrap:wrap;gap:10px}.bdg .budget-estimate{margin:0}
 @media(max-width:640px){.bdg{padding:18px}.bdg-top{flex-wrap:wrap}.bdg-left{margin-left:auto}.budget-breakdown{gap:12px}.bdg .btn{min-height:44px}.budget-project{align-items:flex-start;padding:8px 0}.budget-project input{margin-top:3px}}
+
+@media screen and (max-width:640px){.report{padding:20px 14px 40px;min-width:0}.report section{min-width:0;overflow-x:auto}.report-kpis{grid-template-columns:minmax(0,1fr);gap:10px}.report-kpis div{display:flex;justify-content:space-between;align-items:center;gap:12px}.report-kpis b{font-size:18px}.report-h{overflow-wrap:anywhere}}

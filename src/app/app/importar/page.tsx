@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { pageNumber } from "@/lib/pagination";
 import { fmtDate } from "@/lib/dates";
 import { PageHead, SettingsTabs } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
@@ -10,14 +11,17 @@ import { ConfirmSubmit } from "@/components/confirm-submit";
 
 export const metadata: Metadata = { title: "Importar y exportar" };
 
-export default async function ImportExport({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
+export default async function ImportExport({ searchParams }: { searchParams: Promise<{ ok?: string; pagina?: string }> }) {
   const { workspace, plan } = await requireWorkspace();
   const pro = await canUse(plan, "informes");
   const sp = await searchParams;
   const db = getDb();
+  const requestedPage = pageNumber(sp.pagina);
+  const total = await db.importBatch.count({ where: { workspaceId: workspace.id } });
+  const pages = Math.max(1, Math.ceil(total / 20)), page = Math.min(pages, requestedPage);
   const [accounts, batches] = await Promise.all([
     db.account.findMany({ where: { workspaceId: workspace.id, active: true, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }),
-    db.importBatch.findMany({ where: { workspaceId: workspace.id }, orderBy: { createdAt: "desc" }, take: 20 }),
+    db.importBatch.findMany({ where: { workspaceId: workspace.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20, skip: (page - 1) * 20 }),
   ]);
   return (
     <>
@@ -38,7 +42,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
       </div>
       {batches.length > 0 && (
         <div className="card">
-          <div className="chead"><h3>Importaciones</h3></div>
+          <div className="chead"><h3>Importaciones</h3><span className="sub">{total} lotes · Página {page} de {pages}</span></div>
           <div className="list">
             {batches.map((b) => (
               <div className="li" key={b.id}>
@@ -49,6 +53,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
           </div>
         </div>
       )}
+      {pages > 1 && <nav className="acts" aria-label="Páginas de importaciones">{page > 1 && <Link className="btn" href={`/app/importar?pagina=${page - 1}`}>Anterior</Link>}{page < pages && <Link className="btn" href={`/app/importar?pagina=${page + 1}`}>Siguiente</Link>}</nav>}
       <div className="card">
         <div className="chead"><h3>Exportar</h3></div>
         <p className="sub" style={{ margin: "0 0 12px", fontSize: 14 }}>Tus datos son tuyos. Descargalos cuando quieras.</p>

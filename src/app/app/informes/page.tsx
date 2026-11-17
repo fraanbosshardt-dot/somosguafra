@@ -41,11 +41,14 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
   const prevHas = !prev.totals[0].expense.isZero() || !prev.totals[0].income.isZero();
   const tYm = r.totals[r.periods.indexOf(ym)];
   const keep = acc ? <input type="hidden" name="cuenta" value={acc.id} /> : null;
+  const exportQuery = new URLSearchParams({ desde: r.periods[0], hasta: r.periods.at(-1)!, ...(acc ? { cuenta: acc.id } : {}) });
+  const pdfQuery = new URLSearchParams({ mes: ym, ...(acc ? { cuenta: acc.id } : {}) });
   const W = 640, H = 200, L = 70, B = 26, T = 10, bw = (W - L - 8) / r.periods.length;
   const y = (v: number) => T + (1 - v / (max.toNumber() || 1)) * (H - T - B);
   return (
     <>
-      <PageHead crumb="Análisis" title="Informes" desc={`${r.periods.length < 6 ? `Desde ${fmtPeriod(r.periods[0]).toLowerCase()}` : "Los últimos 6 meses"}, en ${cur}${acc ? `, solo ${acc.name}` : ""}.`} actions={<><a className="btn" href="/app/exportar/excel" download>Excel</a><Link className="btn" href="/reporte">Reporte en PDF</Link></>} />
+      <PageHead crumb="Análisis" title="Informes" desc={`${r.periods.length < 6 ? `Desde ${fmtPeriod(r.periods[0]).toLowerCase()}` : "Los últimos 6 meses"}, en ${cur}${acc ? `, solo ${acc.name}` : ""}.`} actions={<><a className="btn" href={`/app/exportar/excel?${exportQuery}`} download>Excel de estos meses</a><Link className="btn" href={`/reporte?${pdfQuery}`}>PDF de {fmtPeriod(ym).toLowerCase()}</Link></>} />
+      <p className="sub">Por mes del gasto, en {cur}. Los reintegros descuentan del gasto. El Excel conserva estos meses y la cuenta seleccionada; el PDF corresponde al mes indicado en su botón.</p>
       {accounts.length > 1 && (
         <form className="cmp-pick" style={{ marginBottom: 12, justifyContent: "flex-start" }}>
           <span className="sub">Mostrar</span>

@@ -4,7 +4,7 @@ import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { dec, formatMoney, ZERO } from "@/lib/money";
-import { addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
+import { parseDate, validPeriod, addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { categoryIcon, ICON_TONE } from "@/lib/category-icon";
 import { Icon, type IconName } from "@/components/icons";
@@ -18,14 +18,15 @@ const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const TYPE_LABEL: Record<string, string> = { TRANSFER: "Transferencia", ADJUSTMENT: "Corrección de saldo", DEBT_PAYMENT: "Cuota de deuda", CARD_PAYMENT: "Pago de tarjeta", INVESTMENT: "Inversión", DEBT_DISBURSEMENT: "Préstamo recibido" };
 
-export default async function Movements({ searchParams }: { searchParams: Promise<{ mes?: string; tipo?: string; q?: string; desde?: string; hasta?: string; n?: string; guardado?: string; borrado?: string; unido?: string; elegir?: string }> }) {
+export default async function Movements({ searchParams }: { searchParams: Promise<{ mes?: string; tipo?: string; q?: string; categoria?: string; desde?: string; hasta?: string; n?: string; guardado?: string; borrado?: string; unido?: string; elegir?: string }> }) {
   const { workspace } = await requireWorkspace();
   const sp = await searchParams;
-  const p = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : period(todayIn(workspace.timezone));
+  const p = validPeriod(sp.mes) ? sp.mes! : period(todayIn(workspace.timezone));
   const tipo = ["INCOME", "EXPENSE", "TRANSFER"].includes(sp.tipo ?? "") ? sp.tipo! : "ALL";
   const q = (sp.q ?? "").trim().toLowerCase();
+  const categoryId = (sp.categoria ?? "").slice(0, 100);
   // Rango libre: desde y hasta (si están, reemplazan al mes).
-  const iso = (v?: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? new Date(`${v}T00:00:00Z`) : null);
+  const iso = (v?: string) => parseDate(v);
   let from = iso(sp.desde), to = iso(sp.hasta);
   if (from && to && from > to) [from, to] = [to, from];
   const ranged = !!(from || to);
@@ -38,17 +39,19 @@ export default async function Movements({ searchParams }: { searchParams: Promis
   const text = (v: string) => ({ contains: v, mode: "insensitive" as const });
   const where: Prisma.TransactionWhereInput = {
     workspaceId: workspace.id, effectiveDate: when, ...byType,
+    ...(categoryId ? { AND: [{ OR: [{ categoryId }, { category: { parentId: categoryId } }] }] } : {}),
     ...(q ? { OR: [{ description: text(q) }, { category: { name: text(q) } }, { account: { name: text(q) } }] } : {}),
   };
   const cur = workspace.baseCurrency;
   const db = getDb();
-  const [list, total, sums] = await Promise.all([
+  const [list, total, sums, filterCategories] = await Promise.all([
     db.transaction.findMany({ where, include: { account: { select: { name: true, currency: true } }, category: { select: { name: true } }, reversedBy: { select: { id: true } } }, orderBy: [{ effectiveDate: "desc" }, { createdAt: "desc" }], take: showN }),
     db.transaction.count({ where }),
-    db.transaction.groupBy({ by: ["type", "direction"], where: { workspaceId: workspace.id, effectiveDate: when, currency: cur, reversalOfId: null, reversedBy: null, type: { in: ["INCOME", "EXPENSE", "DEBT_PAYMENT"] } }, _sum: { amount: true } }),
+    db.transaction.groupBy({ by: ["type", "direction"], where: { AND: [where, { currency: cur, reversalOfId: null, reversedBy: null, type: { in: ["INCOME", "EXPENSE", "DEBT_PAYMENT"] } }] }, _sum: { amount: true } }),
+    db.category.findMany({ where: { workspaceId: workspace.id }, select: { id: true, name: true, parentId: true, archived: true }, orderBy: { name: "asc" } }),
   ]);
   const rangeQ: Record<string, string> = ranged ? { ...(sp.desde ? { desde: sp.desde } : {}), ...(sp.hasta ? { hasta: sp.hasta } : {}) } : { mes: p };
-  const link = (o: Record<string, string>) => `/app/movimientos?${new URLSearchParams({ mes: p, ...(tipo !== "ALL" ? { tipo } : {}), ...(q ? { q } : {}), ...o })}`;
+  const link = (o: Record<string, string>) => `/app/movimientos?${new URLSearchParams({ ...rangeQ, ...(categoryId ? { categoria: categoryId } : {}), ...(tipo !== "ALL" ? { tipo } : {}), ...(q ? { q } : {}), ...o })}`;
   const sum = (types: string[], dir: "IN" | "OUT") => sums.filter((x) => types.includes(x.type)).reduce((s, x) => { const v = dec(x._sum.amount ?? 0); return x.direction === dir ? s.plus(v) : s.minus(v); }, ZERO);
   const inc = sum(["INCOME"], "IN");
   const out = sum(["EXPENSE", "DEBT_PAYMENT"], "OUT");
@@ -76,24 +79,27 @@ export default async function Movements({ searchParams }: { searchParams: Promis
             <Link className="ibtn" href={link({ mes: addMonths(p, 1) })} aria-label="Mes siguiente">›</Link>
           </div>
         )}
-        <form className="search" style={{ maxWidth: 320 }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<input name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
+        <form className="search" style={{ maxWidth: 320 }}>{categoryId && <input type="hidden" name="categoria" value={categoryId} />}{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<input name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
       </div>
+      <form className="acts" style={{ alignItems: "end" }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}<label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit">Filtrar</button>{categoryId && <Link className="btn" href={link({ categoria: "" })}>Quitar filtro</Link>}</form>
       <details className="more" open={ranged}>
         <summary>Elegir fechas desde y hasta</summary>
         <form className="acts" style={{ alignItems: "flex-end", paddingTop: 10 }}>
           <label className="field" style={{ flex: "1 1 150px" }}>Desde<input name="desde" type="date" defaultValue={sp.desde ?? ""} /></label>
           <label className="field" style={{ flex: "1 1 150px" }}>Hasta<input name="hasta" type="date" defaultValue={sp.hasta ?? ""} /></label>
           {tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}
+          {categoryId && <input type="hidden" name="categoria" value={categoryId} />}
           <button className="btn" type="submit">Ver</button>
         </form>
       </details>
+      <p className="sub">Totales de los movimientos filtrados en {cur}. Transferencias y correcciones de saldo no cuentan como ingresos ni gastos.</p>
       <div className="fc" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
         <div className="fc-in"><small>Entró</small><b className="pos">{formatMoney(inc, cur)}</b></div>
         <div className="fc-out"><small>Salió</small><b className="neg">{formatMoney(out, cur)}</b></div>
         <div><small>Resultado</small><b className={inc.minus(out).isNegative() ? "neg" : ""}>{formatMoney(inc.minus(out), cur, { sign: true })}</b></div>
       </div>
       <div className="seg" style={{ alignSelf: "flex-start" }}>
-        {[["ALL", "Todos"], ["INCOME", "Ingresos"], ["EXPENSE", "Gastos"], ["TRANSFER", "Transferencias"]].map(([k, l]) => <Link key={k} className={`segl ${tipo === k ? "on" : ""}`} href={`/app/movimientos?${new URLSearchParams({ ...rangeQ, ...(k !== "ALL" ? { tipo: k } : {}), ...(q ? { q } : {}) })}`}>{l}</Link>)}
+        {[["ALL", "Todos"], ["INCOME", "Ingresos"], ["EXPENSE", "Gastos"], ["TRANSFER", "Transferencias"]].map(([k, l]) => <Link key={k} className={`segl ${tipo === k ? "on" : ""}`} href={`/app/movimientos?${new URLSearchParams({ ...rangeQ, ...(categoryId ? { categoria: categoryId } : {}), ...(k !== "ALL" ? { tipo: k } : {}), ...(q ? { q } : {}) })}`}>{l}</Link>)}
       </div>
       <div className="acts" style={{ justifyContent: "flex-end", marginBottom: -6 }}>
         {sel ? <Link className="btn sm" href={link({})}>Listo</Link> : rows.length > 0 && <Link className="btn sm" href={link({ elegir: "1" })}>Elegir varios</Link>}

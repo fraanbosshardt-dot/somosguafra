@@ -4,6 +4,7 @@ import { CHAT_TOPICS, CASE_STATUS } from "@/lib/chat-help";
 import type { ChatSelection, ChatView } from "@/server/guafra-chat";
 import styles from "./guafra-chat.module.css";
 import { LogoMark } from "./logo-mark";
+import { requestChatOpen, takeChatOpen } from "@/lib/open-chat";
 import { mergeChatHistory } from "@/lib/chat-history";
 
 const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> = {
@@ -14,7 +15,7 @@ const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> 
   cancel: "Cancelar renovación",
   moves: "Movimientos",
 };
-type Case = ChatSelection & { code: string; subject: string; status: string; at: string };
+type Case = ChatSelection & { code: string; subject: string; status: string; at: string; channel?: string };
 type Payload = {
   current: ChatView | null;
   cases: Case[];
@@ -33,7 +34,7 @@ export function ChatOpen({
       className="btn pri"
       type="button"
       onClick={() =>
-        window.dispatchEvent(new CustomEvent("guafra:open", { detail: code }))
+        requestChatOpen(code)
       }
     >
       {children}
@@ -58,11 +59,26 @@ export function GuafraChat({
     [error, setError] = useState(""),
     [handoff, setHandoff] = useState(false),
     [history, setHistory] = useState(false),
-    [caseCode, setCaseCode] = useState(""),
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [area, setArea] = useState("soporte"),
     [identity, setIdentity] = useState<Payload["identity"]>(null);
+  const [historyRows, setHistoryRows] = useState<Case[] | null>(null);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historyPage, setHistoryPage] = useState(1), [historyPages, setHistoryPages] = useState(1);
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const historyGeneration = useRef(0);
+  async function loadHistory(page = 1, q = historyQuery) {
+    const generation = ++historyGeneration.current;
+    setHistoryBusy(true); setError("");
+    try {
+      const r = await fetch(`/api/soporte/chat?${new URLSearchParams({ history: "1", page: String(page), q })}`, { cache: "no-store" });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "No pudimos cargar el historial.");
+      if (generation === historyGeneration.current) { setHistoryRows(data.cases); setHistoryPage(data.page); setHistoryPages(data.pages); }
+    } catch { if (generation === historyGeneration.current) setError("No pudimos cargar el historial. Volvé a intentar."); }
+    finally { if (generation === historyGeneration.current) setHistoryBusy(false); }
+  }
   const panel = useRef<HTMLElement>(null),
     launch = useRef<HTMLButtonElement>(null),
     draft = useRef<{ text: string; nonce: string } | null>(null),
@@ -89,10 +105,10 @@ export function GuafraChat({
         previousIdentity.current &&
         previousIdentity.current.email !== data.identity?.email
       ) {
+        historyGeneration.current++; setHistoryRows(null); setHistoryQuery("");
         setName("");
         setEmail("");
         setText("");
-        setCaseCode("");
         setHandoff(false);
         draft.current = null;
       }
@@ -123,7 +139,6 @@ export function GuafraChat({
           setName("");
           setEmail("");
           setText("");
-          setCaseCode("");
           setHandoff(false);
           draft.current = null;
         }
@@ -188,6 +203,7 @@ export function GuafraChat({
     const handler = (e: Event) => {
       if (token) return;
       const code = (e as CustomEvent<string>).detail;
+      takeChatOpen();
       fresh();
       requestedCode.current = code;
       newCase.current = !code;
@@ -198,6 +214,8 @@ export function GuafraChat({
       }
     };
     window.addEventListener("guafra:open", handler);
+    const pending = takeChatOpen();
+    if (pending) handler(new CustomEvent("guafra:open", { detail: pending.code }));
     return () => window.removeEventListener("guafra:open", handler);
   }, [load, open, token]);
   useEffect(() => {
@@ -304,8 +322,8 @@ export function GuafraChat({
     nearBottom.current = true;
   }
   function close() {
+    historyGeneration.current++; setHistoryBusy(false);
     fresh();
-    setCaseCode("");
     setOpen(false);
     setLoading(false);
   }
@@ -409,32 +427,9 @@ export function GuafraChat({
           {history && !loading && (
             <div className={styles.history}>
               <p>Tus conversaciones quedan guardadas acá, también las resueltas.</p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  newCase.current = false;
-                  void load(caseCode.trim().toUpperCase());
-                  setHistory(false);
-                }}
-              >
-                <label>
-                  Abrir por código
-                  <input
-                    value={caseCode}
-                    maxLength={100}
-                    onChange={(e) => setCaseCode(e.target.value)}
-                    placeholder="SG-…"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={busy || loading || !caseCode.trim()}
-                >
-                  Abrir caso
-                </button>
-              </form>
-              {cases.length ? (
-                cases.map((c) => (
+              <form onSubmit={(e) => { e.preventDefault(); void loadHistory(1); }}><label>Buscar conversaciones<input value={historyQuery} onChange={(e) => setHistoryQuery(e.target.value)} maxLength={120} placeholder="Código o asunto" /></label><button disabled={historyBusy} type="submit">{historyBusy ? "Buscando…" : "Buscar"}</button></form>
+              {(historyRows ?? cases).length ? (
+                (historyRows ?? cases).map((c) => (
                   <button
                     key={`${c.kind}-${c.id}`}
                     aria-current={current?.id === c.id && current.kind === c.kind ? "true" : undefined}
@@ -450,8 +445,9 @@ export function GuafraChat({
                   >
                     <div className={styles.historyMeta}>
                       <b>{c.code}</b>
-                      <em>{c.kind === "chat" && c.status === "CLOSED" ? "Finalizada" : CASE_STATUS[c.status] ?? (c.status === "BOT" ? "Con Guafra" : c.status)}</em>
+                      <em>{c.kind === "chat" && c.status === "CLOSED" ? "Finalizada" : CASE_STATUS[c.status] ?? (c.status === "BOT" ? "Automática" : c.status)}</em>
                     </div>
+                    <small>{c.channel ?? (c.kind === "chat" ? c.status === "BOT" ? "Con Guafra" : "Con el equipo" : c.kind === "contact" ? "Formulario" : "Ayuda")}</small>
                     <span>{c.subject}</span>
                     <time dateTime={c.at}>
                       {new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" }).format(new Date(c.at))}
@@ -459,8 +455,9 @@ export function GuafraChat({
                   </button>
                 ))
               ) : (
-                <p>Tus conversaciones aparecerán acá.</p>
+                <p>No hay conversaciones para esta búsqueda.</p>
               )}
+              <div className={styles.historyPaging}><button type="button" disabled={historyBusy || historyPage <= 1} onClick={() => void loadHistory(historyPage - 1)}>Anterior</button><span>{historyPage} / {historyPages}</span><button type="button" disabled={historyBusy || historyPage >= historyPages} onClick={() => void loadHistory(historyPage + 1)}>Siguiente</button></div>
             </div>
           )}
           {current && !loading && !history && !handoff && (
@@ -732,7 +729,7 @@ export function GuafraChat({
                 Inicio
               </button>
               <button type="button" aria-current={history ? "page" : undefined}
-                disabled={busy || loading} onClick={() => { setHistory(true); setHandoff(false); void load(); }}>
+                disabled={busy || loading} onClick={() => { setHistory(true); setHandoff(false); setHistoryQuery(""); void loadHistory(1, ""); }}>
                 Mis conversaciones
               </button>
             </nav>
