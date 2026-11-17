@@ -9,7 +9,8 @@
       "fix/paginacion-mercadopago": false,
       "feat/guafra-chatbot": false,
       "feat/planning-review": false,
-      "fix/admin-usabilidad": false
+      "fix/admin-usabilidad": false,
+      "fix/chat-asesor-vista": false
     }
   },
   "regions": [
