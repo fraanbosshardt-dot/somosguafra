@@ -1,46 +1,52 @@
+import { budgetProjection } from "./budget-projection";
 import { resourceQuotaAvailable } from "./resource-quota";
 import { lockWorkspace } from "./workspace-lock";
 // Presupuestos y objetivos de ahorro.
 import type { Db } from "./ledger";
 import { remaining, UserError } from "./ledger";
 import { dec, round2, ZERO, type MoneyValue } from "@/lib/money";
-import { addMonths, periodEnd, periodStart } from "@/lib/dates";
+import { addMonths, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import type Decimal from "decimal.js";
 
 // ---------- Presupuestos ----------
 
-export async function budgetFor(db: Db, ws: string, p: string, currency: string) {
+export async function budgetFor(db: Db, ws: string, p: string, currency: string, today = todayIn()) {
   const [budget, cats, tx, obs] = await Promise.all([
     db.budget.findUnique({ where: { workspaceId_period: { workspaceId: ws, period: p } }, include: { lines: true } }),
-    db.category.findMany({ where: { workspaceId: ws, kind: "EXPENSE", archived: false }, orderBy: { name: "asc" } }),
+    db.category.findMany({ where: { workspaceId: ws, kind: "EXPENSE" }, orderBy: { name: "asc" } }),
     db.transaction.findMany({ where: { workspaceId: ws, currency, type: "EXPENSE", economicPeriod: p }, select: { amount: true, direction: true, categoryId: true } }),
     db.obligation.findMany({ where: { workspaceId: ws, currency, direction: "PAYABLE", status: { in: ["PENDING", "PARTIAL"] }, economicPeriod: p }, include: { payments: true } }),
   ]);
   const parentOf = new Map(cats.map((c) => [c.id, c.parentId ?? c.id]));
-  const top = cats.filter((c) => !c.parentId);
+  const top = cats.filter((c) => !c.parentId && !c.archived);
   const spent = new Map<string, Decimal>(), committed = new Map<string, Decimal>();
   const add = (m: Map<string, Decimal>, k: string, v: Decimal) => m.set(k, (m.get(k) ?? ZERO).plus(v));
   for (const t of tx) add(spent, parentOf.get(t.categoryId ?? "") ?? "none", t.direction === "OUT" ? dec(t.amount) : dec(t.amount).neg());
   for (const o of obs) add(committed, parentOf.get(o.categoryId ?? "") ?? "none", remaining(o));
+  const estimates = await budgetProjection(db, ws, currency, p, p, today);
+  const byCategory = new Map(estimates.map((e) => [e.categoryId, e]));
   const limits = new Map((budget?.lines ?? []).map((l) => [l.categoryId, dec(l.limitAmount)]));
   const rows = [...top.map((c) => ({ id: c.id, name: c.name })), { id: "none", name: "Sin categoría" }]
     .map((c) => {
       const limit = limits.get(c.id) ?? null, s = spent.get(c.id) ?? ZERO, cm = committed.get(c.id) ?? ZERO;
-      return { ...c, limit, spent: s, committed: cm, available: limit ? limit.minus(s).minus(cm) : null, pct: limit && limit.gt(0) ? s.plus(cm).dividedBy(limit).times(100).toNumber() : null };
+      return { ...c, projectRemaining: !!budget?.lines.find((l) => l.categoryId === c.id)?.projectRemaining, estimate: byCategory.get(c.id)?.amount ?? ZERO, scheduled: byCategory.get(c.id)?.scheduled ?? ZERO, limit, spent: s, committed: cm, available: limit ? limit.minus(s).minus(cm).minus(byCategory.get(c.id)?.scheduled ?? ZERO) : null, pct: limit && limit.gt(0) ? s.plus(cm).dividedBy(limit).times(100).toNumber() : null };
     })
     .filter((r) => r.limit || r.spent.gt(0) || r.committed.gt(0));
   const sum = (f: (r: (typeof rows)[number]) => Decimal | null) => rows.reduce((a, r) => a.plus(f(r) ?? ZERO), ZERO);
-  return { budget, rows, categories: top, totals: { limit: sum((r) => r.limit), spent: sum((r) => r.spent), committed: sum((r) => r.committed) } };
+  return { budget, rows, categories: top, totals: { limit: sum((r) => r.limit), spent: sum((r) => r.spent), committed: sum((r) => r.committed), scheduled: sum((r) => r.scheduled) } };
 }
 
-export async function saveBudget(db: Db, ws: string, p: string, currency: string, lines: { categoryId: string; limit: MoneyValue | null }[]) {
-  const cats = new Set((await db.category.findMany({ where: { workspaceId: ws, kind: "EXPENSE" }, select: { id: true } })).map((c) => c.id));
+export async function saveBudget(db: Db, ws: string, p: string, currency: string, lines: { categoryId: string; limit: MoneyValue | null; projectRemaining?: boolean }[]) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(p)) throw new UserError("Elegí un mes válido.");
+  if (lines.length > 300 || new Set(lines.map((l) => l.categoryId)).size !== lines.length) throw new UserError("Revisá las categorías del presupuesto.");
+  if (lines.some((l) => l.limit != null && (!round2(l.limit).isFinite() || round2(l.limit).lt(0) || round2(l.limit).gte("10000000000000000")))) throw new UserError("Revisá los límites: usá importes positivos dentro del rango permitido.");
+  const cats = new Set((await db.category.findMany({ where: { workspaceId: ws, kind: "EXPENSE", parentId: null, archived: false }, select: { id: true } })).map((c) => c.id));
   const valid = lines.filter((l) => cats.has(l.categoryId) && l.limit != null && round2(l.limit).gt(0));
   return db.$transaction(async (tx) => {
     await lockWorkspace(tx, ws);
     const b = await tx.budget.upsert({ where: { workspaceId_period: { workspaceId: ws, period: p } }, create: { workspaceId: ws, period: p, currency }, update: {} });
     await tx.budgetLine.deleteMany({ where: { budgetId: b.id } });
-    if (valid.length) await tx.budgetLine.createMany({ data: valid.map((l) => ({ budgetId: b.id, categoryId: l.categoryId, limitAmount: round2(l.limit!).toFixed(2) })) });
+    if (valid.length) await tx.budgetLine.createMany({ data: valid.map((l) => ({ budgetId: b.id, categoryId: l.categoryId, limitAmount: round2(l.limit!).toFixed(2), projectRemaining: l.projectRemaining === true })) });
     return b;
   });
 }
@@ -48,7 +54,7 @@ export async function saveBudget(db: Db, ws: string, p: string, currency: string
 export async function copyBudget(db: Db, ws: string, from: string, to: string, currency: string) {
   const prev = await db.budget.findUnique({ where: { workspaceId_period: { workspaceId: ws, period: from } }, include: { lines: true } });
   if (!prev || !prev.lines.length) throw new UserError("El mes anterior no tiene presupuesto para copiar.");
-  return saveBudget(db, ws, to, currency, prev.lines.map((l) => ({ categoryId: l.categoryId, limit: l.limitAmount })));
+  return saveBudget(db, ws, to, currency, prev.lines.map((l) => ({ categoryId: l.categoryId, limit: l.limitAmount, projectRemaining: l.projectRemaining })));
 }
 
 // ---------- Objetivos ----------
@@ -87,4 +93,14 @@ export async function createGoal(db: Db, ws: string, input: { name: string; targ
     if (saved.gt(0)) await tx.goalContribution.create({ data: { goalId: goal.id, amount: saved.toFixed(2), date: input.today } });
     return goal;
   });
+}
+
+// Editar la meta no mueve dinero ni modifica el historial de aportes o su moneda.
+export async function editGoal(db: Db, ws: string, id: string, input: { name: string; target: MoneyValue; targetDate: Date | null; monthly: MoneyValue | null }) {
+  const target = round2(input.target), monthly = input.monthly == null ? null : round2(input.monthly);
+  if (!input.name.trim() || input.name.trim().length > 100) throw new UserError("Escribí un nombre de hasta 100 caracteres.");
+  if (!target.isFinite() || !target.gt(0) || (monthly != null && (!monthly.isFinite() || monthly.lt(0)))) throw new UserError("La meta tiene que ser positiva y el aporte no puede ser negativo.");
+  if (input.targetDate && !Number.isFinite(input.targetDate.getTime())) throw new UserError("Revisá la fecha de la meta.");
+  const result = await db.goal.updateMany({ where: { id, workspaceId: ws }, data: { name: input.name.trim(), targetAmount: target.toFixed(2), targetDate: input.targetDate, monthlyContribution: monthly?.toFixed(2) ?? null } });
+  if (!result.count) throw new UserError("No encontramos ese objetivo.");
 }

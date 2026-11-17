@@ -6,7 +6,7 @@ import { formatMoney } from "@/lib/money";
 import { fmtDate, fmtPeriod, todayIn } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
-import { contributeAction, createGoalAction, deleteGoalAction } from "@/app/actions/modules";
+import { contributeAction, createGoalAction, editGoalAction, deleteGoalAction } from "@/app/actions/modules";
 import { FREE_LIMITS } from "@/server/plans";
 import { CURRENCIES } from "@/lib/countries";
 import { GoalSim } from "./goal-sim";
@@ -31,7 +31,18 @@ export default async function Goals() {
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><b className="num">{fm(g.saved)}</b><span className="mut num">{Math.round(g.pct)}%</span></div>
               <div className="bar" style={{ margin: "6px 0 12px", height: 10 }}><i style={{ width: `${g.pct}%`, background: "var(--ink)" }} /></div>
               {!g.done && <dl className="kv"><dt>Te falta</dt><dd>{fm(g.left)}</dd>{g.monthsLeft && <><dt>Necesitás por mes</dt><dd><b>{fm(g.needed)}</b> durante {g.monthsLeft} meses</dd></>}{g.eta && <><dt>Con tu aporte llegás en</dt><dd>{fmtPeriod(g.eta)}</dd></>}</dl>}
-              {!g.done && <GoalSim goalId={g.goal.id} left={g.left.toNumber()} planned={g.planned?.toNumber() ?? Math.max(1, g.needed.toNumber())} currency={g.goal.currency} today={today.toISOString().slice(0, 7)} />}
+              {!g.done && <GoalSim key={`${g.goal.id}:${g.goal.monthlyContribution ?? ""}:${g.goal.targetAmount}`} goalId={g.goal.id} left={g.left.toNumber()} planned={g.planned?.toNumber() ?? Math.max(1, g.needed.toNumber())} currency={g.goal.currency} today={today.toISOString().slice(0, 7)} />}
+              <details className="more goal-edit">
+                <summary className="btn sm">Editar objetivo</summary>
+                <ActionForm action={editGoalAction} className="goal-edit-form">
+                  <input type="hidden" name="goalId" value={g.goal.id} />
+                  <label className="field">Nombre<input name="name" required maxLength={100} defaultValue={g.goal.name} /></label>
+                  <div className="frow"><label className="field">Meta ({g.goal.currency})<input name="target" required inputMode="decimal" defaultValue={g.goal.targetAmount.toFixed(2).replace(".", ",")} /></label><label className="field">Para cuándo (opcional)<input name="targetDate" type="date" defaultValue={g.goal.targetDate?.toISOString().slice(0, 10) ?? ""} /></label></div>
+                  <label className="field">Aporte mensual previsto ({g.goal.currency}, opcional)<input name="monthly" inputMode="decimal" defaultValue={g.goal.monthlyContribution?.toFixed(2).replace(".", ",") ?? ""} /></label>
+                  <p className="sub">La moneda y los aportes registrados se conservan. Editar la meta no mueve dinero.</p>
+                  <div><Submit>Guardar cambios</Submit></div>
+                </ActionForm>
+              </details>
               <div className="goal-foot">
                 <details className="goal-add"><summary className="btn sm">+ Sumar un aporte</summary>
                   <ActionForm action={contributeAction} resetOnOk className="goal-add-form">

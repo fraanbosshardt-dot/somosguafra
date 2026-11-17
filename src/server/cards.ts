@@ -87,7 +87,7 @@ async function loadCard(db: Db, ws: string, cardId: string) {
 type FullCard = Awaited<ReturnType<typeof loadCard>>;
 
 // Las fechas de cada suscripción entre "from" (excluido) y "to" (incluido).
-function subDates(s: { dayOfMonth: number; startDate: Date; endDate: Date | null }, from: Date, to: Date): Date[] {
+export function subDates(s: { dayOfMonth: number; startDate: Date; endDate: Date | null }, from: Date, to: Date): Date[] {
   const out: Date[] = [];
   for (let y = from.getUTCFullYear(), m = from.getUTCMonth(), i = 0; i < 40; i++, m++) {
     const d = utc(y, m, s.dayOfMonth);

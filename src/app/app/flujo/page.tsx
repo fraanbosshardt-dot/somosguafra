@@ -46,6 +46,8 @@ export default async function Flow({ searchParams }: { searchParams: Promise<{ h
       <PageHead crumb="Planificar" title="Flujo de caja" desc="Cuánto entra, cuánto sale y con cuánto terminás cada mes, con lo que ya sabés que viene."
         actions={<div className="seg">{[12, 24, 36, 60].map((x) => long || x === 12 ? <Link key={x} className={`segl ${h === x ? "on" : ""}`} href={q({ h: String(x) })}>{x === 12 ? "1 año" : `${x / 12} años`}</Link> : <span key={x} className="segl dis" title="Función Pro">{x / 12} años · Pro</span>)}</div>} />
       <div className="sub help-line">¿Cómo se calcula? <Help term="flujo" /></div>
+      {events.some((e) => e.kind === "budget") && <p className="notice">Incluye el saldo estimado de los presupuestos que activaste, al final de su mes. Es una previsión de gasto, no un pago pendiente ni un movimiento realizado. <Link className="lnk" href="/app/presupuestos">Revisar presupuestos</Link></p>}
+      {c === "conf" && <p className="sub">Esta vista no incluye estimaciones del saldo presupuestado. Cambiá a «Con lo que se repite» para verlas.</p>}
       <div className="card">
         <div className="fsteps">{step("Hoy", cashNow)}<i>→</i>{step("Fin de mes", rows[0].end)}<i>→</i>{step("En 6 meses", rows[Math.min(5, rows.length - 1)].end)}<i>→</i>{step(h === 12 ? "En 1 año" : `En ${h / 12} años`, rows[rows.length - 1].end)}</div>
         <p className="sub" style={{ marginTop: 12 }}>{red.length ? <span className="neg">Ojo: en {fmtPeriod(red[0].period).toLowerCase()} tu saldo baja a {f(red[0].min)}{red[0].minDate ? ` (el ${fmtDate(red[0].minDate)})` : ""}.</span> : <span className="pos">Tu saldo no baja de cero en este período.</span>}</p>
@@ -72,7 +74,7 @@ export default async function Flow({ searchParams }: { searchParams: Promise<{ h
         </table></div>
       </div>
       <div className="card">
-        <div className="chead"><div><h3>Día a día</h3><p className="sub">Tu saldo después de cada día con cobros o pagos, en los próximos 60 días.</p></div>{lowest && long && <span className={`pill ${lowest.balance.isNegative() ? "r" : ""}`}>Lo más bajo: {f(lowest.balance)} el {fmtDate(lowest.date)}</span>}</div>
+        <div className="chead"><div><h3>Día a día</h3><p className="sub">Tu saldo proyectado en los próximos 60 días. Las estimaciones de presupuesto se ubican al final de su mes; no son vencimientos reales.</p></div>{lowest && long && <span className={`pill ${lowest.balance.isNegative() ? "r" : ""}`}>Lo más bajo: {f(lowest.balance)} el {fmtDate(lowest.date)}</span>}</div>
         {!long ? (
           <p className="sub">Con Pro ves el saldo de cada día, para saber exactamente qué día te quedás corto. <Link className="lnk" href="/app/configuracion?tab=plan">Probar Pro</Link></p>
         ) : daily.length ? (
@@ -84,7 +86,7 @@ export default async function Flow({ searchParams }: { searchParams: Promise<{ h
           ))}</div>
         ) : <p className="sub">No hay cobros ni pagos en los próximos 60 días.</p>}
       </div>
-      <div className="card"><details className="more"><summary>¿Cómo se calcula?</summary><p className="sub" style={{ paddingTop: 6 }}>Arranca con el dinero de tus cuentas en {cur} (sin inversiones ni tarjetas). Suma los cobros y resta los pagos pendientes, las reglas recurrentes y los resúmenes de tarjeta estimados, en el orden de sus fechas. Cada mes empieza con el saldo final del anterior. Las cuentas en otras monedas no se mezclan.</p></details></div>
+      <div className="card"><details className="more"><summary>¿Cómo se calcula?</summary><p className="sub" style={{ paddingTop: 6 }}>Arranca con el dinero de tus cuentas en {cur} (sin inversiones ni tarjetas). Suma los cobros y resta los pagos pendientes, las reglas recurrentes y los resúmenes de tarjeta estimados, en el orden de sus fechas. En «Con lo que se repite» también resta lo que falta estimar de las categorías que activaste en Presupuestos, sin repetir gastos o compromisos ya contemplados. No copia límites automáticamente a meses sin presupuesto. Cada mes empieza con el saldo final del anterior. Las cuentas en otras monedas no se mezclan.</p></details></div>
     </>
   );
 }

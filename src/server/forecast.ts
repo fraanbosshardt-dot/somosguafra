@@ -1,5 +1,6 @@
 // Flujo de caja proyectado: saldo real de hoy + cobros y pagos futuros, en orden de fecha.
 // Lo usan el Flujo de caja, el Simulador, "¿Puedo comprarlo en cuotas?" y las Alertas.
+import { budgetProjection } from "./budget-projection";
 import type { Db } from "./ledger";
 import { accountBalances, readBalances, remaining } from "./ledger";
 import { amountFor, applyWeekend, occurrences } from "./recurring";
@@ -11,7 +12,7 @@ import type Decimal from "decimal.js";
 export const MATERIALIZE_DAYS = 45; // las reglas recurrentes se guardan como pendientes hasta esta cantidad de días
 
 export type Certainty = "conf" | "prob" | "hipo";
-export type FlowEvent = { date: Date; amount: Decimal; description: string; kind: "pending" | "recurring" | "card" | "sim"; certainty: "CONFIRMED" | "PROBABLE" | "HYPOTHETICAL" };
+export type FlowEvent = { date: Date; amount: Decimal; description: string; kind: "pending" | "recurring" | "card" | "sim" | "budget"; certainty: "CONFIRMED" | "PROBABLE" | "HYPOTHETICAL" };
 export type ForecastRow = { period: string; start: Decimal; realizedIn: Decimal; realizedOut: Decimal; pendingIn: Decimal; pendingOut: Decimal; end: Decimal; result: Decimal; min: Decimal; minDate: Date | null };
 export type Adjust = { expensePct?: number; extra?: { date: Date; amount: MoneyValue; description: string }[]; dropRuleIds?: string[] };
 
@@ -68,6 +69,11 @@ export async function forecast(db: Db, ws: string, opts: { currency: string; tod
   }
   for (const c of await projectedCardPayments(db, ws, today, horizon)) {
     if (c.currency === currency) events.push({ date: c.date, amount: c.amount.neg(), description: c.description, kind: "card", certainty: "CONFIRMED" });
+  }
+  if (opts.certainty !== "conf") {
+    for (const b of await budgetProjection(db, ws, currency, p0, period(horizon), today)) {
+      if (b.amount.gt(0)) events.push({ date: b.date, amount: b.amount.neg(), description: `Presupuesto: ${b.name} (estimación restante)`, kind: "budget", certainty: "PROBABLE" });
+    }
   }
   for (const x of opts.adjust?.extra ?? []) events.push({ date: x.date < today ? today : x.date, amount: round2(x.amount), description: x.description, kind: "sim", certainty: "CONFIRMED" });
   if (opts.adjust?.expensePct) {

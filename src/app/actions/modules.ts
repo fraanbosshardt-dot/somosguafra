@@ -13,7 +13,7 @@ import { changeRuleFrom, createRule, endRule, materialize, pauseRule } from "@/s
 import { MATERIALIZE_DAYS } from "@/server/forecast";
 import { cardPurchase, createCard } from "@/server/cards";
 import { cancelDebt, createDebt, deleteDebt, payDebtOnAccount, updateDebt } from "@/server/debts";
-import { createGoal, addContribution, copyBudget, saveBudget } from "@/server/planning";
+import { createGoal, editGoal, addContribution, copyBudget, saveBudget } from "@/server/planning";
 import { addValuation, createAsset, createInvestment, investmentMove, saveManualRate } from "@/server/wealth";
 import { createGrainSale } from "@/server/grain";
 import { applyImport, autoMap, previewImport, revertImport } from "@/server/io";
@@ -358,18 +358,18 @@ export async function saveBudgetAction(_: FormState, fd: FormData): Promise<Form
   const { workspace } = await requireWorkspace();
   try {
     const p = str(fd, "period");
-    const lines = [...fd.entries()].filter(([k]) => k.startsWith("limit:")).map(([k, v]) => ({ categoryId: k.slice(6), limit: String(v).trim() ? parseAmount(String(v)) : null }));
+    const lines = [...fd.entries()].filter(([k]) => k.startsWith("limit:")).map(([k, v]) => ({ categoryId: k.slice(6), limit: String(v).trim() ? parseAmount(String(v)) : null, projectRemaining: fd.get(`project:${k.slice(6)}`) === "on" }));
     if (lines.some((l) => l.limit === null && fd.get(`limit:${l.categoryId}`) && String(fd.get(`limit:${l.categoryId}`)).trim())) throw new UserError("Revisá los importes: tienen que ser números.");
     await saveBudget(getDb(), workspace.id, p, workspace.baseCurrency, lines);
   } catch (e) { return fail(e); }
-  revalidatePath("/app/presupuestos");
-  return { ok: "Presupuesto guardado." };
+  revalidatePath("/app", "layout");
+  return { ok: "Presupuesto guardado. La proyección quedó actualizada." };
 }
 
 export async function copyBudgetAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   try { await copyBudget(getDb(), workspace.id, str(fd, "from"), str(fd, "to"), workspace.baseCurrency); } catch { /* sin presupuesto previo: no hace nada */ }
-  revalidatePath("/app/presupuestos");
+  revalidatePath("/app", "layout");
 }
 
 export async function createGoalAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -378,6 +378,15 @@ export async function createGoalAction(_: FormState, fd: FormData): Promise<Form
     await createGoal(getDb(), workspace.id, { name: str(fd, "name"), target: money(fd, "target", "la meta"), currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte"), saved: optMoney(fd, "saved", "lo que ya tenés"), today: todayIn(workspace.timezone) });
   } catch (e) { return fail(e); }
   redirect(done("/app/objetivos"));
+}
+
+export async function editGoalAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { workspace } = await requireWorkspace();
+  try {
+    await editGoal(getDb(), workspace.id, str(fd, "goalId"), { name: str(fd, "name"), target: money(fd, "target", "la meta"), targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte") });
+  } catch (e) { return fail(e); }
+  revalidatePath("/app/objetivos");
+  return { ok: "Objetivo actualizado. Tus aportes se conservaron." };
 }
 
 export async function contributeAction(_: FormState, fd: FormData): Promise<FormState> {

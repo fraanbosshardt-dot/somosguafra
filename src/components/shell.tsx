@@ -22,7 +22,7 @@ function groups(overdue: number): [string, Item[]][] {
       { href: "/app/cereal", label: "Ventas de cereal", icon: "grain", module: "cereal" },
     ]],
     ["Pagos y deudas", [
-      { href: "/app/proximos", label: "Próximos pagos", icon: "clock", badge: overdue, match: "/app/(proximos|calendario)" },
+      { href: "/app/proximos", label: "Próximos pagos y cobros", icon: "clock", badge: overdue, match: "/app/(proximos|calendario)" },
       { href: "/app/tarjetas", label: "Tarjetas", icon: "card", module: "tarjetas" },
       { href: "/app/deudas", label: "Deudas y préstamos", icon: "bank", module: "deudas" },
     ]],
