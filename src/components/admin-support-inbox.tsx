@@ -43,8 +43,8 @@ export async function AdminSupportInbox({
         query: p.q,
         channel: site ? "contact" : p.canal,
         page,
-        assigned: p.mias === "1" ? a.email : undefined,
-        area: AREAS.some((a) => a.key === p.area) ? p.area : undefined,
+        assigned: p.canal !== "bot" && p.mias === "1" ? a.email : undefined,
+        area: p.canal !== "bot" && AREAS.some((a) => a.key === p.area) ? p.area : undefined,
       }),
       savedReplies(db),
     ]);
@@ -110,7 +110,7 @@ export async function AdminSupportInbox({
             <option value="bot">Solo automáticas</option>
           </select>
         </label>}
-        <label className="field">
+        {p.canal !== "bot" && <label className="field">
           Motivo
           <select name="area" defaultValue={p.area ?? ""}>
             <option value="">Todos los motivos</option>
@@ -120,8 +120,8 @@ export async function AdminSupportInbox({
               </option>
             ))}
           </select>
-        </label>
-        <label className="check">
+        </label>}
+        {p.canal !== "bot" && <label className="check">
           <input
             type="checkbox"
             name="mias"
@@ -129,7 +129,7 @@ export async function AdminSupportInbox({
             defaultChecked={p.mias === "1"}
           />
           Asignadas a mí
-        </label>
+        </label>}
         <button className="btn pri">Filtrar</button>
       </form>
       <p className="sub">
@@ -162,14 +162,14 @@ export async function AdminSupportInbox({
             </span>
           </div>
           <p className="sub">
-            {when(c.at)} ·{" "}
+            {when(c.at)} · {c.kind === "bot" ? "Sin derivación al equipo" : <>
             {c.assigned ? `Asignada a ${c.assigned}` : "Sin asignar"} ·
             Prioridad{" "}
             {c.priority === "HIGH"
               ? "alta"
               : c.priority === "LOW"
                 ? "baja"
-                : "normal"}
+                : "normal"}</>}
           </p>
         </Link>
       ))}
@@ -178,7 +178,7 @@ export async function AdminSupportInbox({
       )}
       </div>
       <Pagination page={page} size={25} total={total} href={url} />
-      {can(a.role,"support") && <details className="card">
+      {can(a.role,"support") && p.canal !== "bot" && <details className="card">
         <summary>Respuestas guardadas para el equipo</summary>
         <p className="sub">Disponibles en cada ticket, filtradas por motivo. Usá {"{nombre}"} y {"{caso}"} para completar el nombre y el código. Las respuestas son borradores: verificá los hechos antes de enviarlas.</p>
         {replies.map((r) => (

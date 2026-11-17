@@ -100,7 +100,7 @@ export async function AdminConversation({
             ? "Cuenta vinculada; verificá identidad antes de cambios sensibles."
             : "Visitante: el correo indicado no acredita identidad."}
         </p>
-        <AdminSections items={[{id:"conversacion",label:"Conversación y respuesta",content:<div className="adm-case-workbench"><section>
+        <AdminSections items={[{id:"conversacion",label:writable?"Conversación y respuesta":"Conversación",content:<div className={writable?"adm-case-workbench":undefined}><section>
         <h2 className="adm-section-title" id="historial">Historial de la conversación</h2>
         <SupportHistory lastMessage={c.messages.at(-1)?.id}><SupportThread
           body={c.body}
