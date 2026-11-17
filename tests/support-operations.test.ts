@@ -1,0 +1,102 @@
+import {beforeAll,afterAll,beforeEach,expect,it,vi} from "vitest";
+import {startTestDb} from "./helpers/testdb";
+import {activeSupportTeam,supportLease,manageSupportCase,notifySupportTeam,runSupportOverdueAlerts,staffNoticeStillRelevant,type SupportEditor} from "@/server/support-operations";
+import {replyToContact} from "@/server/support-replies";
+import {customerReply} from "@/server/support-thread";
+import {supportDeadline,supportWhen} from "@/lib/support-time";
+import {savedReplies} from "@/server/settings";
+import {fillSupportReply,DEFAULT_SUPPORT_REPLIES} from "@/lib/support-replies";
+let t:Awaited<ReturnType<typeof startTestDb>>;
+beforeAll(async()=>{t=await startTestDb();vi.stubEnv("ADMIN_EMAILS","boss@audit.invalid");vi.stubEnv("APP_URL","https://example.invalid");vi.stubEnv("AUTH_SECRET","fixture-secret-with-at-least-32-characters");});
+beforeEach(async()=>{await t.db.contactMessage.deleteMany();await t.db.adminMember.deleteMany();await t.db.emailOutbox.deleteMany();await t.db.appSetting.deleteMany();await t.db.adminMember.createMany({data:[{email:"agent@audit.invalid",role:"SUPPORT"},{email:"viewer@audit.invalid",role:"VIEWER"}]});});
+afterAll(async()=>{vi.unstubAllEnvs();await t?.stop();});
+const create=()=>t.db.contactMessage.create({data:{code:`SG-${crypto.randomUUID()}`,area:"soporte",subject:"Fixture",name:"Cliente",email:"client@audit.invalid",body:"Contenido privado del cliente"}});
+const editor=(revision:string,email="agent@audit.invalid",sessionId="session-agent"):SupportEditor=>({revision,email,sessionId,role:email.startsWith("boss")?"OWNER":"SUPPORT",token:crypto.randomUUID()});
+it("reserva una sola respuesta, incluso en dos pestañas de la misma persona",async()=>{
+  const c=await create(),a=editor(c.updatedAt.toISOString()),b=editor(c.updatedAt.toISOString(),a.email,a.sessionId);
+  const results=await Promise.allSettled([supportLease(t.db,"contact",c.id,a,"claim"),supportLease(t.db,"contact",c.id,b,"claim")]);
+  expect(results.filter(r=>r.status==="fulfilled")).toHaveLength(1);
+  const winner=results[0].status==="fulfilled"?a:b,other=winner===a?b:a;
+  await expect(replyToContact(t.db,c.id,"Respuesta ajena","https://example.invalid",other.email,other)).rejects.toThrow("Tomá");
+  await replyToContact(t.db,c.id,"Respuesta verificada","https://example.invalid",winner.email,winner);
+  expect(await t.db.supportMessage.count({where:{contactId:c.id,role:"staff"}})).toBe(1);
+  expect(await t.db.supportReplyLease.count()).toBe(0);
+  await expect(replyToContact(t.db,c.id,"Reenvío","https://example.invalid",winner.email,winner)).rejects.toThrow("Tomá");
+});
+it("una reserva vencida no permite enviar ni liberar la reserva nueva",async()=>{
+  const c=await create(),a=editor(c.updatedAt.toISOString()),b=editor(c.updatedAt.toISOString(),"boss@audit.invalid","boss-session");
+  await supportLease(t.db,"contact",c.id,a,"claim");
+  await t.db.supportReplyLease.updateMany({data:{expiresAt:new Date(Date.now()-1)}});
+  await supportLease(t.db,"contact",c.id,b,"claim");
+  await supportLease(t.db,"contact",c.id,a,"release");
+  await expect(replyToContact(t.db,c.id,"Respuesta vieja","https://example.invalid",a.email,a)).rejects.toThrow();
+  await replyToContact(t.db,c.id,"Respuesta actual","https://example.invalid",b.email,b);
+});
+it("un mensaje nuevo del cliente invalida el envío preparado y conserva ambos historiales",async()=>{
+  const c=await create(),a=editor(c.updatedAt.toISOString());await supportLease(t.db,"contact",c.id,a,"claim");
+  await customerReply(t.db,"contact",c.id,"Tengo otro detalle",crypto.randomUUID());
+  await expect(replyToContact(t.db,c.id,"Respuesta desactualizada","https://example.invalid",a.email,a)).rejects.toThrow();
+  expect(await t.db.supportMessage.count({where:{contactId:c.id,role:"staff"}})).toBe(0);
+  expect((await t.db.contactMessage.findUniqueOrThrow({where:{id:c.id}})).status).toBe("OPEN");
+});
+it("deriva solo a personas activas, rechaza revisiones antiguas y quita la reserva anterior",async()=>{
+  const c=await create(),revision=c.updatedAt.toISOString(),a=editor(revision);await supportLease(t.db,"contact",c.id,a,"claim");
+  expect((await activeSupportTeam(t.db)).map(m=>m.email)).toEqual(["agent@audit.invalid","boss@audit.invalid"]);
+  await expect(manageSupportCase(t.db,{kind:"contact",id:c.id,revision,assignedTo:"viewer@audit.invalid",note:"",actor:a.email})).rejects.toThrow("acceso activo");
+  await manageSupportCase(t.db,{kind:"contact",id:c.id,revision,assignedTo:"boss@audit.invalid",note:"Nota privada",actor:a.email});
+  await expect(manageSupportCase(t.db,{kind:"contact",id:c.id,revision,assignedTo:a.email,note:"",actor:a.email})).rejects.toThrow("cambió");
+  expect(await t.db.supportReplyLease.count()).toBe(0);
+  const updated=await t.db.contactMessage.findUniqueOrThrow({where:{id:c.id}});
+  await expect(supportLease(t.db,"contact",c.id,editor(updated.updatedAt.toISOString()),"claim")).rejects.toThrow("asignada");
+  expect(await t.db.adminSupportNotice.count({where:{recipient:"boss@audit.invalid",type:"ASSIGNED"}})).toBe(1);
+  await t.db.adminMember.delete({where:{email:a.email}});
+  await expect(manageSupportCase(t.db,{kind:"contact",id:c.id,revision:updated.updatedAt.toISOString(),assignedTo:a.email,note:"",actor:"boss@audit.invalid"})).rejects.toThrow("acceso activo");
+});
+it("los avisos no copian datos privados y los reintentos no duplican correos",async()=>{
+  const c=await create();
+  await t.db.$transaction(async tx=>{await notifySupportTeam(tx,"contact",c.id,"NEW",c.createdAt);await notifySupportTeam(tx,"contact",c.id,"NEW",c.createdAt);});
+  const queued=await t.db.emailOutbox.findMany();expect(queued).toHaveLength(2);
+  expect(queued.map(m=>m.to).sort()).toEqual(["agent@audit.invalid","boss@audit.invalid"]);expect(queued[0].text).toContain(`/admin/soporte/contact/${c.id}`);
+  expect(queued[0].text).not.toContain(c.body);expect(queued[0].text).not.toContain(c.email);
+  const agentMail=queued.find(m=>m.to==="agent@audit.invalid")!;
+  expect(await staffNoticeStillRelevant(t.db,agentMail)).toBe(true);
+  await t.db.adminMember.update({where:{email:"agent@audit.invalid"},data:{role:"VIEWER"}});
+  expect(await staffNoticeStillRelevant(t.db,agentMail)).toBe(false);
+  await t.db.adminMember.update({where:{email:"agent@audit.invalid"},data:{role:"SUPPORT"}});
+  const a=editor(c.updatedAt.toISOString());await supportLease(t.db,"contact",c.id,a,"claim");await replyToContact(t.db,c.id,"Respondido","https://example.invalid",a.email,a);
+  expect(await t.db.adminSupportNotice.count({where:{readAt:null}})).toBe(0);
+  expect(await staffNoticeStillRelevant(t.db,agentMail)).toBe(false);
+  await customerReply(t.db,"contact",c.id,"Vuelvo a consultar",crypto.randomUUID());
+  expect(await t.db.adminSupportNotice.count({where:{readAt:null,type:"CUSTOMER"}})).toBe(2);
+});
+it("detecta demoras una vez por espera y limpia las relaciones al eliminar el caso de prueba",async()=>{
+  const c=await create(),past=new Date(Date.now()-20*864e5);await t.db.contactMessage.update({where:{id:c.id},data:{createdAt:past,updatedAt:past}});
+  expect(await runSupportOverdueAlerts(t.db)).toBe(1);expect(await runSupportOverdueAlerts(t.db)).toBe(0);
+  const notices=await t.db.adminSupportNotice.findMany({where:{type:"OVERDUE"}});expect(notices).toHaveLength(2);
+  const a=editor(past.toISOString());await supportLease(t.db,"contact",c.id,a,"claim");
+  await t.db.contactMessage.delete({where:{id:c.id}});
+  expect(await t.db.adminSupportNotice.count()).toBe(0);expect(await t.db.supportReplyLease.count()).toBe(0);
+});
+it("calcula horas hábiles con fines de semana y sin depender del huso del servidor",()=>{
+  expect(supportDeadline(new Date("2026-11-13T19:30:00Z")).toISOString()).toBe("2026-11-16T19:30:00.000Z");
+  expect(supportDeadline(new Date("2026-11-14T10:00:00Z")).toISOString()).toBe("2026-11-16T20:00:00.000Z");
+  expect(supportDeadline(new Date("2026-11-13T19:59:30Z")).toISOString()).toBe("2026-11-16T19:59:30.000Z");
+  expect(supportWhen(new Date("2026-11-17T01:30:00Z"))).toContain("16 nov");
+  expect(supportWhen(new Date("2026-11-17T01:30:00Z"))).toContain("22:30");
+});
+it("derivar una revisión interna después de responder no genera una demora retroactiva",async()=>{
+  const c=await create();await t.db.contactMessage.update({where:{id:c.id},data:{createdAt:new Date(Date.now()-20*864e5)}});
+  const answered=await replyToContact(t.db,c.id,"Respuesta inicial","https://example.invalid","boss@audit.invalid");
+  await manageSupportCase(t.db,{kind:"contact",id:c.id,revision:answered.updatedAt.toISOString(),assignedTo:"boss@audit.invalid",note:"Revisión adicional",actor:"agent@audit.invalid",review:true});
+  expect((await t.db.contactMessage.findUniqueOrThrow({where:{id:c.id}})).status).toBe("WAITING_INTERNAL");
+  expect(await runSupportOverdueAlerts(t.db)).toBe(0);
+  expect(await t.db.adminSupportNotice.count({where:{type:"REVIEW",recipient:"boss@audit.invalid"}})).toBe(1);
+});
+it("ofrece respuestas por motivo y preserva las personalizadas y una biblioteca vacía",async()=>{
+  expect((await savedReplies(t.db)).length).toBe(DEFAULT_SUPPORT_REPLIES.length);
+  await t.db.appSetting.create({data:{key:"savedReplies",value:{items:[{title:"Propia",text:"Hola {nombre}, caso {caso}."}]}}});
+  expect((await savedReplies(t.db)).some(r=>r.title==="Propia")).toBe(true);
+  expect(fillSupportReply("Hola {nombre}. {caso} / {codigo}",{name:"Ana",code:"SG-TEST"})).toBe("Hola Ana. SG-TEST / SG-TEST");
+  await t.db.appSetting.update({where:{key:"savedReplies"},data:{value:{version:2,items:[]}}});
+  expect(await savedReplies(t.db)).toEqual([]);
+});

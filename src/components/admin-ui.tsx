@@ -1,11 +1,11 @@
 // Piezas del panel interno: gráficos de barras sin librerías, números y textos de la actividad.
-import { fmtDate } from "@/lib/dates";
+import { supportWhen } from "@/lib/support-time";
 
 export const ars = (v: number) => `$ ${v.toLocaleString("es-AR", { maximumFractionDigits: v < 100 ? 2 : 0 })}`;
 export const usd = (v: number) => `US$ ${v.toLocaleString("es-AR", { maximumFractionDigits: v < 100 ? 2 : 0 })}`;
 export const int = (v: number) => v.toLocaleString("es-AR");
 export const pct = (v: number) => `${v.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`;
-export const when = (d: Date) => `${fmtDate(d)} ${d.toISOString().slice(11, 16)}`;
+export const when = supportWhen;
 
 export function Stats({ items }: { items: [string, string | number, string?][] }) {
   return (

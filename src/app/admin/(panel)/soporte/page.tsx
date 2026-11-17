@@ -13,6 +13,7 @@ import { savedReplies } from "@/server/settings";
 import { ActionForm, Submit } from "@/components/forms";
 import { SupportRefresh } from "@/components/support-refresh";
 import { can } from "@/server/admin-team";
+import { REPLY_AREAS } from "@/lib/support-replies";
 import {
   adminSaveReplyAction,
   adminDeleteReplyAction,
@@ -180,11 +181,17 @@ export default async function Inbox({
       <Pagination page={page} size={25} total={total} href={url} />
       <details className="card">
         <summary>Respuestas guardadas para el equipo</summary>
+        <p className="sub">Disponibles en cada ticket, filtradas por motivo. Usá {"{nombre}"} y {"{caso}"} para completar el nombre y el código. Las respuestas son borradores: verificá los hechos antes de enviarlas.</p>
         {replies.map((r) => (
           <div className="li" key={r.title}>
             <div className="grow">
               <b>{r.title}</b>
+              <small className="sub"> · {REPLY_AREAS[r.area??"general"]??"General"}</small>
               <p className="sub">{r.text}</p>
+              <details><summary>Editar respuesta</summary><ActionForm action={adminSaveReplyAction} style={{display:"grid",gap:12,marginTop:12}}>
+                <input type="hidden" name="title" value={r.title}/><label className="field">Motivo<select name="area" defaultValue={r.area??"general"}>{Object.entries(REPLY_AREAS).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+                <label className="field">Texto<textarea name="text" rows={4} defaultValue={r.text} maxLength={2000} required/></label><Submit>Guardar cambios</Submit>
+              </ActionForm></details>
             </div>
             <form action={adminDeleteReplyAction}>
               <input type="hidden" name="title" value={r.title} />
@@ -194,12 +201,14 @@ export default async function Inbox({
         ))}
         <ActionForm
           action={adminSaveReplyAction}
+          resetOnOk
           style={{ display: "grid", gap: 14, marginTop: 20 }}
         >
           <label className="field">
             Nombre
             <input name="title" required />
           </label>
+          <label className="field">Motivo<select name="area" defaultValue="general">{Object.entries(REPLY_AREAS).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
           <label className="field">
             Texto
             <textarea

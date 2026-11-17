@@ -186,12 +186,10 @@ export async function POST(req: NextRequest) {
         },
         token,
       );
-      await drainEmailOutbox(db, 5, 3000).catch((e) =>
-        reportError("[chat receipt queued]", e),
-      );
     } else if (data.action === "resolve" && s)
       current = await resolveBotChat(db, a.actor, s);
     else throw new UserError("Solicitud inválida.");
+    if(current?.human && data.action!=="load") await drainEmailOutbox(db,5,3000).catch(e=>reportError("[chat team notice queued]",e));
     return cookie(
       json({
         current,

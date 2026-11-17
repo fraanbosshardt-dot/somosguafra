@@ -1,6 +1,7 @@
 import type { Db } from "./ledger";
 import { UserError } from "./ledger";
 import { CASE_STATUS } from "@/lib/chat-help";
+import { releaseSupportEditor, clearSupportNotices } from "./support-operations";
 export async function updateSupportCase(
   db: Db,
   input: {
@@ -31,6 +32,8 @@ export async function updateSupportCase(
       throw new UserError(
         "El caso cambió mientras lo revisabas. Actualizá la conversación antes de cambiar su estado.",
       );
+    await releaseSupportEditor(tx,input.kind as "contact"|"ticket",input.id);
+    if(["RESOLVED","CLOSED","ANSWERED"].includes(input.status)) await clearSupportNotices(tx,input.kind as "contact"|"ticket",input.id);
     if (input.kind === "contact") {
       await tx.contactMessage.update({
         where: { id: input.id },

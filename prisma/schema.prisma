@@ -805,6 +805,8 @@ model SupportTicket {
   reply     String?
   assignedTo String?
   messages SupportMessage[]
+  replyLease SupportReplyLease?
+  teamNotices AdminSupportNotice[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -993,6 +995,8 @@ model ContactMessage {
   assignedTo String?
   priority String @default("NORMAL")
   messages SupportMessage[]
+  replyLease SupportReplyLease?
+  teamNotices AdminSupportNotice[]
   chatSession ChatSession?
   userId    String?
   ip        String?
@@ -1001,6 +1005,41 @@ model ContactMessage {
 
   @@index([status, createdAt])
   @@index([area, createdAt])
+}
+
+model SupportReplyLease {
+  id String @id
+  ticketId String? @unique
+  ticket SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contactId String? @unique
+  contact ContactMessage? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  ownerEmail String
+  sessionId String
+  tokenHash String
+  revision String
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model AdminSupportNotice {
+  id String @id @default(cuid())
+  eventKey String @unique
+  recipient String
+  kind String
+  caseId String
+  ticketId String?
+  ticket SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact ContactMessage? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  code String
+  type String
+  priority String @default("NORMAL")
+  activityAt DateTime
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([recipient, readAt, updatedAt])
+  @@index([kind, caseId, type, activityAt])
 }
 
 // Hilo común para Ayuda, Contacto y respuestas por correo; las notas nunca salen al cliente.

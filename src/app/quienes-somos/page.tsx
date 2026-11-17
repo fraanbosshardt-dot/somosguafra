@@ -7,7 +7,7 @@ import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Quiénes somos",
-  description: `${BRAND.name} nació en Argentina para que cualquier persona sepa cuánto tiene, cuánto debe y cuánto puede gastar, sin planillas ni términos difíciles.`,
+  description: `${BRAND.name} te ayuda a saber cuánto tenés, cuánto debés y cuánto podés gastar, sin planillas ni términos difíciles.`,
   alternates: { canonical: "/quienes-somos" },
 };
 
@@ -29,7 +29,7 @@ export default function About() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <p className="ws-eyebrow">Quiénes somos</p>
               <h1 className="ws-h1">Queremos que llegar a fin de mes <em>deje de ser una sorpresa.</em></h1>
-              <p className="ws-lead">{BRAND.name} es una app argentina de finanzas personales. Te muestra hoy cómo termina tu mes, con tus cuentas, tus cuotas y tus vencimientos en un solo lugar.</p>
+              <p className="ws-lead">{BRAND.name} es una app de finanzas personales. Te muestra hoy cómo termina tu mes, con tus cuentas, tus cuotas y tus vencimientos en un solo lugar.</p>
             </div>
             <div className="ws-stack" aria-hidden="true">
               <div className="a"><small>Antes</small><b>Cuadernos, planillas y recordatorios</b></div>

@@ -69,7 +69,7 @@ export default async function Help({ searchParams }: { searchParams: Promise<{ p
           <HelpFaq items={FAQ} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-          <div className="card">
+          <div className="card help-contact-card">
             <div className="chead"><h3>Escribinos</h3></div>
             <p className="sub" style={{ marginBottom: 12 }}>Para reembolsos, bajas o privacidad también podés usar <Link className="lnk" href="/contacto">Contacto</Link>. Consultá <Link className="lnk" href="/terminos">Términos</Link>, <Link className="lnk" href="/privacidad">Privacidad</Link>, <Link className="lnk" href="/reembolsos">Reembolsos</Link> y <Link className="lnk" href="/cookies">Cookies</Link>.</p>
             <p className="sub">Guafra responde consultas frecuentes. Si necesitás una persona, le pasamos todo el historial y te avisamos por correo cuando responda.</p>

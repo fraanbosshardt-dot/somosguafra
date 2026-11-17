@@ -24,15 +24,14 @@ const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length 
 
 export async function adminCaseToolsAction(_: FormState, fd: FormData): Promise<FormState> {
   const a = await requireAdmin("support");
-  const kind = s(fd, "kind") === "ticket" ? "ticket" : "contact", id = s(fd, "id"), note = s(fd, "note").slice(0, 3000);
-  const assignedTo = fd.get("unassign") === "yes" ? null : fd.get("assign") === "me" ? a.email : undefined;
-  const db = getDb();
-  await db.$transaction(async tx => {
-    if (kind === "ticket") await tx.supportTicket.update({ where: { id }, data: { assignedTo } });
-    else await tx.contactMessage.update({ where: { id }, data: { assignedTo } });
-    if (note) await tx.supportMessage.create({ data: { ...(kind === "ticket" ? { ticketId: id } : { contactId: id }), role: "staff", internal: true, author: a.email, body: note, dedupeKey: `note/${crypto.randomUUID()}` } });
-  });
-  await adminAudit(a, "admin.case_managed", { entity: kind, entityId: id }); refresh(); return { ok: "Gestión interna guardada." };
+  const kind = s(fd,"kind"), id=s(fd,"id");
+  if(kind!=="ticket" && kind!=="contact")return {error:"Caso inválido."};
+  const {manageSupportCase}=await import("@/server/support-operations");
+  try {await manageSupportCase(getDb(),{kind,id,revision:s(fd,"revision"),assignedTo:s(fd,"assignedTo").toLowerCase()||null,note:s(fd,"note"),actor:a.email,review:fd.get("review")==="yes"});}
+  catch(e){if(e instanceof UserError)return {error:e.message};throw e;}
+  await adminAudit(a,"admin.case_managed",{entity:kind,entityId:id,meta:{assignedTo:s(fd,"assignedTo")||null}});
+  await drainEmailOutbox(getDb(),3,2000).catch(e=>reportError("[support team notice queued]",e));
+  refresh();return {ok:"Responsable y nota interna guardados."};
 }
 
 // ---------- Sesión del panel ----------
@@ -67,7 +66,7 @@ export async function adminSetPlanAction(fd: FormData) {
 
 export async function adminGiftProAction(fd: FormData) {
   const forever = s(fd, "days") === "0";
-  const a = await requireAdmin(forever ? "owner" : "support");
+  const a = await requireAdmin("owner");
   const workspaceId = s(fd, "workspaceId");
   const days = forever ? null : Math.min(365, Math.max(1, Math.round(n(fd, "days")) || 14));
   const r = await giftPro(getDb(), workspaceId, days);
@@ -76,7 +75,7 @@ export async function adminGiftProAction(fd: FormData) {
 }
 
 export async function adminSuspendAction(fd: FormData) {
-  const a = await requireAdmin("support");
+  const a = await requireAdmin("owner");
   const id = s(fd, "userId");
   const db = getDb();
   const target = await db.user.findUnique({ where: { id } });
@@ -89,7 +88,7 @@ export async function adminSuspendAction(fd: FormData) {
 }
 
 export async function adminReset2faAction(fd: FormData) {
-  const a = await requireAdmin("support");
+  const a = await requireAdmin("owner");
   const id = s(fd, "userId");
   await getDb().$transaction([getDb().user.update({ where: { id }, data: { totpSecretEnc: null, totpEnabledAt: null } }), getDb().recoveryCode.deleteMany({ where: { userId: id } })]);
   await adminAudit(a, "admin.2fa_reset", { entity: "user", entityId: id });
@@ -97,7 +96,7 @@ export async function adminReset2faAction(fd: FormData) {
 }
 
 export async function adminCloseSessionsAction(fd: FormData) {
-  const a = await requireAdmin("support");
+  const a = await requireAdmin("owner");
   const id = s(fd, "userId");
   const r = await getDb().session.deleteMany({ where: { userId: id } });
   await adminAudit(a, "admin.sessions_closed", { entity: "user", entityId: id, meta: { count: r.count } });
@@ -122,7 +121,7 @@ export async function adminDeleteAccountAction(_: FormState, fd: FormData): Prom
 // ---------- Pro reservado por correo ----------
 export async function adminAddGrantAction(_: FormState, fd: FormData): Promise<FormState> {
   const forever = s(fd, "days") === "0";
-  const a = await requireAdmin(forever ? "owner" : "support");
+  const a = await requireAdmin("owner");
   const email = s(fd, "email").toLowerCase();
   if (!isEmail(email)) return { error: "Revisá el correo." };
   const db = getDb();
@@ -142,7 +141,7 @@ export async function adminAddGrantAction(_: FormState, fd: FormData): Promise<F
 }
 
 export async function adminDeleteGrantAction(fd: FormData) {
-  const a = await requireAdmin("support");
+  const a = await requireAdmin("owner");
   const id = s(fd, "id");
   await getDb().proGrant.deleteMany({ where: { id, usedAt: null } });
   await adminAudit(a, "admin.pro_reserve_removed", { entityId: id });
@@ -192,7 +191,8 @@ export async function adminReplyTicketAction(_: FormState, fd: FormData): Promis
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  await replyToTicket(db, id, reply, appUrl(), a.email);
+  try { await replyToTicket(db,id,reply,appUrl(),a.email,{...a,token:s(fd,"leaseToken"),revision:s(fd,"revision")}); }
+  catch(e){if(e instanceof UserError)return {error:e.message};throw e;}
   await drainEmailOutbox(db).catch((e) => reportError("[support reply queued]", e));
   await adminAudit(a, "admin.ticket_answered", { entity: "ticket", entityId: id, meta: { queued: true } });
   refresh();
@@ -221,8 +221,15 @@ export async function adminSaveReplyAction(_: FormState, fd: FormData): Promise<
   const title = s(fd, "title").slice(0, 60), text = s(fd, "text").slice(0, 2000);
   if (!title || !text) return { error: "Poné un nombre y el texto de la respuesta." };
   const db = getDb();
-  const items = [...(await savedReplies(db)).filter((r) => r.title !== title), { title, text }].slice(-30);
-  await writeSetting(db, "savedReplies", { items });
+  const {REPLY_AREAS}=await import("@/lib/support-replies");
+  const area=s(fd,"area")||"general";
+  if(!Object.hasOwn(REPLY_AREAS,area))return {error:"Elegí un motivo válido."};
+  try { await db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('saved-support-replies'))`;
+    const items=[...(await savedReplies(tx as unknown as typeof db)).filter(r=>r.title!==title),{title,text,area}];
+    if(items.length>60)throw new UserError("La biblioteca admite hasta 60 respuestas. Editá o quitá una antes de agregar otra.");
+    await tx.appSetting.upsert({where:{key:"savedReplies"},create:{key:"savedReplies",value:{version:2,items}},update:{value:{version:2,items}}});
+  }); } catch(e) { if(e instanceof UserError)return {error:e.message};throw e; }
   await adminAudit(a, "admin.saved_reply", { meta: { title } });
   refresh();
   return { ok: "Respuesta guardada." };
@@ -231,7 +238,11 @@ export async function adminSaveReplyAction(_: FormState, fd: FormData): Promise<
 export async function adminDeleteReplyAction(fd: FormData) {
   const a = await requireAdmin("support");
   const db = getDb();
-  await writeSetting(db, "savedReplies", { items: (await savedReplies(db)).filter((r) => r.title !== s(fd, "title")) });
+  await db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext('saved-support-replies'))`;
+    const items=(await savedReplies(tx as unknown as typeof db)).filter(r=>r.title!==s(fd,"title"));
+    await tx.appSetting.upsert({where:{key:"savedReplies"},create:{key:"savedReplies",value:{version:2,items}},update:{value:{version:2,items}}});
+  });
   await adminAudit(a, "admin.saved_reply_removed", { meta: { title: s(fd, "title") } });
   refresh();
 }
@@ -384,7 +395,9 @@ export async function adminReplyContactAction(_: FormState, fd: FormData): Promi
   const id = s(fd, "id"), reply = s(fd, "reply");
   if (!reply) return { error: "Escribí la respuesta." };
   const db = getDb();
-  const m = await replyToContact(db, id, reply, appUrl(), a.email);
+  let m;
+  try { m=await replyToContact(db,id,reply,appUrl(),a.email,{...a,token:s(fd,"leaseToken"),revision:s(fd,"revision")}); }
+  catch(e){if(e instanceof UserError)return {error:e.message};throw e;}
   await drainEmailOutbox(db).catch((e) => reportError("[contact reply queued]", e));
   await adminAudit(a, "admin.contact_answered", { entity: "contact", entityId: id, meta: { queued: true, area: m.area } });
   refresh();

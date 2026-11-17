@@ -36,7 +36,7 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
   const plan = effectivePlan(sub);
   const firstUse = ws ? await db.transaction.findFirst({ where: { workspaceId: ws.id }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }) : null;
   const journey = [{ label: "Cuenta creada", at: u.createdAt }, { label: "Correo confirmado", at: u.emailVerified }, { label: "Bienvenida terminada", at: ws?.onboardedAt }, { label: "Primera acción registrada", at: firstUse?.createdAt }].filter(e => e.at).sort((a,b) => a.at!.getTime() - b.at!.getTime());
-  const support = can(admin.role, "support"), owner = can(admin.role, "owner");
+  const support = can(admin.role, "owner"), owner = can(admin.role, "owner");
   const subText = !sub ? "Gratis" : sub.provider === "mercadopago" ? `Pro pago (${sub.billingCycle === "yearly" ? "anual" : "mensual"}) · ${sub.status === "ACTIVE" ? "al día" : sub.status === "PAST_DUE" ? "pago pendiente" : sub.status === "CANCELED" ? "cancelado" : sub.status}${sub.couponCode ? ` · cupón ${sub.couponCode}` : ""}` : plan === "PRO" ? (sub.trialEndsAt ? `Pro hasta el ${fmtDate(sub.trialEndsAt)}` : "Pro regalado sin vencimiento") : "Gratis";
   return (
     <>

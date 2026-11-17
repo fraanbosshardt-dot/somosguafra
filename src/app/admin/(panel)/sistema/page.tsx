@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Sistema y seguridad" };
 export const dynamic = "force-dynamic";
 
 export default async function SystemPage() {
-  await requireAdmin();
+  await requireAdmin("operations");
   const db = getDb();
   const bill = await billingConfig(db);
   const t0 = performance.now();
