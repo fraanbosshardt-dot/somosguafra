@@ -13,7 +13,8 @@
       "fix/chat-asesor-vista": false,
       "feat/admin-organizacion": false,
       "fix/admin-formularios-correo": false,
-      "fix/presupuestos-claridad": false
+      "fix/presupuestos-claridad": false,
+      "fix/inicio-movil": false
     }
   },
   "regions": [
