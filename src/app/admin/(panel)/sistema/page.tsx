@@ -82,7 +82,7 @@ export default async function SystemPage() {
           <tbody>{problems.map((p) => <tr key={p.id}><td style={{ whiteSpace: "nowrap" }}>{when(p.createdAt)}</td><td>{actionName(p.action)}</td><td>{p.entityId ?? "—"}</td><td>{p.ip ?? "—"}</td></tr>)}</tbody>
         </table></div> : <div className="empty">Sin problemas registrados.</div>}
       </div></>},
-{id:"integraciones",label:"Recepción de correo",content:<><div className="notice"><span><b>Recepción de soporte por correo:</b> {process.env.SUPPORT_INBOUND_ENABLED === "true" && process.env.RESEND_WEBHOOK_SECRET && process.env.SUPPORT_RECEIVING_DOMAIN ? "Habilitada; verificar eventos recibidos en Resend." : "Pendiente. Las conversaciones de la web funcionan; falta conectar dominio de recepción y webhook en Resend."}</span></div></>}]}/>
+{id:"integraciones",label:"Chat y avisos por correo",content:<><div className="notice"><span><b>Recepción de soporte por correo:</b> {process.env.SUPPORT_INBOUND_ENABLED === "true" && process.env.RESEND_WEBHOOK_SECRET && process.env.SUPPORT_RECEIVING_DOMAIN && process.env.RESEND_RECEIVING_API_KEY ? "Habilitada. Las respuestas por correo se incorporan al mismo caso." : "Desactivada por ahora. La atención se realiza en el chat y los correos avisan al cliente para que vuelva a su conversación."}</span></div></>}]}/>
 </>
   );
 }
