@@ -1,3 +1,4 @@
+import { AdminSections } from "@/components/admin-sections";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -31,12 +32,11 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
   const who = (w: { members: { user: { id: string; name?: string; email: string } }[] }) => w.members[0]?.user;
   return (
     <>
-      {pagoerror && <p className="notice r" role="alert">{pagoerror.slice(0, 300)}</p>}
-      <PageHead title="Cobros y cupones" desc="Suscripciones de Mercado Pago, pagos y descuentos." actions={owner ? <a className="btn" href="/admin/export/pagos">Descargar pagos (Excel)</a> : undefined} />
-      {!bill.enabled && <p className="notice a">Los cobros con Mercado Pago todavía no están activados: faltan MP_ACCESS_TOKEN y MP_WEBHOOK_SECRET en Vercel, o el precio de Pro en pesos en Ajustes. Mientras tanto, podés regalar Pro desde Clientes.</p>}
-      <Stats items={[["Suscripciones activas", int(active)], ["Con pago pendiente", int(pastDue)], ["Renuevan en 7 días", int(renewing)], ["Pagos rechazados", int(rejected), "últimos 30 días · todos los registros"]]} />
-
-      <div className="card">
+{pagoerror && <p className="notice r" role="alert">{pagoerror.slice(0, 300)}</p>}
+<PageHead title="Cobros y cupones" desc="Suscripciones de Mercado Pago, pagos y descuentos." actions={owner ? <a className="btn" href="/admin/export/pagos">Descargar pagos (Excel)</a> : undefined} />
+{!bill.enabled && <p className="notice a">Los cobros con Mercado Pago todavía no están activados: faltan MP_ACCESS_TOKEN y MP_WEBHOOK_SECRET en Vercel, o el precio de Pro en pesos en Ajustes. Mientras tanto, podés regalar Pro desde Clientes.</p>}
+<Stats items={[["Suscripciones activas", int(active)], ["Con pago pendiente", int(pastDue)], ["Renuevan en 7 días", int(renewing)], ["Pagos rechazados", int(rejected), "últimos 30 días · todos los registros"]]} />
+<AdminSections items={[{id:"suscripciones",label:"Suscripciones",content:<><div className="card">
         <div className="chead"><h3>Suscripciones</h3></div>
         {subs.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Cliente</th><th>Ciclo</th><th>Estado</th><th>Cupón</th><th>Desde</th><th /></tr></thead>
@@ -51,9 +51,8 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             </tr>); })}</tbody>
         </table></div> : <div className="empty">Todavía no hay suscripciones pagas.</div>}
         <Pagination page={subPage} size={BILLING_PAGE_SIZE} total={subTotal} href={p => href(p, paymentPage)} label="Páginas de suscripciones" />
-      </div>
-
-      <div className="card">
+      </div></>},
+{id:"pagos",label:"Pagos",content:<><div className="card">
         <div className="chead"><h3>Últimos pagos</h3><span className="sub">Las devoluciones se hacen desde Mercado Pago y se reflejan acá solas</span></div>
         {invoices.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Fecha</th><th>Cliente</th><th>Importe</th><th>Estado</th></tr></thead>
@@ -61,10 +60,9 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             <tr key={i.id}><td>{fmtDate(i.paidAt ?? i.createdAt)}</td><td>{u ? <Link className="lnk" href={`/admin/usuarios/${u.id}`}>{u.email}</Link> : "—"}</td><td>{formatMoney(i.amount.toString(), i.currency)}</td>
               <td><span className={`pill ${i.status === "approved" ? "g" : ["rejected", "charged_back"].includes(i.status) ? "r" : ""}`}>{paymentLabel(i.status)}</span></td></tr>); })}</tbody>
         </table></div> : <div className="empty">Sin pagos todavía.</div>}
-        <Pagination page={paymentPage} size={BILLING_PAGE_SIZE} total={invoiceTotal} href={p => href(subPage, p)} label="Páginas de pagos" />
-      </div>
-
-      <div className="card">
+        <Pagination page={paymentPage} size={BILLING_PAGE_SIZE} total={invoiceTotal} href={p => `${href(subPage, p)}#panel-pagos`} label="Páginas de pagos" />
+      </div></>},
+{id:"cupones",label:"Cupones",content:<><div className="card">
         <div className="chead"><h3>Cupones de descuento</h3><span className="sub">El cliente lo escribe al pasar a Pro (Configuración → Plan)</span></div>
         {owner && (
           <ActionForm action={adminCreateCouponAction} className="frow" style={{ alignItems: "flex-end", flexWrap: "wrap", marginBottom: 12 }}>
@@ -86,7 +84,7 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
             </div>
           );
         })}</div> : <p className="adm-hint">No hay cupones.</p>}
-      </div>
-    </>
+      </div></>}]}/>
+</>
   );
 }

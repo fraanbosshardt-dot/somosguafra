@@ -19,7 +19,7 @@ export function SupportRefresh() {
     return () => clearInterval(timer);
   }, [router]);
   return (
-    <div className="acts" style={{ marginBottom: 16 }}>
+    <div className="acts" style={{ alignItems: "center" }}>
       <button
         type="button"
         className="btn sm"
@@ -28,11 +28,10 @@ export function SupportRefresh() {
           setUpdated(true);
         }}
       >
-        Actualizar conversación
+        Actualizar
       </button>
       <small className="sub">
-        {updated ? "Vista actualizada. " : " "}Se revisa cada 20 s mientras no
-        estés escribiendo.
+        {updated ? "Actualizado" : "Actualización automática"}
       </small>
     </div>
   );

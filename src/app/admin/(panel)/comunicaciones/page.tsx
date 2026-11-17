@@ -1,3 +1,4 @@
+import { AdminSections } from "@/components/admin-sections";
 import { BusinessSegments, TransactionalMailStatus } from "@/components/business-insights";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -22,12 +23,9 @@ export default async function Comms() {
   ]);
   return (
     <>
-      <PageHead title="Comunicaciones" desc="Avisos dentro de la app y la página de novedades. Sin campañas por correo." />
-      <BusinessSegments />
-      <TransactionalMailStatus />
-      {!owner && <p className="notice a">Tu rol solo puede mirar esta sección.</p>}
-
-      <div className="card">
+<PageHead title="Comunicaciones" desc="Avisos dentro de la app y la página de novedades. Sin campañas por correo." />
+{!owner && <p className="notice a">Tu rol solo puede mirar esta sección.</p>}
+<AdminSections items={[{id:"avisos",label:"Avisos en la app",content:<><div className="card">
         <div className="chead"><h3>Aviso dentro de la app</h3><span className="sub">Aparece arriba de todo, en todas las pantallas</span></div>
         {ann ? (
           <div className={`notice ${ann.tone === "warn" ? "a" : "b"}`} style={{ marginBottom: 12 }}>
@@ -47,9 +45,8 @@ export default async function Comms() {
           </ActionForm>
         )}
         {owner && ann && <form action={adminClearAnnouncementAction} style={{ marginTop: 8 }}><button className="btn ghost sm" type="submit">Sacar el aviso</button></form>}
-      </div>
-
-      <div className="card">
+      </div></>},
+{id:"novedades",label:"Novedades",content:<><div className="card">
         <div className="chead"><h3>Novedades</h3><a className="lk" href="/novedades" target="_blank">Ver la página</a></div>
         {owner && (
           <ActionForm action={adminAddNewsAction} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
@@ -62,7 +59,9 @@ export default async function Comms() {
           <div className="li" key={n.id}><div className="grow"><div className="t">{n.title}</div><div className="s">{fmtDate(n.publishedAt)}</div></div>
             {owner && <form action={adminDeleteNewsAction}><input type="hidden" name="id" value={n.id} /><button className="btn ghost sm" type="submit">Borrar</button></form>}</div>
         ))}</div> : <p className="adm-hint">Todavía no hay novedades publicadas.</p>}
-      </div>
-    </>
+      </div></>},
+{id:"seguimiento",label:"Seguimiento",content:<><BusinessSegments /></>},
+{id:"correos",label:"Correos de servicio",content:<><TransactionalMailStatus /></>}]}/>
+</>
   );
 }

@@ -1,3 +1,4 @@
+import { pendingSupportCounts } from "@/server/support-inbox";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -29,8 +30,8 @@ const SECTIONS: { href: string; label: string; icon: string; perm: Perm }[] = [
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
   const db = getDb();
-  const [inquiries, support] = await Promise.all([db.contactMessage.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } }), db.supportTicket.count({ where: { status: {in:["OPEN","IN_PROGRESS","WAITING_INTERNAL"]} } })]);
-  const items = SECTIONS.filter((s) => can(admin.role, s.perm)).map(({ href, label, icon }) => ({ href, label: `${label}${href === "/admin/consultas" && inquiries ? ` (${inquiries})` : href === "/admin/soporte" && (support+inquiries) ? ` (${support+inquiries})` : ""}`, icon }));
+  const {site:inquiries, conversations:support} = await pendingSupportCounts(db);
+  const items = SECTIONS.filter((s) => can(admin.role, s.perm)).map(({ href, label, icon }) => ({ href, label: `${label}${href === "/admin/consultas" && inquiries ? ` (${inquiries})` : href === "/admin/soporte" && (support) ? ` (${support})` : ""}`, icon }));
   return (
     <div className="adm">
       <header className="adm-top">

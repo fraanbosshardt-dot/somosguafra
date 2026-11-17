@@ -1,3 +1,4 @@
+import { AdminSections } from "@/components/admin-sections";
 import { operationsSnapshot } from "@/server/operations";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -44,17 +45,15 @@ export default async function SystemPage() {
   const ok = (good: boolean, text: string) => <span className={`pill ${good ? "g" : "r"}`}>{text}</span>;
   return (
     <>
-      <PageHead title="Sistema y seguridad" desc="Si todo funciona y si alguien está intentando entrar donde no debe." />
-      <div className="notice"><span><b>Recepción de soporte por correo:</b> {process.env.SUPPORT_INBOUND_ENABLED === "true" && process.env.RESEND_WEBHOOK_SECRET && process.env.SUPPORT_RECEIVING_DOMAIN ? "Habilitada; verificar eventos recibidos en Resend." : "Pendiente. Las conversaciones de la web funcionan; falta conectar dominio de recepción y webhook en Resend."}</span></div>
-      {sys.maintenance && <p className="notice a">La app está en modo mantenimiento: los clientes ven el aviso en lugar de sus pantallas. Se cambia en Ajustes.</p>}
-      <div className="card"><div className="chead"><h3>Recuperación de cobros y comunicaciones</h3>{ok(operations.ok, operations.ok ? "Al día" : "Necesita atención")}</div>
+<PageHead title="Sistema y seguridad" desc="Si todo funciona y si alguien está intentando entrar donde no debe." />
+{sys.maintenance && <p className="notice a">La app está en modo mantenimiento: los clientes ven el aviso en lugar de sus pantallas. Se cambia en Ajustes.</p>}
+<AdminSections items={[{id:"estado",columns:2,label:"Estado y tareas",content:<><div className="card"><div className="chead"><h3>Recuperación de cobros y comunicaciones</h3>{ok(operations.ok, operations.ok ? "Al día" : "Necesita atención")}</div>
         <p className="sub">Ejecución programada cada 15 minutos, con hasta 15 minutos de variación del alojamiento. Webhooks y regreso del pago actualizan el estado en el momento.</p>
         {operations.issues.length > 0 && <ul>{operations.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
         <p className="sub">Última ejecución: {operations.ageMinutes === null ? "sin registrar" : `hace ${operations.ageMinutes} min`}. Correo más antiguo: {operations.emailAgeMinutes} min. Pagos vigentes sin acceso: {operations.paidWithoutAccess}.</p>
         <p className="sub">Consultas abiertas antiguas para revisar: {operations.openSupport} de Ayuda y {operations.openContacts} de Contacto.</p>
       </div>
-      <div className="grid g2">
-        <div className="card">
+<div className="card">
           <div className="chead"><h3>Estado</h3></div>
           <dl className="kv">
             <dt>Base de datos</dt><dd>{ok(dbMs < 800, `Responde en ${dbMs} ms`)}</dd>
@@ -68,22 +67,22 @@ export default async function SystemPage() {
             <dt>Avisos en el celular</dt><dd>{ok(pushConfig().enabled, pushConfig().enabled ? "Activado" : "Faltan las claves")}</dd>
             <dt>Ingreso con Google</dt><dd>{ok(googleEnabled(), googleEnabled() ? "Activado" : "Falta configurar")}</dd>
           </dl>
-        </div>
-        <div className="card">
+        </div></>},
+{id:"seguridad",label:"Seguridad",content:<><div className="card">
           <div className="chead"><h3>Seguridad</h3><span className="sub">Últimas 24 horas</span></div>
           <Stats items={[["Contraseñas incorrectas", int(failedLogins)], ["Códigos de dos pasos mal", int(failed2fa)], ["Intentos al panel sin permiso", int(deniedAdmin), "últimos 30 días"]]} />
           {suspicious.length > 0 ? (
             <div className="notice r" style={{ marginTop: 12 }}><span><b>Conexiones con muchos intentos fallidos:</b> {suspicious.map((s) => `${s.ip} (${s._count._all})`).join(", ")}. El sistema frena cada correo después de 8 intentos en 15 minutos.</span></div>
           ) : <p className="adm-hint" style={{ marginTop: 12 }}>No hay conexiones sospechosas.</p>}
-        </div>
-      </div>
-      <div className="card">
+        </div></>},
+{id:"problemas",label:"Problemas",content:<><div className="card">
         <div className="chead"><h3>Últimos problemas</h3></div>
         {problems.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>
           <thead><tr><th>Cuándo</th><th>Qué pasó</th><th>Sobre</th><th>Conexión</th></tr></thead>
           <tbody>{problems.map((p) => <tr key={p.id}><td style={{ whiteSpace: "nowrap" }}>{when(p.createdAt)}</td><td>{actionName(p.action)}</td><td>{p.entityId ?? "—"}</td><td>{p.ip ?? "—"}</td></tr>)}</tbody>
         </table></div> : <div className="empty">Sin problemas registrados.</div>}
-      </div>
-    </>
+      </div></>},
+{id:"integraciones",label:"Recepción de correo",content:<><div className="notice"><span><b>Recepción de soporte por correo:</b> {process.env.SUPPORT_INBOUND_ENABLED === "true" && process.env.RESEND_WEBHOOK_SECRET && process.env.SUPPORT_RECEIVING_DOMAIN ? "Habilitada; verificar eventos recibidos en Resend." : "Pendiente. Las conversaciones de la web funcionan; falta conectar dominio de recepción y webhook en Resend."}</span></div></>}]}/>
+</>
   );
 }
