@@ -1,4 +1,6 @@
+import { AdminSections } from "@/components/admin-sections";
 import Link from "next/link";
+import { paymentLabel } from "@/lib/payment-labels";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin, adminAudit } from "@/lib/auth/admin";
@@ -32,6 +34,7 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
     db.invoice.findMany({ where, orderBy: { createdAt: "desc" }, take: 12 }),
     db.account.count({ where }), db.transaction.count({ where }), db.creditCard.count({ where }), db.debt.count({ where }),
   ]);
+  const contacts = await db.contactMessage.findMany({where:{userId:id},orderBy:{createdAt:"desc"},take:10,select:{id:true,subject:true,code:true,status:true,createdAt:true,chatSession:{select:{id:true}}}});
   const sub = ws?.subscription;
   const plan = effectivePlan(sub);
   const firstUse = ws ? await db.transaction.findFirst({ where: { workspaceId: ws.id }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }) : null;
@@ -40,12 +43,9 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
   const subText = !sub ? "Gratis" : sub.provider === "mercadopago" ? `Pro pago (${sub.billingCycle === "yearly" ? "anual" : "mensual"}) · ${sub.status === "ACTIVE" ? "al día" : sub.status === "PAST_DUE" ? "pago pendiente" : sub.status === "CANCELED" ? "cancelado" : sub.status}${sub.couponCode ? ` · cupón ${sub.couponCode}` : ""}` : plan === "PRO" ? (sub.trialEndsAt ? `Pro hasta el ${fmtDate(sub.trialEndsAt)}` : "Pro regalado sin vencimiento") : "Gratis";
   return (
     <>
-      <PageHead crumb="Clientes" title={u.name} desc={u.email} actions={<Link className="btn" href="/admin/usuarios">Volver</Link>} />
-      <Stats items={[["Plan", plan === "PRO" ? "Pro" : "Gratis"], ["Cuentas", int(accounts)], ["Movimientos", int(moves)], ["Tarjetas", int(cards)], ["Deudas", int(debts)], ["Sesiones abiertas", int(sessions.length)]]} />
-      {owner && ws && <div className="card"><h3>Estadísticas comerciales</h3><p className="sub">Las cuentas internas y de prueba pueden excluirse sin modificar su acceso ni sus pagos.</p><form action={adminExcludeMetricsAction} className="acts"><input type="hidden" name="workspaceId" value={ws.id} /><label className="check"><input name="excluded" type="checkbox" value="yes" defaultChecked={ws.excludeFromMetrics} /> Cuenta interna o de prueba</label><button className="btn sm">Guardar clasificación</button></form></div>}
-      <div className="card"><h3>Recorrido de la cuenta</h3><div className="list">{journey.map(e => <div className="li" key={e.label}><div className="grow"><b>{e.label}</b></div><span className="sub">{when(e.at!)}</span></div>)}</div><p className="sub">Solo hitos de uso; no se muestran importes ni contenido de las finanzas personales.</p></div>
-      <div className="grid g2">
-        <div className="card">
+<PageHead crumb="Clientes" title={u.name} desc={u.email} actions={<Link className="btn" href="/admin/usuarios">Volver</Link>} />
+<Stats items={[["Plan", plan === "PRO" ? "Pro" : "Gratis"], ["Cuentas", int(accounts)], ["Movimientos", int(moves)], ["Tarjetas", int(cards)], ["Deudas", int(debts)], ["Sesiones abiertas", int(sessions.length)]]} />
+<AdminSections items={[{id:"general",columns:2,label:"Resumen",content:<><div className="card adm-client-data">
           <div className="chead"><h3>Datos</h3></div>
           <dl className="kv">
             <dt>Alta</dt><dd>{fmtDate(u.createdAt)}</dd>
@@ -57,7 +57,29 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
             <dt>Suscripción</dt><dd>{subText}</dd>
           </dl>
         </div>
-        <div className="card">
+<div className="adm-client-secondary"><details className="card"><summary>Recorrido de la cuenta</summary><div className="list">{journey.map(e => <div className="li" key={e.label}><div className="grow"><b>{e.label}</b></div><span className="sub">{when(e.at!)}</span></div>)}</div><p className="sub">Solo hitos de uso; no se muestran importes ni contenido de las finanzas personales.</p></details>
+{owner && ws && <details className="card"><summary>Clasificación comercial</summary><p className="sub">Las cuentas internas y de prueba pueden excluirse sin modificar su acceso ni sus pagos.</p><form action={adminExcludeMetricsAction} className="acts"><input type="hidden" name="workspaceId" value={ws.id} /><label className="check"><input name="excluded" type="checkbox" value="yes" defaultChecked={ws.excludeFromMetrics} /> Cuenta interna o de prueba</label><button className="btn sm">Guardar clasificación</button></form></details>}</div></>},
+{id:"pagos",label:"Pagos",content:<><div className="card">
+          <div className="chead"><h3>Pagos</h3><span className="sub">Últimos 12 registros</span></div>
+          {invoices.length ? <div className="list">{invoices.map((i) => <div className="li" key={i.id}><div className="grow"><div className="t">{formatMoney(i.amount.toString(), i.currency)}</div><div className="s">{fmtDate(i.paidAt ?? i.createdAt)} · {i.provider}</div></div><span className={`pill ${i.status === "approved" ? "g" : "r"}`}>{paymentLabel(i.status)}</span></div>)}</div> : <p className="adm-hint">Sin pagos.</p>}
+        </div></>},
+{id:"soporte",label:"Consultas",content:<><div className="card">
+          <div className="chead"><h3>Consultas</h3><Link className="lk" href={`${can(admin.role,"support") ? "/admin/soporte" : "/admin/consultas"}?q=${encodeURIComponent(u.email)}`}>Ver consultas</Link></div>
+          {tickets.length || contacts.length ? <div className="list">{[
+            ...tickets.map(t=>({...t,href:can(admin.role,"support")?`/admin/soporte/ticket/${t.id}`:null,source:"Ayuda de la app"})),
+            ...contacts.map(t=>({...t,href:t.chatSession?(can(admin.role,"support")?`/admin/soporte/contact/${t.id}`:null):`/admin/consultas/${t.id}`,source:t.chatSession?"Chat con el equipo":"Formulario del sitio"})),
+          ].sort((a,b)=>b.createdAt.getTime()-a.createdAt.getTime()).slice(0,10).map(t=><div className="li" key={t.id}><div className="grow"><div className="t">{t.href?<Link className="lnk" href={t.href}>{t.subject}</Link>:t.subject}</div><div className="s">{t.code} · {t.source} · {fmtDate(t.createdAt)}</div></div><span className="pill">{t.status === "OPEN" ? "Sin responder" : t.status === "ANSWERED" ? "Esperando al cliente" : t.status === "RESOLVED" ? "Resuelto" : t.status === "CLOSED" ? "Cerrado" : "En revisión"}</span></div>)}</div> : <p className="adm-hint">No hizo consultas.</p>}
+
+        </div></>},
+{id:"seguridad",label:"Sesiones",content:<><div className="card">
+          <div className="chead"><h3>Sesiones abiertas</h3></div>
+          {sessions.length ? <div className="list">{sessions.map((s) => <div className="li" key={s.id}><div className="grow"><div className="t">{(s.userAgent ?? "Navegador").replace(/\(.*?\)/g, "").slice(0, 60)}</div><div className="s">Desde {when(s.createdAt)}{s.ip ? ` · ${s.ip}` : ""}</div></div></div>)}</div> : <p className="adm-hint">No tiene sesiones abiertas.</p>}
+        </div></>},
+{id:"actividad",label:"Actividad",content:<><div className="card">
+          <div className="chead"><h3>Actividad reciente</h3><span className="sub">Últimos 25 eventos</span></div>
+          <div className="list adm-compact-history">{logs.map((l) => <div className="li" key={l.id}><div className="grow"><div className="t">{actionName(l.action)}</div><div className="s">{when(l.createdAt)}{(l.meta as { admin?: string } | null)?.admin ? ` · por ${(l.meta as { admin: string }).admin}` : ""}</div></div></div>)}</div>
+        </div></>},
+{id:"administrar",label:"Administrar",content:<><div className="card">
           <div className="chead"><h3>Acciones</h3></div>
           {!support ? <p className="adm-hint">Tu rol solo puede mirar.</p> : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -96,28 +118,7 @@ export default async function Customer({ params }: { params: Promise<{ id: strin
               )}
             </div>
           )}
-        </div>
-      </div>
-      <div className="grid g2">
-        <div className="card">
-          <div className="chead"><h3>Sesiones abiertas</h3></div>
-          {sessions.length ? <div className="list">{sessions.map((s) => <div className="li" key={s.id}><div className="grow"><div className="t">{(s.userAgent ?? "Navegador").replace(/\(.*?\)/g, "").slice(0, 60)}</div><div className="s">Desde {when(s.createdAt)}{s.ip ? ` · ${s.ip}` : ""}</div></div></div>)}</div> : <p className="adm-hint">No tiene sesiones abiertas.</p>}
-        </div>
-        <div className="card">
-          <div className="chead"><h3>Pagos</h3></div>
-          {invoices.length ? <div className="list">{invoices.map((i) => <div className="li" key={i.id}><div className="grow"><div className="t">{formatMoney(i.amount.toString(), i.currency)}</div><div className="s">{fmtDate(i.paidAt ?? i.createdAt)} · {i.provider}</div></div><span className={`pill ${i.status === "approved" ? "g" : "r"}`}>{i.status === "approved" ? "Aprobado" : i.status === "refunded" ? "Devuelto" : "Rechazado"}</span></div>)}</div> : <p className="adm-hint">Sin pagos.</p>}
-        </div>
-      </div>
-      <div className="grid g2">
-        <div className="card">
-          <div className="chead"><h3>Consultas</h3><Link className="lk" href="/admin/soporte">Soporte</Link></div>
-          {tickets.length ? <div className="list">{tickets.map((t) => <div className="li" key={t.id}><div className="grow"><div className="t">{t.subject}</div><div className="s">{fmtDate(t.createdAt)}</div></div><span className={`pill ${t.status === "OPEN" ? "r" : t.status === "ANSWERED" ? "b" : ""}`}>{t.status === "OPEN" ? "Sin responder" : t.status === "ANSWERED" ? "Respondida" : "Cerrada"}</span></div>)}</div> : <p className="adm-hint">No hizo consultas.</p>}
-        </div>
-        <div className="card">
-          <div className="chead"><h3>Actividad</h3></div>
-          <div className="list">{logs.map((l) => <div className="li" key={l.id}><div className="grow"><div className="t">{actionName(l.action)}</div><div className="s">{when(l.createdAt)}{(l.meta as { admin?: string } | null)?.admin ? ` · por ${(l.meta as { admin: string }).admin}` : ""}</div></div></div>)}</div>
-        </div>
-      </div>
-    </>
+        </div></>}]}/>
+</>
   );
 }

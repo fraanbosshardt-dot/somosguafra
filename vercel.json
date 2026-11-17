@@ -10,7 +10,8 @@
       "feat/guafra-chatbot": false,
       "feat/planning-review": false,
       "fix/admin-usabilidad": false,
-      "fix/chat-asesor-vista": false
+      "fix/chat-asesor-vista": false,
+      "feat/admin-organizacion": false
     }
   },
   "regions": [

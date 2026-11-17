@@ -71,7 +71,8 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
         {users.length === 200 && <p className="adm-hint">Se muestran los 200 más nuevos. Buscá para encontrar otros.</p>}
       </div>
 
-      <div className="card">
+      <details className="card">
+        <summary>Reservar Pro para una persona</summary>
         <div className="chead"><h3>Pro reservado por correo</h3><span className="sub">Para alguien que todavía no tiene cuenta</span></div>
         <p className="sub" style={{ fontSize: 13.5, margin: "0 0 12px" }}>Cuando esa persona se registre (con Google o con correo), arranca con Pro. Si ya tiene cuenta, se le da en el momento.</p>
         {support ? (
@@ -90,7 +91,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
             </div>
           ))}</div>
         )}
-      </div>
+      </details>
     </>
   );
 }

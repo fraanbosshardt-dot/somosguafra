@@ -1,3 +1,4 @@
+import { AdminSections } from "@/components/admin-sections";
 import { Fragment } from "react";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -20,8 +21,8 @@ export default async function Team() {
   const roles: AdminRole[] = ["OWNER", "SUPPORT", "VIEWER"];
   return (
     <>
-      <PageHead title="Equipo" desc="Quién puede entrar al panel. Se entra solo con Google y con un correo de esta lista." />
-      <div className="card">
+<PageHead title="Equipo" desc="Quién puede entrar al panel. Se entra solo con Google y con un correo de esta lista." />
+<AdminSections items={[{id:"miembros",label:"Miembros",content:<><div className="card">
         <div className="chead"><h3>Lista blanca</h3></div>
         <div className="list">
           {ownerEmails().map((e) => (
@@ -40,17 +41,16 @@ export default async function Team() {
           ))}
           {!ownerEmails().length && !members.length && <p className="adm-hint">No hay nadie en la lista.</p>}
         </div>
-      </div>
-      <div className="grid g2">
-        <div className="card">
+      </div></>},
+{id:"agregar",label:"Sumar integrante",content:<><div className="card">
           <div className="chead"><h3>Sumar a alguien</h3></div>
           <ActionForm action={adminAddMemberAction} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <label className="field">Correo de Google<input name="email" type="email" required placeholder="nombre@gmail.com" /></label>
             <label className="field">Rol<select name="role" defaultValue="SUPPORT">{roles.map((r) => <option key={r} value={r}>{ROLE_NAMES[r]} — {ROLE_HELP[r]}</option>)}</select></label>
             <div><Submit>Sumar</Submit></div>
           </ActionForm>
-        </div>
-        <div className="card">
+        </div></>},
+{id:"sesiones",label:"Sesiones",content:<><div className="card">
           <div className="chead"><h3>Sesiones abiertas del panel</h3><span className="sub">Duran 8 horas</span></div>
           <div className="list">{sessions.map((s) => (
             <div className="li" key={s.id}>
@@ -58,12 +58,11 @@ export default async function Team() {
               {s.id !== me.sessionId && <form action={adminRevokeSessionAction}><input type="hidden" name="id" value={s.id} /><button className="btn ghost sm" type="submit">Cerrar</button></form>}
             </div>
           ))}</div>
-        </div>
-      </div>
-      <div className="card">
+        </div></>},
+{id:"permisos",label:"Permisos",content:<><div className="card">
         <div className="chead"><h3>Qué puede hacer cada rol</h3></div>
         <dl className="kv">{roles.map((r) => <Fragment key={r}><dt>{ROLE_NAMES[r]}</dt><dd style={{ textAlign: "left" }}>{ROLE_HELP[r]}</dd></Fragment>)}</dl>
-      </div>
-    </>
+      </div></>}]}/>
+</>
   );
 }

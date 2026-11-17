@@ -23,8 +23,8 @@ export function SupportComposer({kind,id,revision,name,code,area,replies}:{kind:
     const timer=setInterval(async()=>{if(document.hidden)return;const h=held.current;if(!h)return;try{await operation("renew",h.token,h.revision);}catch(e){if(active){held.current=null;setHolding(false);setError(e instanceof Error?e.message:"La reserva venció; tu borrador se conserva.");}}},25000);
     return()=>{active=false;clearInterval(timer);};
   },[holding,kind,id]);
-  return <div ref={root} style={{marginTop:20}}>
-    <div className="notice" style={{display:"block",marginBottom:16}}><b>{holding?"Estás preparando la respuesta":"Tomá la conversación antes de responder"}</b><p className="sub">Una sola persona puede preparar y enviar la respuesta a la vez. La reserva vence si se pierde la conexión; el borrador se conserva en esta pantalla.</p>
+  return <div ref={root} className="adm-composer">
+    <div className="notice" style={{display:"block",marginBottom:16}}><b>{holding?"Estás preparando la respuesta":"Tomá la conversación antes de responder"}</b><p className="sub">Tomalo para evitar respuestas simultáneas. Si la reserva vence, tu borrador se conserva.</p>
     {holding?<button type="button" className="btn sm" onClick={release}>Liberar para otra persona</button>:<button type="button" className="btn pri" disabled={busy} onClick={()=>void claim()}>{busy?"Reservando…":"Tomar para responder"}</button>}</div>
     {error&&<p className="notice error" role="alert">{error}</p>}
     <ActionForm resetOnOk action={kind==="contact"?adminReplyContactAction:adminReplyTicketAction} style={{display:"grid",gap:16}}>

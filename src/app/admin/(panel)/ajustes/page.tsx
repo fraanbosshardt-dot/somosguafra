@@ -1,3 +1,4 @@
+import { AdminSections } from "@/components/admin-sections";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
@@ -17,8 +18,8 @@ export default async function AdminSettings() {
   const [settings, sys, contact] = await Promise.all([planSettings(db), systemSettings(db), contactSettings(db)]);
   return (
     <>
-      <PageHead title="Ajustes" desc="Precios, qué incluye cada plan y cómo funciona la app, sin tocar código." />
-      <ActionForm action={adminSaveSystemAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+<PageHead title="Ajustes" desc="Precios, qué incluye cada plan y cómo funciona la app, sin tocar código." />
+<AdminSections items={[{id:"sistema",label:"Sistema",content:<><ActionForm action={adminSaveSystemAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div className="chead"><h3>Sistema</h3></div>
         <label className="li" style={{ cursor: "pointer" }}>
           <div className="grow"><div className="t">Modo mantenimiento</div><div className="s">Los clientes ven un aviso en lugar de sus pantallas. El panel sigue funcionando.</div></div>
@@ -27,8 +28,8 @@ export default async function AdminSettings() {
         <label className="field">Mensaje de mantenimiento<input name="maintenanceMsg" defaultValue={sys.maintenanceMsg} maxLength={300} /></label>
         <label className="field" style={{ maxWidth: 260 }}>Lecturas de PDF por mes (Pro)<input name="pdfLimit" inputMode="numeric" defaultValue={sys.pdfLimit} /></label>
         <div><Submit>Guardar</Submit></div>
-      </ActionForm>
-      <ActionForm action={adminSavePlansAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      </ActionForm></>},
+{id:"planes",label:"Planes y precios",content:<><ActionForm action={adminSavePlansAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div className="chead"><h3>Precio de Pro</h3><span className="sub">Es lo que cobra Mercado Pago y lo que se ve en la web y en la app</span></div>
         <p className="sub" style={{ margin: 0 }}>En pesos, por mes y por año (los dos hacen falta para cobrar).</p>
         <div className="frow" style={{ maxWidth: 420 }}>
@@ -42,14 +43,14 @@ export default async function AdminSettings() {
           <label className="li" key={f.key} style={{ cursor: "pointer" }}><div className="grow"><div className="t">{f.name}{f.beta && <> <span className="pill beta">Beta</span></>}</div><div className="s">{settings.freeAlso.includes(f.key) ? "Incluida en Gratis" : "Solo Pro"}</div></div><span className="sw-t"><input type="checkbox" name="freeAlso" value={f.key} defaultChecked={settings.freeAlso.includes(f.key)} aria-label={`Dar gratis: ${f.name}`} /><span /></span></label>
         ))}</div>
         <div><Submit>Guardar</Submit></div>
-      </ActionForm>
-      <ActionForm action={adminSaveContactAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      </ActionForm></>},
+{id:"contacto",label:"Contacto y redes",content:<><ActionForm action={adminSaveContactAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div className="chead" id="contacto"><div><h3>Contacto y redes</h3><p className="sub">Las consultas llegan a Consultas del sitio. Las redes aparecen en el pie del sitio solo si cargás el link.</p></div></div>
         <div className="frow" style={{ flexWrap: "wrap" }}>{SOCIALS.map((r) => (
           <label className="field" key={r.key} style={{ minWidth: 240, flex: "1 1 240px" }}>{r.name}<input name={`social_${r.key}`} type="url" defaultValue={contact.socials[r.key] ?? ""} placeholder="https://" /></label>
         ))}</div>
         <div><Submit>Guardar</Submit></div>
-      </ActionForm>
-    </>
+      </ActionForm></>}]}/>
+</>
   );
 }

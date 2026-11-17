@@ -60,6 +60,7 @@ export function HBars({ rows, base }: { rows: { label: string; n: number }[]; ba
 
 // Nombres en castellano para la actividad.
 const ACTIONS: Record<string, string> = {
+  "obligation.updated":"Actualizó un pago o cobro previsto", "obligation.created":"Registró un pago o cobro previsto", "obligation.deleted":"Eliminó un pago o cobro previsto",
   "auth.signup": "Creó su cuenta", "auth.login": "Ingresó", "auth.login_failed": "Contraseña incorrecta", "auth.2fa_ok": "Pasó el segundo paso",
   "auth.2fa_failed": "Código de dos pasos incorrecto", "auth.password_reset": "Cambió la contraseña", "auth.reset_requested": "Pidió recuperar la contraseña",
   "auth.google_linked": "Unió su cuenta de Google", "billing.checkout_started": "Fue a pagar Pro", "billing.canceled": "Canceló Pro",

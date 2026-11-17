@@ -1,3 +1,6 @@
+import { Pagination } from "@/components/pagination";
+import { pageNumber } from "@/lib/pagination";
+import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -8,19 +11,21 @@ import { actionName, when } from "@/components/admin-ui";
 export const metadata: Metadata = { title: "Actividad" };
 const FILTERS: [string, string, string | null][] = [["", "Todo", null], ["equipo", "Equipo", "admin."], ["ingresos", "Ingresos", "auth."], ["cobros", "Cobros", "billing."], ["tareas", "Tareas", "cron."]];
 
-export default async function Activity({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string }> }) {
+export default async function Activity({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string; pagina?: string }> }) {
   await requireAdmin("operations");
   const sp = await searchParams;
   const f = FILTERS.find(([k]) => k === (sp.ver ?? "")) ?? FILTERS[0];
   const q = (sp.q ?? "").trim().toLowerCase();
-  const logs = await getDb().auditLog.findMany({
-    where: {
+  const page = pageNumber(sp.pagina), db = getDb();
+  const where: Prisma.AuditLogWhereInput = {
       ...(f[2] ? { action: { startsWith: f[2] } } : {}),
       ...(q ? { OR: [{ user: { email: { contains: q, mode: "insensitive" } } }, { entityId: { contains: q, mode: "insensitive" } }, { meta: { path: ["admin"], string_contains: q } }] } : {}),
-    },
+    };
+  const [total,logs] = await Promise.all([db.auditLog.count({where}),db.auditLog.findMany({
+    where,
     include: { user: { select: { email: true, id: true } } },
-    orderBy: { createdAt: "desc" }, take: 200,
-  });
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 30, skip:(page-1)*30,
+  })]);
   return (
     <>
       <PageHead title="Actividad" desc="Todo lo que pasó, con quién lo hizo. Lo del equipo muestra el correo del panel." />
@@ -37,7 +42,7 @@ export default async function Activity({ searchParams }: { searchParams: Promise
           return <tr key={l.id}><td style={{ whiteSpace: "nowrap" }}>{when(l.createdAt)}</td><td>{l.user ? <Link className="lnk" href={`/admin/usuarios/${l.user.id}`}>{who}</Link> : who}</td><td>{actionName(l.action)}</td><td>{detail || "—"}</td></tr>;
         })}</tbody>
       </table></div>
-      {!logs.length && <div className="empty">Nada para mostrar.</div>}</div>
+      {!logs.length && <div className="empty">Nada para mostrar.</div>}<Pagination page={page} size={30} total={total} href={p=>`/admin/actividad?${new URLSearchParams({ver:f[0],q,pagina:String(p)})}`}/></div>
     </>
   );
 }
