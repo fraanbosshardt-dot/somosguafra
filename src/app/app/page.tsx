@@ -94,9 +94,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
     <>
       <PageHead crumb={dateLine} title={`${hello}, ${first}`} />
       {paymentNotice}
-      {(incomeRules === 0 || expenseRules === 0) && <p className="notice a">El disponible usa únicamente lo que cargaste. Si faltan cobros o gastos fijos, puede cambiar. <Link className="lnk" href="/app/revision">Revisar mis datos</Link></p>}
-      <div className="card hero">
-        <div className="hero-main"><p className="sub">Saldo menos pagos cargados. No incluye nuevas compras ni el margen de presupuestos.</p>
+      <div className="card hero home-summary">
+        <div className="hero-main">
           <div className="lbl">{nextIn ? `Disponible hasta el próximo cobro (${fmtDayMonth(nextIn.dueDate)})` : "Disponible hasta fin de mes"}</div>
           <div className={`big ${left.isNegative() ? "neg" : ""}`}>{fm(left)}</div>
           <p className="sub" style={{ maxWidth: "46ch" }}>{left.gt(0) ? `Unos ${fm(perDay)} por día durante ${days} ${days === 1 ? "día" : "días"}.` : "Lo que tenés no alcanza para lo que vence antes. Revisá Próximos pagos."}</p>
@@ -121,6 +120,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
         </div>
       </div>
       <QuickButtons cereal={!!modules.cereal} />
+      {(incomeRules === 0 || expenseRules === 0) && <p className="notice a home-data-notice"><span>El disponible usa lo que cargaste. Revisá que estén todos tus cobros y gastos fijos.</span><Link className="lnk" href="/app/revision">Revisar mis datos</Link></p>}
       {solomirar && <p className="notice a" role="status">En este espacio solo podés mirar: no se guardó ningún cambio. Si necesitás cargar, pedile a quien te invitó que te dé permiso.</p>}
       {compartido && <p className="notice g" role="status">Listo, ya estás en el espacio compartido. Para volver al tuyo, abrí el menú de tu cuenta.</p>}
       {listo && <p className="notice g" role="status">{listo === "cobro" ? "Listo, registramos el cobro." : "Listo, registramos el pago."}</p>}
