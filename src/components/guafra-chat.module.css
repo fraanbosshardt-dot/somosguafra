@@ -493,9 +493,6 @@
   .inline {
     inset: auto;
   }
-  .handoff {
-    max-height: 65%;
-  }
 }
 
 .mark {

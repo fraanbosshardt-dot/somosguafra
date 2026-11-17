@@ -77,6 +77,7 @@ export function GuafraChat({
     feed = useRef<HTMLDivElement>(null),
     handoffTitle = useRef<HTMLHeadingElement>(null),
     nearBottom = useRef(true),
+    feedScrollTop = useRef(0),
     id = useId();
   useEffect(() => { if (handoff) handoffTitle.current?.focus({ preventScroll: true }); }, [handoff]);
   const accept = useCallback((data: Payload) => {
@@ -230,7 +231,8 @@ export function GuafraChat({
       feed.current.scrollTop = current?.messages.length
         ? feed.current.scrollHeight
         : 0;
-  }, [current?.messages.at(-1)?.id, open]);
+    else if (feed.current) feed.current.scrollTop = feedScrollTop.current;
+  }, [current?.messages.at(-1)?.id, open, handoff, history]);
   async function act(data: Record<string, unknown>, after?: () => void) {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -461,149 +463,152 @@ export function GuafraChat({
               )}
             </div>
           )}
-          {current && !loading && !history && (
+          {current && !loading && !history && !handoff && (
             <p className={styles.case}>
               {current.code} ·{" "}
               {current.inactive ? "Finalizada por inactividad" : CASE_STATUS[current.status] ??
                 (current.status === "BOT" ? "Con Guafra" : current.status)}
             </p>
           )}
-          <div
-            ref={feed}
-            hidden={(history && !loading) || handoff}
-            className={styles.feed}
-            onScroll={() => {
-              if (feed.current)
-                nearBottom.current =
-                  feed.current.scrollHeight -
-                    feed.current.scrollTop -
-                    feed.current.clientHeight <
-                  80;
-            }}
-            role="log"
-            aria-label="Mensajes"
-            aria-live="polite"
-            aria-relevant="additions text"
-            aria-busy={busy}
-          >
-            {!current && !loading && (
-              <div className={styles.welcome}>
-                <span className={styles.eyebrow}>ESTAMOS PARA AYUDARTE</span>
-                <h2>Hola, soy Guafra.</h2>
-                <p>
-                  Te ayudo a usar somosguafra. Si necesitás al equipo, le paso
-                  toda esta conversación.
-                </p>
-                <div className={styles.topics}>
-                  {CHAT_TOPICS.filter((t) =>
-                    [
-                      "start",
-                      "plans",
-                      "trial",
-                      "pending",
-                      "cancel",
-                      "moves",
-                    ].includes(t.id),
-                  ).map((t) => (
-                    <button
-                      type="button"
-                      key={t.id}
-                      disabled={busy || loading}
-                      onClick={() => send(t.title, t.id)}
-                    >
-                      {QUICK_LABELS[t.id] ?? t.title}
-                      <span aria-hidden="true">↗</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {current && !loading && (
-              <>
-                {current.hasOlder && (
-                  <button
-                    className={styles.older}
-                    type="button"
-                    disabled={busy || loading}
-                    onClick={() => {
-                      if (!current.messages[0]) return;
-                      void act(
-                        { action: "load", before: current.messages[0].id },
-                        () => {},
-                      );
-                    }}
-                  >
-                    Ver mensajes anteriores
-                  </button>
-                )}
-                {current.messages.map((m) => (
-                  <article
-                    className={`${styles.message} ${m.role === "customer" ? styles.customer : styles.answer}`}
-                    key={m.id}
-                  >
-                    <small>
-                      {m.role === "customer"
-                        ? "Vos"
-                        : m.role === "bot"
-                          ? "Guafra · automático"
-                          : "Equipo somosguafra"}
-                    </small>
-                    <p>{m.body}</p>
-                    {m.role === "bot" &&
-                      CHAT_TOPICS.find((t) => t.id === m.topic)?.link && (
-                        <a
-                          href={CHAT_TOPICS.find((t) => t.id === m.topic)!.link}
-                        >
-                          {CHAT_TOPICS.find((t) => t.id === m.topic)!.linkLabel}{" "}
-                          ↗
-                        </a>
-                      )}
-                    <time dateTime={m.at}>
-                      {new Intl.DateTimeFormat("es-AR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        day: "numeric",
-                        month: "short",
-                      }).format(new Date(m.at))}
-                    </time>
-                  </article>
-                ))}
-                {current.human && (
-                  <p className={styles.hint}>
-                    {["CLOSED", "RESOLVED"].includes(current.status)
-                      ? "Caso resuelto. Si volvés a escribir, se reabre esta misma conversación."
-                      : "El equipo recibe tus mensajes acá. Te avisamos por correo cuando responda."}
+          {!handoff && !history && (
+            <div
+              ref={feed}
+              className={styles.feed}
+              onScroll={() => {
+                if (feed.current) {
+                  feedScrollTop.current = feed.current.scrollTop;
+                  nearBottom.current =
+                    feed.current.scrollHeight -
+                      feed.current.scrollTop -
+                      feed.current.clientHeight <
+                    80;
+                }
+              }}
+              role="log"
+              aria-label="Mensajes"
+              aria-live="polite"
+              aria-relevant="additions text"
+              aria-busy={busy}
+            >
+              {!current && !loading && (
+                <div className={styles.welcome}>
+                  <span className={styles.eyebrow}>ESTAMOS PARA AYUDARTE</span>
+                  <h2>Hola, soy Guafra.</h2>
+                  <p>
+                    Te ayudo a usar somosguafra. Si necesitás al equipo, le paso
+                    toda esta conversación.
                   </p>
-                )}
-                {!current.human && !handoff && (
-                  <div className={styles.options}>
+                  <div className={styles.topics}>
+                    {CHAT_TOPICS.filter((t) =>
+                      [
+                        "start",
+                        "plans",
+                        "trial",
+                        "pending",
+                        "cancel",
+                        "moves",
+                      ].includes(t.id),
+                    ).map((t) => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        disabled={busy || loading}
+                        onClick={() => send(t.title, t.id)}
+                      >
+                        {QUICK_LABELS[t.id] ?? t.title}
+                        <span aria-hidden="true">↗</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {current && !loading && (
+                <>
+                  {current.hasOlder && (
                     <button
+                      className={styles.older}
                       type="button"
                       disabled={busy || loading}
                       onClick={() => {
-                        setArea(current.area);
-                        setHandoff(true);
+                        if (!current.messages[0]) return;
+                        void act(
+                          { action: "load", before: current.messages[0].id },
+                          () => {},
+                        );
                       }}
                     >
-                      Hablar con el equipo
+                      Ver mensajes anteriores
                     </button>
-                    {!current.resolved && (
+                  )}
+                  {current.messages.map((m) => (
+                    <article
+                      className={`${styles.message} ${m.role === "customer" ? styles.customer : styles.answer}`}
+                      key={m.id}
+                    >
+                      <small>
+                        {m.role === "customer"
+                          ? "Vos"
+                          : m.role === "bot"
+                            ? "Guafra · automático"
+                            : "Equipo somosguafra"}
+                      </small>
+                      <p>{m.body}</p>
+                      {m.role === "bot" &&
+                        CHAT_TOPICS.find((t) => t.id === m.topic)?.link && (
+                          <a
+                            href={CHAT_TOPICS.find((t) => t.id === m.topic)!.link}
+                          >
+                            {CHAT_TOPICS.find((t) => t.id === m.topic)!.linkLabel}{" "}
+                            ↗
+                          </a>
+                        )}
+                      <time dateTime={m.at}>
+                        {new Intl.DateTimeFormat("es-AR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          day: "numeric",
+                          month: "short",
+                        }).format(new Date(m.at))}
+                      </time>
+                    </article>
+                  ))}
+                  {current.human && (
+                    <p className={styles.hint}>
+                      {["CLOSED", "RESOLVED"].includes(current.status)
+                        ? "Caso resuelto. Si volvés a escribir, se reabre esta misma conversación."
+                        : "El equipo recibe tus mensajes acá. Te avisamos por correo cuando responda."}
+                    </p>
+                  )}
+                  {!current.human && !handoff && (
+                    <div className={styles.options}>
                       <button
                         type="button"
                         disabled={busy || loading}
-                        onClick={() => void act({ action: "resolve" })}
+                        onClick={() => {
+                          setArea(current.area);
+                          setHandoff(true);
+                        }}
                       >
-                        Ya resolví mi consulta
+                        Hablar con el equipo
                       </button>
-                    )}
-                    {current.resolved && (
-                      <span>{current.inactive ? "Esta consulta automática terminó por inactividad. Podés retomarla escribiendo o empezar otra desde Inicio." : "Tu consulta quedó resuelta y guardada en Mis conversaciones."}</span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                      {!current.resolved && (
+                        <button
+                          type="button"
+                          disabled={busy || loading}
+                          onClick={() => void act({ action: "resolve" })}
+                        >
+                          Ya resolví mi consulta
+                        </button>
+                      )}
+                      {current.resolved && (
+                        <span>{current.inactive ? "Esta consulta automática terminó por inactividad. Podés retomarla escribiendo o empezar otra desde Inicio." : "Tu consulta quedó resuelta y guardada en Mis conversaciones."}</span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {handoff && current && !current.human && !loading && !history && (
             <form
               className={styles.handoff}
