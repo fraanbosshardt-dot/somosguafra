@@ -36,3 +36,21 @@ it("la respuesta de Ayuda queda visible aunque el proveedor de correo esté caí
   expect((await t.db.supportTicket.findUniqueOrThrow({ where: { id: ticket.id } })).reply).toBe("Ya lo revisamos");
   expect(await t.db.emailOutbox.count({ where: { to: u.email, sentAt: null } })).toBe(1);
 });
+it("indica responder desde el chat cuando la recepción por correo está desactivada", async () => {
+  vi.stubEnv("AUTH_SECRET", "fixture-support-secret-at-least-32-characters");
+  vi.stubEnv("SUPPORT_RECEIVING_DOMAIN", "reply.example.invalid");
+  vi.stubEnv("SUPPORT_INBOUND_ENABLED", "false");
+  const create = (code:string) => t.db.contactMessage.create({data:{code,area:"soporte",name:"Fixture",email:`${code}@audit.invalid`,subject:"Prueba",body:"Consulta"}});
+  const web = await create("CHAT-ONLY");
+  await replyToContact(t.db,web.id,"Respuesta de prueba","https://example.invalid");
+  const notice = await t.db.emailOutbox.findFirstOrThrow({where:{to:web.email}});
+  expect(notice.replyTo).toBeNull();
+  expect(notice.text).toContain("Este correo es un aviso y no recibe respuestas");
+  expect(notice.text).toContain("https://example.invalid/consulta/");
+  vi.stubEnv("SUPPORT_INBOUND_ENABLED", "true");
+  const receiving = await create("RECEIVING-ENABLED");
+  await replyToContact(t.db,receiving.id,"Respuesta de prueba","https://example.invalid");
+  const mail = await t.db.emailOutbox.findFirstOrThrow({where:{to:receiving.email}});
+  expect(mail.replyTo).toMatch(/@reply\.example\.invalid$/);
+  expect(mail.text).not.toContain("no recibe respuestas");
+});

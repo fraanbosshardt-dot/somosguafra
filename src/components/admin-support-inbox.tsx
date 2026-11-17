@@ -72,13 +72,7 @@ export async function AdminSupportInbox({
         </div>
       )}
       <form
-        className="card"
-        style={{
-          display: "flex",
-          gap: 14,
-          flexWrap: "wrap",
-          alignItems: "end",
-        }}
+        className="card adm-inbox-filters"
       >
         <label className="field" style={{ flex: "1 1 220px" }}>
           Buscar
@@ -130,7 +124,7 @@ export async function AdminSupportInbox({
           />
           Asignadas a mí
         </label>}
-        <button className="btn pri">Filtrar</button>
+        <div className="adm-form-actions"><button className="btn pri">Filtrar</button></div>
       </form>
       <p className="sub">
         {total} {total === 1 ? "resultado" : "resultados"} · {site ? "Formularios del sitio" : p.canal === "bot" ? "Atención automática: no requieren respuesta del equipo" : "Atención de una persona"}

@@ -115,7 +115,7 @@ export async function AdminConversation({
         <SupportComposer key={`composer/${kind}/${id}`} kind={kind as "contact"|"ticket"} id={id} revision={c.updatedAt.toISOString()}
           name={name.split(" ")[0]} code={c.code} area={"area" in c && c.area!=="soporte" ? c.area : /contrase|correo|acceso|sesión/i.test(c.subject)?"acceso":"soporte"} replies={await savedReplies(db)}/>
         </>}
-        </section></div>},{id:"gestion",label:"Responsable y estado",content:<>{writable ? <>
+        </section></div>},{id:"gestion",label:"Responsable y estado",content:<>{writable ? <div className="adm-case-management-layout"><section>
         <CaseTools
           kind={kind as "contact" | "ticket"}
           id={id}
@@ -123,17 +123,12 @@ export async function AdminConversation({
           revision={c.updatedAt.toISOString()} me={admin.email} team={await activeSupportTeam(db)}
         />
 
-        <h2 className="adm-section-title" id="estado-caso">Estado y cierre del caso</h2>
-        <p className="sub adm-state-help">Al responder, el caso queda esperando al cliente. Si el equipo todavía está investigando, elegí «En revisión interna». Marcá «Resuelto» cuando hayas solucionado la consulta, o «Cerrado» para finalizar su atención. El historial se conserva; si el cliente vuelve a escribir, el caso se reabre. Una nota interna no se envía al cliente.</p>
+        </section><section className="adm-case-state"><h2 className="adm-section-title" id="estado-caso">Estado y cierre del caso</h2>
+        <ul className="adm-case-guide"><li><b>Esperando al cliente:</b> queda así después de responder.</li><li><b>En revisión interna:</b> el equipo sigue investigando.</li><li><b>Resuelto o cerrado:</b> finalizás la atención y conservás el historial.</li></ul><p className="sub">Si el cliente vuelve a escribir, el caso se reabre.</p>
         <ActionForm
           key={`${c.status}/${c.priority}`}
           action={adminChatStateAction}
-          style={{
-            display: "flex",
-            gap: 16,
-            flexWrap: "wrap",
-            alignItems: "end",
-          }}
+          className="adm-state-form"
         >
           <input type="hidden" name="kind" value={kind} />
           <input type="hidden" name="id" value={id} />
@@ -160,9 +155,9 @@ export async function AdminConversation({
               <option value="LOW">Baja</option>
             </select>
           </label>
-          <Submit>Guardar estado y prioridad</Submit>
+          <div className="adm-form-actions"><Submit>Guardar estado y prioridad</Submit></div>
         </ActionForm>
-        </> : <p className="adm-hint">Tu rol permite consultar el caso. Solo el equipo de soporte puede responder o cambiar su estado.</p>}</>}]} />
+        </section></div> : <p className="adm-hint">Tu rol permite consultar el caso. Solo el equipo de soporte puede responder o cambiar su estado.</p>}</>}]} />
       </div>
     </>
   );

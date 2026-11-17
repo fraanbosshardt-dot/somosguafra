@@ -441,9 +441,11 @@ export async function adminSettlementAction(_: FormState, fd: FormData): Promise
   if (!Number.isInteger(releaseDays) || releaseDays < 0 || releaseDays > 365 || !Number.isFinite(quotedFeePct) || quotedFeePct < 0 || quotedFeePct > 100 || !Number.isFinite(totalFeePct) || totalFeePct < 0 || totalFeePct > 100) return { error: "Revisá los días y porcentajes." };
   await writeSetting(getDb(), "settlement", { releaseDays, quotedFeePct, totalFeePct }); await adminAudit(a, "admin.settlement_reference_updated"); refresh(); return { ok: "Referencia guardada. Los datos reales del proveedor tienen prioridad." };
 }
-export async function adminExcludeMetricsAction(fd: FormData) {
+export async function adminExcludeMetricsAction(_: FormState, fd: FormData): Promise<FormState> {
   const a = await requireAdmin("owner");
-  const workspaceId = s(fd, "workspaceId");
-  await getDb().workspace.update({ where: { id: workspaceId }, data: { excludeFromMetrics: fd.get("excluded") === "yes" } });
+  const workspaceId = s(fd, "workspaceId"), excluded = fd.get("excluded") === "yes";
+  if (!workspaceId) return {error:"No encontramos la cuenta a clasificar."};
+  await getDb().workspace.update({ where: { id: workspaceId }, data: { excludeFromMetrics: excluded } });
   await adminAudit(a, "admin.metrics_exclusion_changed", { workspaceId }); refresh();
+  return {ok: excluded ? "Clasificación guardada. Esta cuenta queda fuera de las estadísticas comerciales." : "Clasificación guardada. Esta cuenta vuelve a incluirse en las estadísticas comerciales."};
 }
