@@ -10,7 +10,7 @@ const GLOSSARY: Record<string, string> = {
   proyectado: "Sale de tus pagos que se repiten: es lo que esperás para esa fecha. Todavía no está guardado como pendiente. Lo podés pagar por adelantado o cancelar solo esa vez.",
   total: "Marcalo si lo que cargás es todo lo de esta vez, aunque sea un monto distinto al esperado. Así no queda nada pendiente. Destildalo si fue una parte y falta el resto.",
   porcobrar: "Lo que tenés para cobrar y todavía no entró: ventas de cereal, alquileres, sueldo. No está en tus cuentas, por eso no se suma al número grande.",
-  flujo: "Cuánta plata vas a tener mes a mes, sumando lo que tenés hoy, lo que vas a cobrar y lo que vas a pagar. Incluye lo que se repite.",
+  flujo: "Cuánta plata vas a tener mes a mes, sumando lo que tenés hoy, lo que vas a cobrar y lo que vas a pagar. Incluye lo que se repite y, en la vista con proyecciones, el remanente de los presupuestos que activaste. Estos últimos son estimaciones al final del mes, no vencimientos reales.",
   periodo: "A qué mes corresponde el gasto o el ingreso, aunque se pague otro día. Por ejemplo, el alquiler de noviembre pagado el 2 de diciembre.",
 };
 

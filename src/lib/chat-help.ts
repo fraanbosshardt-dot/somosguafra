@@ -177,12 +177,21 @@ export const CHAT_TOPICS = [
     linkLabel: "Otros canales de consulta",
   },
   {
+    id: "duplicate-payments",
+    title: "Revisar pagos o cobros repetidos",
+    words: ["duplicado", "duplicados", "repetido", "repetidos", "repetidos en proximos", "duplicados en proximos", "orden alfabetico"],
+    area: "soporte",
+    answer: "En Próximos pagos y cobros buscá el concepto y elegí Nombre (A–Z) o Solo posibles repetidos. La señal Revisar coincidencia no confirma que sobre un registro. Revisá fecha, importe original y origen antes de cancelar; no se elimina nada automáticamente. Cancelar una ocurrencia afecta esa vez; para detener las próximas revisá la regla recurrente. No uses Pagar o Cobrar para quitar repetidos.",
+    link: "/app/proximos?orden=nombre&coincidencias=1",
+    linkLabel: "Revisar coincidencias",
+  },
+  {
     id: "budgets",
     title: "Presupuestos por categoría",
     words: ["presupuesto", "limites de gasto", "categoria de gasto"],
     area: "soporte",
     answer:
-      "En Presupuestos elegí el mes y agregá las categorías que querés controlar. Cada una tiene su límite, lo gastado y lo comprometido. Las categorías sin límite se muestran por separado y no descuentan del presupuesto. Podés corregir los límites sin borrar movimientos.",
+      "En Presupuestos elegí el mes y agregá las categorías que querés controlar. Cada una tiene su límite, gasto real y pendientes. Un límite no es un gasto. Activá «Incluir lo que queda en la proyección» para estimar el remanente al fin de ese mes, descontando lo gastado y lo ya previsto, incluidos recurrentes y suscripciones por categoría. La estimación no crea pagos ni movimientos y no se extiende sola a otros meses. Las categorías sin límite se muestran por separado y no descuentan del presupuesto. Podés corregir los límites sin borrar movimientos.",
     link: "/app/presupuestos",
     linkLabel: "Ver Presupuestos",
   },
@@ -198,7 +207,7 @@ export const CHAT_TOPICS = [
     ],
     area: "soporte",
     answer:
-      "En Objetivos cargá una meta, su importe, moneda y fecha. Registrá tus aportes para ver el progreso y el monto que falta. El simulador del aporte muestra cómo cambia la fecha estimada; no mueve dinero ni garantiza rendimientos.",
+      "En Objetivos cargá una meta, su importe, moneda y fecha. Registrá tus aportes para ver el progreso y el monto que falta. En «Editar objetivo» podés cambiar nombre, meta, fecha y aporte previsto sin alterar la moneda ni los aportes guardados. El simulador del aporte muestra cómo cambia la fecha estimada; no mueve dinero ni garantiza rendimientos.",
     link: "/app/objetivos",
     linkLabel: "Ver Objetivos",
   },
@@ -253,7 +262,7 @@ export const CHAT_TOPICS = [
     ],
     area: "soporte",
     answer:
-      "En Flujo de caja ves ingresos, pagos y saldo proyectado según lo que cargaste. Podés distinguir lo confirmado de lo que se repite. Próximos pagos y Calendario muestran vencimientos; registrar un pago pendiente lo convierte en un movimiento. Revisá que estén cargados todos tus compromisos.",
+      "En Flujo de caja ves ingresos, pagos y saldo proyectado según lo que cargaste. Podés distinguir lo confirmado de lo que se repite. El flujo incluye el remanente de los presupuestos que activaste como estimación al final de cada mes, salvo en «Solo lo confirmado». Próximos pagos y cobros y Calendario muestran vencimientos; registrar un pago pendiente lo convierte en un movimiento. Revisá que estén cargados todos tus compromisos.",
     link: "/app/flujo",
     linkLabel: "Ver Flujo de caja",
   },

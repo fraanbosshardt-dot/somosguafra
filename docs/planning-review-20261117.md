@@ -3,7 +3,7 @@
 ## Diagnóstico antes de modificar
 
 - `src/server/recurring.ts`: materialización protegida por la combinación regla/fecha. `projectedItems` excluye ocurrencias ya guardadas, incluso canceladas. Dos reglas independientes o una carga manual y una regla pueden compartir concepto, fecha e importe; eso requiere revisión, no borrado automático.
-- `prisma/schema.prisma`: unicidad de `recurringRuleId/occurrenceDate` e idempotencia de movimientos por espacio. No se inspeccionaron ni eliminaron registros financieros privados para inferir la intención de cada operación.
+- `prisma/schema.prisma`: unicidad de `recurringRuleId/occurrenceDate` e idempotencia de movimientos por espacio. Una consulta agregada de solo lectura encontró coincidencias entre registros sin regla y superposiciones con reglas. No se infirió la intención de cada operación ni se modificaron registros.
 - `src/server/planning.ts:budgetFor`: gasto real desde transacciones EXPENSE; comprometido desde saldos pendientes. `saveBudget` guarda límites, no crea gasto ni obligaciones.
 - `src/server/forecast.ts:forecast`: proyecta pendientes, reglas recurrentes y tarjetas. No consulta límites presupuestarios.
 - `src/app/app/presupuestos/page.tsx`: porcentaje de gasto real separado de pendientes. Un límite aislado no debe mostrar 100% gastado. La causa del caso del usuario aún requiere identificar los movimientos concretos, su categoría y período.
@@ -19,7 +19,7 @@
 6. Editar objetivo: nombre, meta, fecha y aporte mensual previsto. Moneda e historial de aportes inalterados. Actualización restringida al espacio autenticado, sin movimientos de dinero. Una meta inferior al ahorro puede quedar cumplida.
 7. Vista previa de esta rama deshabilitada para evitar utilizar infraestructura compartida antes de revisión. Sin migraciones ni cambios de fórmulas del flujo.
 
-## Propuesta pendiente de aprobación: presupuesto como estimación
+## Integración aprobada: presupuesto como estimación
 
 Para todas las categorías, no solamente alimentación:
 
@@ -43,4 +43,23 @@ Para todas las categorías, no solamente alimentación:
 
 ## Publicación y reversión
 
-Esta rama se entrega para revisión. No modificar fórmulas ni datos de producción sin aprobar la propuesta correspondiente. El cambio no requiere migración. Para revertir su futura publicación: revertir el commit y desplegar la versión anterior; conservar objetivos y aportes existentes. Ningún cambio de presentación necesita restaurar la base.
+La implementación fue autorizada por el usuario después del diagnóstico. Migración aditiva `20261117010000_budget_projection`: agrega `BudgetLine.projectRemaining` con valor predeterminado false. No cambia límites, registros contables ni opciones existentes.
+
+Publicación: respaldo cifrado previo y verificado, CI completo sobre el commit exacto, merge y despliegue automático con migración previa al arranque. Comprobar salud, migración, preservación de registros y páginas privadas/públicas.
+
+Reversión: revertir el código y desplegar la versión anterior; conservar la nueva columna (compatible con el cliente anterior) y todos los objetivos, aportes y registros. No restaurar el respaldo sobre datos nuevos para revertir solamente esta función. Desactivar una categoría deja de proyectar el remanente sin borrar movimientos.
+
+## Funcionamiento definitivo y límites
+
+- Opción por categoría y mes, desactivada por defecto. Copiar el mes conserva el importe exacto y la opción; no se extiende a meses sin presupuesto.
+- Remanente = máximo(0, límite − máximo(0, gasto neto de categoría/mes) − pendientes no asociados a resumen − recurrentes todavía no materializados − suscripciones de tarjeta todavía no registradas).
+- Las ocurrencias existentes de una regla, cualquiera sea su estado, impiden volver a reservarla como virtual. Los pagos parciales se reparten entre gasto real y saldo pendiente. Los meses vencidos no agregan estimaciones futuras.
+- El remanente se agrega como evento `budget`, PROBABLE, al último día de su mes. Solo se ve en proyecciones; «Solo lo confirmado» lo excluye. No genera obligaciones ni transacciones.
+- Compras con tarjeta consumen el límite en el período económico de la compra (en cuotas, por el total); el flujo conserva el vencimiento real del resumen/cuota. Pagar el resumen es transferencia y no consume otra vez el presupuesto. Las cuotas antiguas se suman al efectivo necesario del nuevo mes, sin consumir el presupuesto de compras nuevas.
+- Los consumos futuros aún no realizados se suponen salida al fin de mes, sin inventar un vencimiento de tarjeta. Un resumen cargado solo por total no permite distribuir gasto entre categorías; la app explica que hace falta el detalle.
+- Las categorías sin límite, divisas distintas y datos de otros espacios se mantienen separados. Las compras de subcategorías archivadas siguen consumiendo el límite de su categoría principal activa.
+- Los reintegros reducen el gasto neto; la estimación adicional no puede exceder el límite. Un exceso deja remanente cero, nunca un ingreso artificial.
+- Se conservan centavos en el editor, el guardado y la copia; el servidor sigue usando importes decimales exactos.
+- Ayuda, glosario y guía del bot actualizados. El bot distingue revisar registros de un reclamo de cobro real, que deriva a una persona. Las respuestas personalizadas por el dueño conservan su prioridad.
+
+Pruebas nuevas: 13 casos de integración/ruteo, además de los 5 de revisión y edición. Cubren tarjetas con vencimiento posterior, cuotas de otro mes, suscripciones a más de 40 meses, cierre y pago parcial/total del resumen, anulaciones, reintegros, copia con centavos, aislamiento y valores inválidos. Suite local inicial con la integración: 517 aprobadas y 2 omitidas; los dos casos agregados después se verificaron en la ejecución enfocada. CI completo debe confirmar el total final antes de publicar.

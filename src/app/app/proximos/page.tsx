@@ -92,9 +92,9 @@ export default async function Upcoming({ searchParams }: { searchParams: Promise
         <button className="btn" type="submit">Aplicar</button>
         <Link className="btn ghost" href={href({ q: undefined, orden: undefined, coincidencias: undefined })}>Limpiar</Link>
       </form>
-      {matches.size > 0 && <p className="sub" role="status">Hay {matches.size} registros con el mismo concepto, fecha, importe y moneda. Revisalos antes de cancelar: pueden ser operaciones distintas. Los pagos de meses diferentes no se consideran coincidencias.</p>}
+      {matches.size > 0 && <p className="sub" role="status">Hay {matches.size} registros con el mismo concepto, fecha, importe original y moneda. Revisalos antes de cancelar: pueden ser operaciones distintas. Los pagos de meses diferentes no se consideran coincidencias.</p>}
       <div className="acts" style={{ justifyContent: "flex-end", marginBottom: -6 }}>
-        {elegir ? <Link className="btn sm" href={href({})}>Listo</Link> : all.length > 1 && <Link className="btn sm" href={href({ elegir: "1" })}>Pagar varios juntos</Link>}
+        {elegir ? <Link className="btn sm" href={href({})}>Listo</Link> : coincidencias !== "1" && all.length > 1 && <Link className="btn sm" href={href({ elegir: "1" })}>Pagar varios juntos</Link>}
       </div>
       {elegir ? (() => {
         // Lo atrasado y lo de este mes (sin proyectados ni ventas de cereal estimadas): se paga lo que falta de cada uno.

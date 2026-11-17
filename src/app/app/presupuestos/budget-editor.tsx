@@ -1,25 +1,25 @@
 "use client";
 // Armar el presupuesto sin una lista larga de "Sin límite": se ven solo las categorías con límite,
 // se agregan de a una y Somos Guafra sugiere el monto con lo que gastaste los últimos meses.
+import { parseAmount, dec, ZERO } from "@/lib/money";
 import { useState } from "react";
 import { ActionForm, Submit } from "@/components/forms";
 import { saveBudgetAction } from "@/app/actions/modules";
 
-type Cat = { id: string; name: string; avg: number; limit: number | null };
-const fmt = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
-const num = (s: string) => { const t = s.replace(/\$|\s/g, ""); return Number(/,/.test(t) ? t.replace(/\./g, "").replace(",", ".") : t.replace(/\./g, "")) || 0; };
+type Cat = { id: string; name: string; avg: number; limit: string | null; projectRemaining: boolean };
+const fmt = (n: number | string) => new Intl.NumberFormat("es-AR", { minimumFractionDigits: dec(n).mod(1).isZero() ? 0 : 2, maximumFractionDigits: 2 }).format(n as number);
 // Redondeo amigable de la sugerencia (ej.: 47.320 → 48.000).
 const nice = (n: number) => { const step = n >= 100000 ? 5000 : n >= 10000 ? 1000 : 100; return Math.ceil(n / step) * step; };
 
 export function BudgetEditor({ period, cats, symbol, hasBudget }: { period: string; cats: Cat[]; symbol: string; hasBudget: boolean }) {
   // Sin presupuesto: arranca con las categorías en las que más gastás (hasta 5), con la sugerencia puesta.
   const start = hasBudget ? cats.filter((c) => c.limit) : [...cats].filter((c) => c.avg > 0).sort((a, b) => b.avg - a.avg).slice(0, 5);
-  const [rows, setRows] = useState(start.map((c) => ({ id: c.id, value: c.limit ? fmt(c.limit) : fmt(nice(c.avg)) })));
+  const [rows, setRows] = useState(start.map((c) => ({ id: c.id, value: c.limit ? fmt(c.limit) : fmt(nice(c.avg)), project: c.projectRemaining })));
   const [pick, setPick] = useState("");
   const byId = new Map(cats.map((c) => [c.id, c]));
   const free = cats.filter((c) => !rows.some((r) => r.id === c.id)).sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
-  const total = rows.reduce((s, r) => s + num(r.value), 0);
-  const add = (id: string) => { const c = byId.get(id); if (!c) return; setRows((r) => [...r, { id, value: c.avg > 0 ? fmt(nice(c.avg)) : "" }]); setPick(""); };
+  const total = rows.reduce((sum, row) => sum.plus(parseAmount(row.value) ?? ZERO), ZERO);
+  const add = (id: string) => { const c = byId.get(id); if (!c) return; setRows((r) => [...r, { id, value: c.avg > 0 ? fmt(nice(c.avg)) : "", project: false }]); setPick(""); };
 
   return (
     <ActionForm action={saveBudgetAction} style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10 }}>
@@ -33,11 +33,12 @@ export function BudgetEditor({ period, cats, symbol, hasBudget }: { period: stri
               <div className="bud-row" key={r.id}>
                 <div className="bud-name"><b>{c.name}</b>{c.avg > 0 && <span className="sub">Gastás ~{symbol} {fmt(c.avg)} por mes</span>}</div>
                 <label className="bud-amt"><span className="sr-only">Límite para {c.name}</span><em>{symbol}</em><input name={`limit:${r.id}`} inputMode="decimal" value={r.value} placeholder="0" onChange={(e) => setRows((x) => x.map((y, j) => (j === i ? { ...y, value: e.target.value } : y)))} /></label>
+                <label className="budget-project"><input type="checkbox" name={`project:${r.id}`} checked={r.project} onChange={(e) => setRows((x) => x.map((y, j) => j === i ? { ...y, project: e.target.checked } : y))} />Incluir lo que queda en la proyección</label>
                 <button type="button" className="dots" aria-label={`Quitar ${c.name}`} title="Quitar" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>×</button>
               </div>
             );
           })}
-          <div className="bud-total"><span>Total del presupuesto</span><b className="num">{symbol} {fmt(total)}</b></div>
+          <div className="bud-total"><span>Total del presupuesto</span><b className="num">{symbol} {fmt(total.toFixed(2))}</b></div>
         </div>
       ) : <p className="sub" style={{ margin: 0 }}>Elegí las categorías que querés controlar. Las demás no cuentan en el presupuesto.</p>}
       {free.length > 0 && (
@@ -48,7 +49,7 @@ export function BudgetEditor({ period, cats, symbol, hasBudget }: { period: stri
           </select>
         </div>
       )}
-      <div className="stm-foot"><p className="sub">Lo que gastes en las categorías sin límite no descuenta de este presupuesto.</p><Submit>Guardar presupuesto</Submit></div>
+      <div className="stm-foot"><p className="sub">La opción de proyección reserva una estimación al final del mes, sin crear gastos ni pagos. Solo aplica a este mes; al copiar el presupuesto se copia también la opción.</p><Submit>Guardar presupuesto</Submit></div>
     </ActionForm>
   );
 }

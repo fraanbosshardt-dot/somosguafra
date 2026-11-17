@@ -565,6 +565,7 @@ model BudgetLine {
   budget      Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   categoryId  String
   limitAmount Decimal @db.Decimal(18, 2)
+  projectRemaining Boolean @default(false)
 
   @@unique([budgetId, categoryId])
 }

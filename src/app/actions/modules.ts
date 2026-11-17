@@ -358,18 +358,18 @@ export async function saveBudgetAction(_: FormState, fd: FormData): Promise<Form
   const { workspace } = await requireWorkspace();
   try {
     const p = str(fd, "period");
-    const lines = [...fd.entries()].filter(([k]) => k.startsWith("limit:")).map(([k, v]) => ({ categoryId: k.slice(6), limit: String(v).trim() ? parseAmount(String(v)) : null }));
+    const lines = [...fd.entries()].filter(([k]) => k.startsWith("limit:")).map(([k, v]) => ({ categoryId: k.slice(6), limit: String(v).trim() ? parseAmount(String(v)) : null, projectRemaining: fd.get(`project:${k.slice(6)}`) === "on" }));
     if (lines.some((l) => l.limit === null && fd.get(`limit:${l.categoryId}`) && String(fd.get(`limit:${l.categoryId}`)).trim())) throw new UserError("Revisá los importes: tienen que ser números.");
     await saveBudget(getDb(), workspace.id, p, workspace.baseCurrency, lines);
   } catch (e) { return fail(e); }
-  revalidatePath("/app/presupuestos");
-  return { ok: "Presupuesto guardado." };
+  revalidatePath("/app", "layout");
+  return { ok: "Presupuesto guardado. La proyección quedó actualizada." };
 }
 
 export async function copyBudgetAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   try { await copyBudget(getDb(), workspace.id, str(fd, "from"), str(fd, "to"), workspace.baseCurrency); } catch { /* sin presupuesto previo: no hace nada */ }
-  revalidatePath("/app/presupuestos");
+  revalidatePath("/app", "layout");
 }
 
 export async function createGoalAction(_: FormState, fd: FormData): Promise<FormState> {

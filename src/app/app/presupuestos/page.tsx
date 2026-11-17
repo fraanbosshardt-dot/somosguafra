@@ -4,7 +4,7 @@ import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { budgetFor } from "@/server/planning";
 import { formatMoney, ZERO } from "@/lib/money";
-import { addMonths, fmtPeriod, period, todayIn } from "@/lib/dates";
+import { addMonths, fmtPeriod, period, periodEnd, todayIn } from "@/lib/dates";
 import { PageHead, Stat } from "@/components/page";
 import { copyBudgetAction } from "@/app/actions/modules";
 import { BudgetEditor } from "./budget-editor";
@@ -17,12 +17,12 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   const p = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : period(todayIn(workspace.timezone));
   const cur = workspace.baseCurrency;
-  const b = await budgetFor(getDb(), workspace.id, p, cur);
+  const b = await budgetFor(getDb(), workspace.id, p, cur, todayIn(workspace.timezone));
   const fm = (v: Parameters<typeof formatMoney>[0]) => formatMoney(v, cur);
   // "Te queda" mira solo las categorías con límite: lo que gastás en las demás no descuenta de un presupuesto que no pusiste.
   const limited = b.rows.filter((r) => r.limit);
   const sum = (f: (r: (typeof limited)[number]) => typeof b.totals.limit) => limited.reduce((s, r) => s.plus(f(r)), ZERO);
-  const lim = sum((r) => r.limit!), spentLim = sum((r) => r.spent), commLim = sum((r) => r.committed);
+  const lim = sum((r) => r.limit!), spentLim = sum((r) => r.spent), commLim = sum((r) => r.committed.plus(r.scheduled));
   const left = lim.minus(spentLim).minus(commLim);
   const hasBudget = !!b.budget && lim.gt(0);
   // Promedio gastado por categoría en los 3 meses anteriores (para sugerir el límite).
@@ -39,13 +39,15 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
     <>
       <PageHead crumb="Planificar" title="Presupuestos" desc="Cuánto querés gastar por categoría, contra lo gastado y lo que ya está comprometido en el mes."
         actions={<><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><span className="btn" style={{ minWidth: 150, justifyContent: "center" }}>{fmtPeriod(p)}</span><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></>} />
+      <p className="sub">Un límite no es un gasto. Las compras consumen el presupuesto; los pendientes y lo programado se muestran por separado. Para estimar el resto en el flujo, activá la opción en cada categoría.</p>
       {hasBudget ? (
         <>
-          <div className="card bdg-stats"><Stat label="Presupuesto" value={fm(lim)} /><Stat label="Gastado" value={fm(spentLim)} /><Stat label="Comprometido" value={fm(commLim)} /><Stat label={left.isNegative() ? "Te pasaste" : "Te queda"} value={fm(left.abs())} tone={left.isNegative() ? "neg" : "pos"} /></div>
+          <div className="card bdg-stats"><Stat label="Presupuesto" value={fm(lim)} /><Stat label="Gastado" value={fm(spentLim)} /><Stat label="Ya previsto" value={fm(commLim)} /><Stat label={left.isNegative() ? "Te pasaste" : "Te queda"} value={fm(left.abs())} tone={left.isNegative() ? "neg" : "pos"} /></div>
+          <p className="sub">«Ya previsto» incluye pendientes y, en categorías con proyección activada, recurrentes y suscripciones programadas. En tarjetas, el consumo cuenta por categoría una sola vez; pagar el resumen no es otro gasto.</p>
           {/* Una tarjeta por categoría con límite: cuánto queda, la barra y lo gastado */}
           <div className="bdg-grid">{limited.map((r) => {
             const pct = r.spent.dividedBy(r.limit!).times(100).toNumber();
-            const comm = Math.max(0, Math.min(100 - pct, r.committed.dividedBy(r.limit!).times(100).toNumber()));
+            const comm = Math.max(0, Math.min(100 - Math.max(0, pct), r.committed.plus(r.scheduled).dividedBy(r.limit!).times(100).toNumber()));
             const over = pct > 100, near = !over && pct >= 80;
             return (
               <div className={`bdg ${over ? "over" : near ? "near" : ""}`} key={r.id}>
@@ -53,11 +55,13 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
                   <b className="bdg-name">{r.name}</b>
                   <div className="bdg-left"><b className={`num ${r.available!.isNegative() ? "neg" : ""}`}>{fm(r.available!.abs())}</b><span>{r.available!.isNegative() ? "de más" : "te quedan"}</span></div>
                 </div>
-                <div className="bdg-bar" role="img" aria-label={`Gastaste el ${Math.round(pct)}% del límite`}><i style={{ width: `${Math.min(100, pct)}%` }} /><i className="c" style={{ width: `${comm}%` }} /></div>
+                <div className="bdg-bar" role="img" aria-label={`Gastaste el ${Math.round(pct)}% del límite`}><i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /><i className="c" style={{ width: `${comm}%` }} /></div>
                 <div className="bdg-foot">
                   <span>{fm(r.spent)} gastado de {fm(r.limit!)}{r.committed.gt(0) ? ` · ${fm(r.committed)} por pagar` : ""}</span>
                   <b>{Math.round(pct)}%</b>
                 </div>
+                {r.scheduled.gt(0) && <p className="sub budget-estimate">{fm(r.scheduled)} programado en recurrentes o suscripciones de tarjeta.</p>}
+                {r.projectRemaining && <p className="sub budget-estimate"><span className="pill">Estimación</span> {periodEnd(p) < todayIn(workspace.timezone) ? "Mes finalizado: no agrega salidas futuras." : `${fm(r.estimate)} adicionales en el flujo al finalizar este mes.`}</p>}
               </div>
             );
           })}</div>
@@ -75,10 +79,11 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
           <form action={copyBudgetAction}><input type="hidden" name="from" value={addMonths(p, -1)} /><input type="hidden" name="to" value={p} /><button className="btn" type="submit">Copiar el del mes anterior</button></form></div>
           <div className="hero-side"><div className="hrow"><span>Gastado este mes</span><b>{fm(b.totals.spent)}</b></div><div className="hrow"><span>Comprometido</span><b>{fm(b.totals.committed)}</b></div></div></div>
       )}
+      <p className="sub">Si cargás la tarjeta solo por el total del resumen, no se puede conocer cuánto corresponde a cada categoría. Para que esos consumos descuenten de su presupuesto, usá el detalle de compras por categoría. Las compras en cuotas consumen el presupuesto por el total en el mes de compra; las cuotas siguen sus vencimientos en el flujo.</p>
       <div className="card">
         <details className="more" open={!hasBudget}>
           <summary>{hasBudget ? "Editar límites" : "Armar el presupuesto"}</summary>
-          <BudgetEditor period={p} symbol={symbolOf(cur)} hasBudget={hasBudget} cats={b.categories.map((c) => { const l = b.budget?.lines.find((x) => x.categoryId === c.id); return { id: c.id, name: c.name, avg: avg.get(c.id) ?? 0, limit: l ? Number(l.limitAmount) : null }; })} />
+          <BudgetEditor key={`${p}:${b.budget?.id ?? "new"}`} period={p} symbol={symbolOf(cur)} hasBudget={hasBudget} cats={b.categories.map((c) => { const l = b.budget?.lines.find((x) => x.categoryId === c.id); return { id: c.id, name: c.name, avg: avg.get(c.id) ?? 0, limit: l ? l.limitAmount.toFixed(2) : null, projectRemaining: l?.projectRemaining ?? false }; })} />
         </details>
       </div>
     </>
