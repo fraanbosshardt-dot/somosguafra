@@ -9,7 +9,7 @@ export const when = supportWhen;
 
 export function Stats({ items }: { items: [string, string | number, string?][] }) {
   return (
-    <div className="fc adm-stats" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}>
+    <div className="fc adm-stats" style={{ gridTemplateColumns: `repeat(${items.length === 6 ? 3 : Math.min(4, Math.max(1, items.length))},minmax(0,1fr))` }}>
       {items.map(([l, v, hint]) => <div key={l}><small>{l}</small><b>{v}</b>{hint && <span className="adm-hint">{hint}</span>}</div>)}
     </div>
   );
@@ -64,6 +64,7 @@ const ACTIONS: Record<string, string> = {
   "auth.2fa_failed": "Código de dos pasos incorrecto", "auth.password_reset": "Cambió la contraseña", "auth.reset_requested": "Pidió recuperar la contraseña",
   "auth.google_linked": "Unió su cuenta de Google", "billing.checkout_started": "Fue a pagar Pro", "billing.canceled": "Canceló Pro",
   "billing.pro_grant_used": "Recibió el Pro reservado", "card.statement_loaded": "Cargó un resumen", "card.pdf_read": "Leyó un PDF de resumen",
+  "admin.customer_viewed": "Consultó la ficha del cliente", "admin.access": "Consultó el panel", "admin.case_edit_claimed": "Tomó el caso para responder", "admin.case_status": "Cambió el estado del caso", "admin.case_managed": "Actualizó el responsable o las notas del caso", "admin.chat_help_updated": "Actualizó una respuesta automática de Guafra",
   "admin.login": "Entró al panel", "admin.login_denied": "Intentó entrar al panel sin permiso", "admin.plan_changed": "Cambió un plan",
   "admin.pro_gifted": "Regaló Pro", "admin.pro_reserved": "Reservó Pro para un correo", "admin.pro_reserve_removed": "Quitó un Pro reservado",
   "admin.user_suspended": "Suspendió una cuenta", "admin.user_restored": "Reactivó una cuenta", "admin.2fa_reset": "Quitó el segundo paso de una cuenta",

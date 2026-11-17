@@ -5,7 +5,7 @@ import { PageHead } from "@/components/page";
 import { Pagination } from "@/components/pagination";
 import { pageNumber } from "@/lib/pagination";
 import { AREAS } from "@/lib/brand";
-import { CASE_STATUS } from "@/lib/chat-help";
+import { ADMIN_CASE_STATUS } from "@/lib/chat-help";
 import { unifiedInbox } from "@/server/support-inbox";
 import { when } from "@/components/admin-ui";
 import { SupportInboxSummary } from "@/components/support-inbox";
@@ -95,7 +95,7 @@ export default async function Inbox({
           <select name="estado" defaultValue={status}>
             <option value="open">Pendientes del equipo</option>
             <option value="all">Todos los casos humanos</option>
-            {Object.entries(CASE_STATUS).map(([k, v]) => (
+            {Object.entries(ADMIN_CASE_STATUS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
               </option>
@@ -160,7 +160,7 @@ export default async function Inbox({
               </p>
             </div>
             <span className={`pill ${c.priority === "HIGH" ? "r" : ""}`}>
-              {CASE_STATUS[c.status] ?? "Automática"}
+              {ADMIN_CASE_STATUS[c.status] ?? "Automática"}
             </span>
           </div>
           <p className="sub">

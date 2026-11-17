@@ -374,21 +374,28 @@
 }
 .handoff {
   overflow: auto;
-  flex-shrink: 1;
+  flex: 1;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   padding: 16px;
-  border-top: 1px solid var(--chat-line);
-  background: var(--chat-soft);
+  background: var(--chat-bg);
 }
-.handoff strong {
-  font-size: 14px;
+.handoff h2 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0 0 8px;
 }
+.panel > :is(.header,.toolbar,.foot) { flex-shrink: 0; }
 .handoff p {
   font-size: 12px;
-  margin: 6px 0 12px !important;
+  margin: 0 0 8px !important;
 }
+.handoff .options { margin: 12px 0 0; }
 .handoff label {
   display: block;
-  margin: 10px 0;
+  margin: 8px 0;
   font-size: 12px;
 }
 .handoff input,
@@ -396,7 +403,7 @@
   display: block;
   width: 100%;
   margin-top: 4px;
-  border: 1px solid #bccfc1;
+  border: 1px solid var(--chat-line);
   border-radius: 9px;
   background: var(--chat-bg);
   color: var(--chat-text);

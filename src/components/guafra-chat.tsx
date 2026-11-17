@@ -75,8 +75,10 @@ export function GuafraChat({
     previousIdentity = useRef<Payload["identity"]>(null),
     requestedCode = useRef<string | undefined>(undefined),
     feed = useRef<HTMLDivElement>(null),
+    handoffTitle = useRef<HTMLHeadingElement>(null),
     nearBottom = useRef(true),
     id = useId();
+  useEffect(() => { if (handoff) handoffTitle.current?.focus({ preventScroll: true }); }, [handoff]);
   const accept = useCallback((data: Payload) => {
     selected.current = data.current;
     setCurrent(data.current);
@@ -384,7 +386,7 @@ export function GuafraChat({
             <div>
               <strong>Guafra</strong>
               <small>
-                {current?.human
+                {handoff ? "Contactar al equipo" : current?.human
                   ? "Atención del equipo"
                   : "Asistente automático"}
               </small>
@@ -468,7 +470,7 @@ export function GuafraChat({
           )}
           <div
             ref={feed}
-            hidden={history && !loading}
+            hidden={(history && !loading) || handoff}
             className={styles.feed}
             onScroll={() => {
               if (feed.current)
@@ -605,6 +607,7 @@ export function GuafraChat({
           {handoff && current && !current.human && !loading && !history && (
             <form
               className={styles.handoff}
+              aria-labelledby={`${id}-handoff-title`}
               onSubmit={(e) => {
                 e.preventDefault();
                 void act({ action: "handoff", name, email, area }, () =>
@@ -612,9 +615,9 @@ export function GuafraChat({
                 );
               }}
             >
-              <strong>Le pasamos tu consulta al equipo</strong>
+              <h2 id={`${id}-handoff-title`} ref={handoffTitle} tabIndex={-1}>Hablá con el equipo</h2>
               <p>
-                Lunes a viernes, 9 a 17 h (Argentina). Conservamos todo el chat.
+                Conservamos todo el historial. Te avisaremos por correo cuando respondamos, de lunes a viernes, de 9 a 17 h (Argentina).
               </p>
               <label>
                 Nombre

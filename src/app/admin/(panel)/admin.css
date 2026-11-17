@@ -101,3 +101,52 @@
   .adm .fc.adm-stats{grid-template-columns:minmax(0,1fr)!important}
   .adm .fc.adm-stats>div{border-right:0!important}
 }
+
+/* Ritmo común del panel: los desplegables separan explicación, campos y acciones. */
+.adm .adm-main{gap:20px}
+.adm .adm-main .card{padding:22px;line-height:1.55}
+.adm .adm-main .chead{gap:12px 20px;margin-bottom:18px;align-items:flex-start}
+.adm .adm-main .chead>.sub{margin:0;max-width:65ch}
+.adm .adm-main .card>:is(p,.adm-hint){margin-block:12px;line-height:1.6}
+.adm .adm-main .card>:is(p,.adm-hint):last-child{margin-bottom:0}
+.adm .adm-main .card>h3+*{margin-top:14px}
+.adm .adm-main .field{gap:8px;line-height:1.5}
+.adm .adm-main :is(.acts,.li-acts){gap:12px;flex-wrap:wrap}
+.adm .adm-main .acts{align-items:flex-end}
+.adm .adm-main .frow{gap:16px;align-items:start}
+.adm .adm-main .btn{min-height:40px;line-height:1.4;white-space:normal;padding-block:8px;text-align:center;max-width:100%;height:auto}
+.adm .adm-main .btn.sm{min-height:38px}
+.adm .adm-main :is(button,select){flex-shrink:0}
+.adm .adm-main :is(form,.li-acts){min-width:0;max-width:100%}
+.adm .adm-main .li{gap:16px;padding-block:16px;align-items:flex-start}
+.adm .adm-main .li .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.5;font-weight:500}
+.adm .adm-main .li .s{margin-top:4px;line-height:1.6}
+.adm .adm-main .li>.grow{flex:1 1 220px}
+.adm .adm-main .li:has(details[open]){flex-wrap:wrap}
+.adm .adm-main .li:has(details[open])>.grow{flex-basis:100%}
+.adm .adm-main details:not(.help)>summary{cursor:pointer;line-height:1.5;min-height:44px;padding-block:10px;font-weight:500;overflow-wrap:anywhere}
+.adm .adm-main details[open]:not(.help)>summary{margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.adm .adm-main details[open]>summary+:is(p,.sub){margin-top:0;margin-bottom:16px}
+.adm .adm-main details>form{margin-block:16px 0}
+.adm .adm-main :is(.notice,.card)>p+.btn{margin-top:12px}
+.adm .adm-main .notice:has(>.btn){flex-wrap:wrap;align-items:center}
+.adm .adm-main .notice>span{min-width:0;flex:1 1 220px}
+.adm .adm-main .form-msg{margin-top:16px}
+.adm .adm-main .adm-danger{margin-top:20px;padding-top:20px;gap:14px}
+.adm .adm-main :is(h1,h2,h3,[id]){scroll-margin-top:140px}
+.adm .adm-section-title{font-size:17px;font-weight:500;margin:24px 0 12px}
+.adm .adm-case-nav{display:flex;flex-wrap:wrap;gap:10px;margin-block:20px;padding-block:14px;border-block:1px solid var(--line)}
+.adm .adm-state-help{max-width:75ch}
+@media(max-width:760px){
+ .adm .adm-main .card{padding:18px 16px}
+ .adm .adm-main :is(.btn,.btn.sm){min-height:44px}
+ .adm .adm-main .li{flex-wrap:wrap;gap:12px}
+ .adm .adm-main .li>.li-acts{flex-basis:100%;justify-content:flex-start}
+ .adm .adm-main .acts>.field{flex:1 1 180px;min-width:0}
+ .adm .adm-main .acts>.btn{align-self:flex-end}
+ .adm .adm-main .frow{grid-template-columns:minmax(0,1fr)}
+ .adm .adm-main .notice{gap:14px}
+ .adm .adm-case-nav .btn{flex:1 1 120px}
+}
+
+.adm .adm-main :is(form,fieldset)>.btn{justify-self:start}

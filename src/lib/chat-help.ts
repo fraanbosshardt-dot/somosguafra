@@ -338,4 +338,5 @@ export const CASE_STATUS: Record<string, string> = {
   RESOLVED: "Resuelto",
   CLOSED: "Cerrado",
 };
+export const ADMIN_CASE_STATUS: Record<string, string> = { ...CASE_STATUS, ANSWERED: "Esperando al cliente" };
 export const CASE_OPEN = ["OPEN", "IN_PROGRESS", "WAITING_INTERNAL"];
