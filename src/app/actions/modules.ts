@@ -13,7 +13,7 @@ import { changeRuleFrom, createRule, endRule, materialize, pauseRule } from "@/s
 import { MATERIALIZE_DAYS } from "@/server/forecast";
 import { cardPurchase, createCard } from "@/server/cards";
 import { cancelDebt, createDebt, deleteDebt, payDebtOnAccount, updateDebt } from "@/server/debts";
-import { createGoal, addContribution, copyBudget, saveBudget } from "@/server/planning";
+import { createGoal, editGoal, addContribution, copyBudget, saveBudget } from "@/server/planning";
 import { addValuation, createAsset, createInvestment, investmentMove, saveManualRate } from "@/server/wealth";
 import { createGrainSale } from "@/server/grain";
 import { applyImport, autoMap, previewImport, revertImport } from "@/server/io";
@@ -378,6 +378,15 @@ export async function createGoalAction(_: FormState, fd: FormData): Promise<Form
     await createGoal(getDb(), workspace.id, { name: str(fd, "name"), target: money(fd, "target", "la meta"), currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte"), saved: optMoney(fd, "saved", "lo que ya tenés"), today: todayIn(workspace.timezone) });
   } catch (e) { return fail(e); }
   redirect(done("/app/objetivos"));
+}
+
+export async function editGoalAction(_: FormState, fd: FormData): Promise<FormState> {
+  const { workspace } = await requireWorkspace();
+  try {
+    await editGoal(getDb(), workspace.id, str(fd, "goalId"), { name: str(fd, "name"), target: money(fd, "target", "la meta"), targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte") });
+  } catch (e) { return fail(e); }
+  revalidatePath("/app/objetivos");
+  return { ok: "Objetivo actualizado. Tus aportes se conservaron." };
 }
 
 export async function contributeAction(_: FormState, fd: FormData): Promise<FormState> {

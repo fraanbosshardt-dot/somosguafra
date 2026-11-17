@@ -49,12 +49,12 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
     return (
       <div className="li" key={r.id} style={{ flexWrap: "wrap" }} data-q={searchText(r.description, FREQ[r.frequency], r.direction === "RECEIVABLE" ? "cobro ingreso" : "pago gasto", r.amount.toString())}>
         <div className="grow" style={{ minWidth: 200 }}>
-          <div className="t">{r.description} {r.pausedAt && <span className="pill">Pausada</span>}{!active && <span className="pill">Terminada</span>}</div>
+          <div className="t recurring-name">{r.description} {r.pausedAt && <span className="pill">Pausada</span>}{!active && <span className="pill">Terminada</span>}</div>
           <div className="s">{FREQ[r.frequency]}{r.dayOfMonth ? ` · día ${r.dayOfMonth}` : ""}{r.variableAmount ? " · importe variable" : ""}{next ? ` · próxima: ${fmtDate(next)}` : ""}{r.endDate ? ` · ${active ? "hasta" : "terminó el"} ${fmtDate(r.endDate)}` : " · sin fecha de fin"}</div>
         </div>
         <b className={`num ${r.direction === "RECEIVABLE" ? "pos" : ""}`}>{formatMoney(r.direction === "RECEIVABLE" ? r.amount : r.amount.neg(), r.currency, { sign: true })}</b>
         <details className="more" style={{ width: "100%" }}>
-          <summary>{active ? "Cambiar, terminar o borrar" : "Opciones"}</summary>
+          <summary className="recurring-options">{active ? "Editar y otras opciones" : "Opciones"}</summary>
           <div className="rule-opts">
             {active && (
               <>

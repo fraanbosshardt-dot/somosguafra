@@ -1371,3 +1371,15 @@ input[list]{appearance:none;-webkit-appearance:none}
 .review-account-action.is-reviewed {color:var(--muted);background:var(--canvas)}
 .review-account-action.is-pending {border:1px solid var(--line);color:var(--fg);background:var(--surface);font-weight:600}
 @media(max-width:640px){.month-review .li{gap:12px;align-items:flex-start;flex-wrap:wrap}.month-review .grow{flex:1 1 180px}.month-review .acts>.btn{flex:1 1 170px;justify-content:center}.help-contact-card>.btn{width:100%;justify-content:center}}
+
+/* Planificación: prioridad al concepto y edición sin comprimir los controles. */
+.li .t.recurring-name{font-size:16px;font-weight:650;line-height:1.5;overflow-wrap:anywhere}
+.more>summary.recurring-options{font-size:13px;font-weight:400;color:var(--muted);padding-block:8px;min-height:40px}
+.goal-edit{margin-top:16px}
+.goal-edit-form{display:flex;flex-direction:column;gap:14px;padding-top:16px}
+.upcoming-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px}
+.upcoming-filters .field{flex:1 1 180px;min-width:0}
+.upcoming-filters .btn{min-height:44px}
+@media(max-width:600px){.goal-edit-form .frow{flex-direction:column}.upcoming-filters .btn{width:100%}}
+
+.navg a[href="/app/proximos"]{height:auto;min-height:44px;padding-block:6px;gap:10px;line-height:1.35}

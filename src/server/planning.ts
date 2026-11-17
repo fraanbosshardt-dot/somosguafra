@@ -88,3 +88,13 @@ export async function createGoal(db: Db, ws: string, input: { name: string; targ
     return goal;
   });
 }
+
+// Editar la meta no mueve dinero ni modifica el historial de aportes o su moneda.
+export async function editGoal(db: Db, ws: string, id: string, input: { name: string; target: MoneyValue; targetDate: Date | null; monthly: MoneyValue | null }) {
+  const target = round2(input.target), monthly = input.monthly == null ? null : round2(input.monthly);
+  if (!input.name.trim() || input.name.trim().length > 100) throw new UserError("Escribí un nombre de hasta 100 caracteres.");
+  if (!target.isFinite() || !target.gt(0) || (monthly != null && (!monthly.isFinite() || monthly.lt(0)))) throw new UserError("La meta tiene que ser positiva y el aporte no puede ser negativo.");
+  if (input.targetDate && !Number.isFinite(input.targetDate.getTime())) throw new UserError("Revisá la fecha de la meta.");
+  const result = await db.goal.updateMany({ where: { id, workspaceId: ws }, data: { name: input.name.trim(), targetAmount: target.toFixed(2), targetDate: input.targetDate, monthlyContribution: monthly?.toFixed(2) ?? null } });
+  if (!result.count) throw new UserError("No encontramos ese objetivo.");
+}

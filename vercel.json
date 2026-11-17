@@ -7,7 +7,8 @@
       "fix/diagnostico-conciliacion": false,
       "fix/consulta-pagos-proveedor": false,
       "fix/paginacion-mercadopago": false,
-      "feat/guafra-chatbot": false
+      "feat/guafra-chatbot": false,
+      "feat/planning-review": false
     }
   },
   "regions": [
