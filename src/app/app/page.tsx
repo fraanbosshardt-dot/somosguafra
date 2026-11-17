@@ -96,8 +96,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
       {paymentNotice}
       {(incomeRules === 0 || expenseRules === 0) && <p className="notice a">El disponible usa únicamente lo que cargaste. Si faltan cobros o gastos fijos, puede cambiar. <Link className="lnk" href="/app/revision">Revisar mis datos</Link></p>}
       <div className="card hero">
-        <div className="hero-main">
-          <div className="lbl">{nextIn ? `Te queda hasta tu próximo cobro, el ${fmtDayMonth(nextIn.dueDate)}` : "Te queda hasta fin de mes"}</div>
+        <div className="hero-main"><p className="sub">Saldo menos pagos cargados. No incluye nuevas compras ni el margen de presupuestos.</p>
+          <div className="lbl">{nextIn ? `Disponible hasta el próximo cobro (${fmtDayMonth(nextIn.dueDate)})` : "Disponible hasta fin de mes"}</div>
           <div className={`big ${left.isNegative() ? "neg" : ""}`}>{fm(left)}</div>
           <p className="sub" style={{ maxWidth: "46ch" }}>{left.gt(0) ? `Unos ${fm(perDay)} por día durante ${days} ${days === 1 ? "día" : "días"}.` : "Lo que tenés no alcanza para lo que vence antes. Revisá Próximos pagos."}</p>
           <div className="mbar m-only" aria-hidden="true"><i style={{ width: `${monthPct}%` }} /></div>
@@ -114,7 +114,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
           {nextIn && <Link className="hrow" href="/app/proximos"><span>{nextIn.description}</span><b className="pos">{formatMoney(nextIn.remaining, nextIn.currency, { sign: true })}</b></Link>}
           {toCollect.length > 0 && <Link className="hrow" href="/app/proximos?ver=cobrar"><span>Por cobrar ({toCollect.length})</span><b className="pos">{formatMoney(toCollectTotal, cur, { sign: true })}</b></Link>}
           {toCollect.length > 0 && <div className="sub hero-help">Por cobrar todavía no está en tus cuentas <Help term="porcobrar" /></div>}
-          <Link className="hrow" href="/app/flujo"><span>A fin de mes terminás con</span><b className={endOfMonth.isNegative() ? "neg" : ""}>{fm(endOfMonth)}</b></Link>
+          <Link className="hrow" href="/app/flujo?c=conf"><span>Fin de mes con lo cargado</span><b className={endOfMonth.isNegative() ? "neg" : ""}>{fm(endOfMonth)}</b></Link>
           {estimatedIn.gt(0) && <div className="sub hero-help">Si se cumple lo estimado del cereal, {fm(estimatedIn, { sign: true })} más</div>}
           {d.cardDebt.gt(0) && <Link className="hrow" href="/app/tarjetas"><span>Debés en tarjetas</span><b>{fm(d.cardDebt.neg())}</b></Link>}
           {d.others.map((o) => <div className="hrow" key={o.id}><span>{o.name}</span><b>{formatMoney(o.balance, o.currency)}</b></div>)}
@@ -157,7 +157,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
           {dueNow.length > toConfirm.length && <div className="acts" style={{ justifyContent: "center", paddingTop: 10 }}><Link className="btn sm" href="/app/proximos">Ver {dueNow.length - toConfirm.length} más en Próximos pagos</Link></div>}
         </div>
       )}
-      <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
+      <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste ni el margen de tus presupuestos. Para contemplar esas estimaciones, revisá Flujo de caja.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
       {stepsLeft > 0 && (
         <div className="card">
           <div className="chead"><div><h3>Terminá de configurar</h3><p className="sub">{steps.length - stepsLeft} de {steps.length} listos. Con esto Somos Guafra te muestra cuánto vas a tener cada mes.</p></div></div>

@@ -17,9 +17,11 @@ export default async function MonthReview() {
     db.recurringRule.count({ where: { workspaceId: workspace.id, direction: "PAYABLE", pausedAt: null } }),
   ]);
   const checked = accounts.filter((a) => a.lastReconciledAt && a.lastReconciledAt >= first).length;
+  const readyChecks = Number(accounts.length > 0 && checked === accounts.length) + Number(overdue === 0) + Number(uncategorized === 0);
   return <div className="narrow wide month-review">
     <PageHead crumb="Mi dinero" title="Revisión del mes" desc={`${fmtPeriod(month)}: comprobá lo que cargaste antes de decidir cuánto podés gastar.`} actions={<Link className="btn" href="/app">Volver al inicio</Link>} />
     <div className="notice">La revisión no mueve dinero ni cierra tus registros. Podés corregirlos cuando quieras. Los pendientes solo se dan por pagados o cobrados cuando lo confirmás.</div>
+    <p className="sub">{readyChecks} de 3 controles automáticos al día: saldos revisados, sin atrasos y categorías completas. Revisá también tus ingresos y gastos futuros en el paso 4.</p>
     <div className="grid g2">
       <section className="card"><div className="chead"><h2 style={{ fontSize: 19 }}>1. Compará tus saldos</h2><span className="pill">{checked} de {accounts.length}</span></div>
         <p className="sub">Revisá cada saldo contra el banco, la billetera o tu efectivo. Un ajuste corrige el registro; no hace una transferencia real.</p>

@@ -8,6 +8,7 @@ import type { ModuleState } from "@/lib/modules";
 import { QuickAdd, openQuickAdd } from "@/components/quick-add";
 import { BigTextToggle } from "@/components/big-text";
 import { ThemeButton } from "@/components/theme";
+import { requestChatOpen } from "@/lib/open-chat";
 import { LogoMark } from "@/components/logo-mark";
 
 type Item = { href: string; label: string; icon: IconName; module?: keyof ModuleState; badge?: number; match?: string };
@@ -98,6 +99,7 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
         <Link className="ibtn top-search-btn" href="/app/buscar" aria-label="Buscar"><Icon name="search" /></Link>
         {!readOnly && <Link href="/app/movimientos/nuevo" className="btn pri top-new"><Icon name="plus" />Nuevo movimiento</Link>}
         {modules.alertas && <Link className="ibtn" href="/app/alertas" aria-label="Alertas"><Icon name="bell" />{overdue > 0 && <span className="dot" />}</Link>}
+        <button className="ibtn mobile-chat-open" type="button" aria-label="Abrir chat Guafra" title="Guafra: ayuda y soporte" onClick={() => requestChatOpen()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6.2A8.5 8.5 0 1 1 21 11.5Z" /><path d="M7 10h9M7 14h5" /></svg></button>
         <ThemeButton className="ibtn top-secondary" />
         <Link className="ibtn top-secondary" href="/app/ayuda" aria-label="Ayuda"><Icon name="help" /></Link>
         <Link className="ibtn top-secondary" href="/app/configuracion" aria-label="Configuración"><Icon name="gear" /></Link>

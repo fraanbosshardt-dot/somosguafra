@@ -310,7 +310,13 @@ export async function debtDetail(db: Db, ws: string, debtId: string) {
   const capitalPaid = settled.reduce((s, r) => s.plus(dec(r.capital)), ZERO);
   // Sin cronograma: lo que falta es el capital menos los pagos a cuenta registrados.
   const manualPaid = debt.schedule.length ? ZERO : (await db.transaction.findMany({ where: { workspaceId: ws, type: "DEBT_PAYMENT", notes: `debt:${debt.id}` } })).reduce((s, t) => s.plus(dec(t.amount)), ZERO);
-  const remainingCapital = debt.status !== "ACTIVE" ? ZERO : debt.schedule.length ? open.reduce((s, r) => s.plus(dec(r.capital)), ZERO) : dec(debt.principal).minus(capitalPaid).minus(manualPaid);
+  // En pagos parciales sin desglose del acreedor, estimamos capital en proporción
+  // al cronograma de esa cuota. Sin interés ni cargos, descuenta exactamente lo pagado.
+  const remainingCapital = debt.status !== "ACTIVE" ? ZERO : debt.schedule.length ? open.reduce((sum, r) => {
+    const total = dec(r.total), capital = dec(r.capital), paid = r.paid ?? ZERO;
+    const fraction = total.gt(0) && paid.gt(0) ? paid.gte(total) ? dec(1) : paid.dividedBy(total) : ZERO;
+    return sum.plus(capital.minus(round2(capital.times(fraction))));
+  }, ZERO) : dec(debt.principal).minus(capitalPaid).minus(manualPaid);
   const futureSum = open.reduce((s, r) => s.plus(dec(r.total)).minus(r.paid ?? ZERO), ZERO);
   return { debt, rows, open, settledCount: settled.length, remainingCapital, futureSum, next: open[0] ?? null };
 }

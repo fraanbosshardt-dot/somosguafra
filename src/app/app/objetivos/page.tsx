@@ -44,11 +44,11 @@ export default async function Goals() {
                 </ActionForm>
               </details>
               <div className="goal-foot">
-                <details className="goal-add"><summary className="btn sm">+ Sumar un aporte</summary>
+                <details className="goal-add"><summary className="btn sm">+ Registrar ahorro</summary>
                   <ActionForm action={contributeAction} resetOnOk className="goal-add-form">
                     <input type="hidden" name="goalId" value={g.goal.id} />
-                    <label className="field">¿Cuánto separaste?<input name="amount" inputMode="decimal" placeholder="0,00" /></label>
-                    <Submit className="btn pri">Sumar</Submit>
+                    <label className="field">¿Cuánto ya separaste?<input name="amount" inputMode="decimal" placeholder="0,00" /></label>
+                    <p className="sub">Anota dinero que ya separaste. No hace una transferencia ni modifica el saldo de tus cuentas.</p><Submit className="btn pri">Registrar ahorro</Submit>
                   </ActionForm>
                 </details>
                 <form action={deleteGoalAction} className="goal-del"><input type="hidden" name="goalId" value={g.goal.id} /><ConfirmSubmit className="btn sm ghost" question={`¿Eliminar el objetivo "${g.goal.name}"?`} yes="Sí, eliminar">Eliminar</ConfirmSubmit></form>

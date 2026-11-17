@@ -610,3 +610,10 @@
     padding: 10px 14px;
   }
 }
+
+/* En la app móvil se abre desde la cabecera: no tapa cifras ni confirmaciones. */
+@media(max-width:900px){:global(body:has(.mobile-chat-open)) .app .launch{display:none}}
+.history small{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+.historyPaging{display:flex;align-items:center;gap:8px;margin-top:12px}
+.historyPaging button{width:auto;flex:1;text-align:center;min-height:44px;margin:0}
+.historyPaging span{flex:none}

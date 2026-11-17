@@ -12,7 +12,8 @@
       "fix/admin-usabilidad": false,
       "fix/chat-asesor-vista": false,
       "feat/admin-organizacion": false,
-      "fix/admin-formularios-correo": false
+      "fix/admin-formularios-correo": false,
+      "fix/presupuestos-claridad": false
     }
   },
   "regions": [

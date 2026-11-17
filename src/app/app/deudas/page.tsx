@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
+import { debtSummary } from "@/server/financial-summaries";
 import { listDebts } from "@/server/debts";
 import { formatMoney, ZERO } from "@/lib/money";
 import { fmtDate, fmtPeriod, isoDate, period, todayIn } from "@/lib/dates";
@@ -20,14 +21,15 @@ export default async function Debts({ searchParams }: { searchParams: Promise<{ 
   const [all, accounts] = await Promise.all([listDebts(db, workspace.id, today), db.account.findMany({ where: { workspaceId: workspace.id, active: true, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } }, select: { id: true, name: true, currency: true } })]);
   const active = all.filter((d) => d.debt.status === "ACTIVE"), closed = all.filter((d) => d.debt.status !== "ACTIVE");
   const cur = workspace.baseCurrency;
-  const total = active.filter((d) => d.debt.currency === cur).reduce((s, d) => s.plus(d.remainingCapital), ZERO);
-  const thisMonth = active.flatMap((d) => d.open).filter((r) => period(r.dueDate) === period(today) || r.dueDate < today).reduce((s, r) => s.plus(r.total.toString()), ZERO);
+  const summaries = debtSummary(active, today);
   const lastDue = active.flatMap((d) => d.open).reduce<Date | null>((m, r) => (!m || r.dueDate > m ? r.dueDate : m), null);
   return (
     <>
-      <PageHead crumb="Pagos y deudas" title="Deudas y préstamos" desc="Tocá una deuda para ver cuotas, tasas y cuánto ahorrás si la cancelás. Desde ahí también la editás o la eliminás." />
+      <PageHead crumb="Pagos y deudas" title="Deudas y préstamos" desc="Consultá cuotas, pagos y capital estimado de cada deuda." />
       {borrada && <p className="notice g" role="status">Listo, eliminamos el préstamo con sus cuotas.</p>}
-      {active.length > 0 && <div className="card" style={{ display: "flex", gap: 28, flexWrap: "wrap" }}><Stat label="Capital que debés" value={formatMoney(total, cur)} /><Stat label="Falta pagar este mes" value={thisMonth.isZero() ? "Al día" : formatMoney(thisMonth, cur)} tone={thisMonth.isZero() ? "pos" : undefined} /><Stat label="Terminás de pagar" value={lastDue ? fmtPeriod(period(lastDue)) : "—"} /></div>}
+      {summaries.map((s) => <div className="card" key={s.currency}><div className="chead"><h3>Deudas en {s.currency}</h3></div><div className="acts" style={{ gap: 28 }}><Stat label="Capital pendiente según cronograma" value={formatMoney(s.capital, s.currency)} /><Stat label="Cuotas del mes y atrasadas" value={s.due.isZero() ? "Al día" : formatMoney(s.due, s.currency)} tone={s.due.isZero() ? "pos" : undefined} /></div></div>)}
+      {summaries.length > 0 && <details className="card more"><summary>Cómo se calculan estos importes</summary><p className="sub">Las cuotas del mes y atrasadas descuentan los pagos parciales. El capital y las cuotas con intereses son conceptos distintos: no se suman entre sí. Si pagaste parte de una cuota con intereses o cargos, el capital se estima proporcionalmente al cronograma. Confirmá el saldo con el acreedor antes de cancelar.</p></details>}
+      {lastDue && <p className="sub">Último vencimiento registrado: {fmtPeriod(period(lastDue))}.</p>}
       {active.length > 0 && (
         <div className="grid g3">{active.map((d) => (
           <Link key={d.debt.id} href={`/app/deudas/${d.debt.id}`} className="card dcard" style={{ textDecoration: "none", color: "inherit" }}>

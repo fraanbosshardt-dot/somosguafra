@@ -15,21 +15,12 @@ export default async function Alerts() {
   return (
     <>
       <PageHead crumb="Análisis" title="Alertas y consejos" desc="Salen de tus propios datos y se actualizan cada vez que cargás algo." />
-      <div className="card">
-        {list.length ? (
-          <div className="list">
-            {list.map((i, k) => (
-              <div className="li" key={k}>
-                <span className={`pill ${LABEL[i.level][1]}`}>{LABEL[i.level][0]}</span>
-                <div className="grow"><div className="t" style={{ whiteSpace: "normal" }}>{i.title}</div>{i.detail && <div className="s">{i.detail}</div>}</div>
-                <Link className="btn sm" href={i.href}>Ver</Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty">No hay nada que revisar. Cuando tengas pagos atrasados, meses que quedan en rojo o presupuestos pasados, te avisamos acá.</div>
-        )}
-      </div>
+      {[
+        { title: "Requiere acción", items: list.filter((i) => i.level === "urgent") },
+        { title: "Para revisar", items: list.filter((i) => i.level === "warn") },
+        { title: "Información y consejos", items: list.filter((i) => i.level === "info" || i.level === "good") },
+      ].filter((group) => group.items.length).map((group) => <section className="card" key={group.title}><div className="chead"><h2 style={{ fontSize: 18 }}>{group.title}</h2><span className="pill">{group.items.length}</span></div><div className="list">{group.items.map((i, k) => <div className="li" key={k} style={{ flexWrap: "wrap", gap: 12 }}><span className={`pill ${LABEL[i.level][1]}`}>{LABEL[i.level][0]}</span><div className="grow"><div className="t" style={{ whiteSpace: "normal" }}>{i.title}</div>{i.detail && <div className="s">{i.detail}</div>}</div><Link className="btn sm" href={i.href}>Revisar</Link></div>)}</div></section>)}
+      {!list.length && <div className="card empty">No hay alertas con los datos cargados. Revisá que estén todos tus compromisos.</div>}
     </>
   );
 }

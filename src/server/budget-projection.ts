@@ -6,8 +6,8 @@ import { subDates } from "./cards";
 import { dec, ZERO } from "@/lib/money";
 import { period, periodEnd, periodStart } from "@/lib/dates";
 
-export async function budgetProjection(db: Db, ws: string, currency: string, from: string, to: string, today: Date) {
-  const budgets = await db.budget.findMany({ where: { workspaceId: ws, currency, period: { gte: from, lte: to }, lines: { some: { projectRemaining: true } } }, include: { lines: { where: { projectRemaining: true } } } });
+export async function budgetProjection(db: Db, ws: string, currency: string, from: string, to: string, today: Date, includeUnprojected = false) {
+  const budgets = await db.budget.findMany({ where: { workspaceId: ws, currency, period: { gte: from, lte: to }, ...(includeUnprojected ? {} : { lines: { some: { projectRemaining: true } } }) }, include: { lines: includeUnprojected ? true : { where: { projectRemaining: true } } } });
   if (!budgets.length) return [];
   const periods = budgets.map((b) => b.period);
   const first = periodStart([...periods].sort()[0]), last = periodEnd([...periods].sort().at(-1)!);
@@ -22,6 +22,12 @@ export async function budgetProjection(db: Db, ws: string, currency: string, fro
   const parentOf = new Map(cats.map((c) => [c.id, c.parentId ?? c.id]));
   const byId = new Map(cats.map((c) => [c.id, c]));
   const spent = new Map<string, ReturnType<typeof dec>>(), committed = new Map<string, ReturnType<typeof dec>>(), scheduled = new Map<string, ReturnType<typeof dec>>();
+  const scheduledItems = new Map<string, { description: string; date: Date; amount: ReturnType<typeof dec> }[]>();
+  const schedule = (month: string, categoryId: string | null, description: string, date: Date, amount: ReturnType<typeof dec>) => {
+    add(scheduled, month, categoryId, amount);
+    const root = categoryId ? parentOf.get(categoryId) : undefined;
+    if (includeUnprojected && root) { const k = key(month, root); scheduledItems.set(k, [...(scheduledItems.get(k) ?? []), { description, date, amount }]); }
+  };
   const key = (p: string, category: string) => `${p}/${category}`;
   const add = (map: typeof spent, p: string, cat: string | null, value: ReturnType<typeof dec>) => {
     const root = cat ? parentOf.get(cat) : undefined;
@@ -33,12 +39,12 @@ export async function budgetProjection(db: Db, ws: string, currency: string, fro
   const seen = new Set(taken.map((o) => `${o.recurringRuleId}/${o.occurrenceDate?.toISOString().slice(0, 10)}`));
   const begin = first > today ? first : today;
   for (const rule of rules) for (const date of occurrences(rule, begin, last)) {
-    if (!seen.has(`${rule.id}/${date.toISOString().slice(0, 10)}`)) add(scheduled, period(date), rule.categoryId, amountFor(rule, date));
+    if (!seen.has(`${rule.id}/${date.toISOString().slice(0, 10)}`)) schedule(period(date), rule.categoryId, rule.description, date, amountFor(rule, date));
   }
   const charged = new Set(expenses.map((tx) => tx.idempotencyKey).filter(Boolean));
   // El consumo de tarjeta se cuenta en su mes, no otra vez al pagar el resumen.
   for (const sub of subscriptions) for (const month of periods) for (const date of subDates(sub, new Date(Math.max(periodStart(month).getTime(), today.getTime()) - 864e5), periodEnd(month))) {
-    if (!charged.has(`sub:${sub.id}:${date.toISOString().slice(0, 10)}`)) add(scheduled, period(date), sub.categoryId, dec(sub.amount));
+    if (!charged.has(`sub:${sub.id}:${date.toISOString().slice(0, 10)}`)) schedule(period(date), sub.categoryId, sub.description, date, dec(sub.amount));
   }
   return budgets.flatMap((budget) => budget.lines.flatMap((line) => {
     const cat = byId.get(line.categoryId);
@@ -47,6 +53,6 @@ export async function budgetProjection(db: Db, ws: string, currency: string, fro
     // Un reintegro puede liberar el límite, pero no aumenta la estimación por encima de él.
     const used = (actual.gt(0) ? actual : ZERO).plus(due).plus(planned);
     const rest = dec(line.limitAmount).minus(used);
-    return [{ categoryId: cat.id, name: cat.name, period: budget.period, date: periodEnd(budget.period), amount: periodEnd(budget.period) >= today && rest.gt(0) ? rest : ZERO, scheduled: planned }];
+    return [{ categoryId: cat.id, name: cat.name, period: budget.period, date: periodEnd(budget.period), amount: periodEnd(budget.period) >= today && rest.gt(0) ? rest : ZERO, scheduled: planned, scheduledItems: scheduledItems.get(k) ?? [] }];
   }));
 }

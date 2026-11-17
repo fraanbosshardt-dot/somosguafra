@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
-import { addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
+import { parseDate, validPeriod, addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { PageHead, Tabs } from "@/components/page";
 import { projectedItems } from "@/server/recurring";
 import { projectedAction } from "@/app/actions/modules";
@@ -14,7 +14,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const { workspace } = await requireWorkspace();
   const today = todayIn(workspace.timezone);
   const sp = await searchParams;
-  const p = /^\d{4}-\d{2}$/.test(sp.mes ?? "") ? sp.mes! : period(today);
+  const p = validPeriod(sp.mes) ? sp.mes! : period(today);
   const from = periodStart(p), to = periodEnd(p);
   const obs = await getDb().obligation.findMany({ where: { workspaceId: workspace.id, dueDate: { gte: from, lte: to }, status: { not: "CANCELLED" } }, orderBy: { dueDate: "asc" } });
   // Proyectados: lo que tus pagos que se repiten van a generar este mes (desde hoy en adelante).
@@ -29,7 +29,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const weeks = Math.ceil((lead + to.getUTCDate()) / 7);
   // Día elegido (al tocar un número): su lista va debajo. Por defecto, hoy si está en este mes.
   const todayKey = today.toISOString().slice(0, 10);
-  const sel = /^\d{4}-\d{2}-\d{2}$/.test(sp.dia ?? "") && sp.dia!.startsWith(p) ? sp.dia! : todayKey.startsWith(p) ? todayKey : null;
+  const sel = parseDate(sp.dia) && sp.dia!.startsWith(p) ? sp.dia! : todayKey.startsWith(p) ? todayKey : null;
   const selItems = sel ? byDay.get(sel) ?? [] : [];
   const selProj = sel ? projByDay.get(sel) ?? [] : [];
   const selDate = sel ? new Date(`${sel}T00:00:00Z`) : null;

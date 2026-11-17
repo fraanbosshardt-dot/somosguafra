@@ -4,6 +4,9 @@ import { getDb } from "@/lib/db";
 import { canAfford, forecast } from "@/server/forecast";
 import { formatMoney, parseAmount, ZERO } from "@/lib/money";
 import { addMonths, fmtDate, fmtPeriod, isoDate, parseDate, period, periodStart, todayIn } from "@/lib/dates";
+import { ActionForm, Submit } from "@/components/forms";
+import { privateSimulationAction } from "./actions";
+import { openSimulation } from "@/server/private-simulation";
 import { PageHead, Tabs } from "@/components/page";
 import { ProGate } from "@/components/pro";
 import { ConfirmSubmit } from "@/components/confirm-submit";
@@ -14,8 +17,13 @@ export const metadata: Metadata = { title: "Simulador" };
 type SP = Record<string, string | undefined>;
 
 export default async function Simulator({ searchParams }: { searchParams: Promise<SP> }) {
-  const { workspace, plan } = await requireWorkspace();
-  const sp = await searchParams;
+  const { workspace, plan, user } = await requireWorkspace();
+  const raw = await searchParams;
+  const unlocked = raw.sim ? openSimulation(raw.sim, user.id, workspace.id) : null;
+  const sp: SP = { tab: raw.tab, preset: raw.preset, esc: raw.esc, lleno: raw.lleno, ...(unlocked ?? {}) };
+  const expired = !!raw.sim && !unlocked;
+  const legacy = !raw.sim && ["precio", "total", "colchon", "extra", "invertir", "gastos", "sin"].some((k) => !!raw[k]);
+  const privacyNotice = expired ? <p className="notice a" role="status">Este cálculo venció o corresponde a otro espacio. Volvé a calcular con tus datos.</p> : legacy ? <p className="notice" role="status">Para proteger tus datos, volvé a ingresar los importes de este cálculo. Los nuevos enlaces no los muestran en la dirección.</p> : null;
   const tab = sp.tab === "escenarios" ? "escenarios" : "cuotas";
   const cur = workspace.baseCurrency;
   const today = todayIn(workspace.timezone);
@@ -34,10 +42,10 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
     return (
       <>
         <PageHead crumb="Planificar" title="Simulador" desc="Probá una decisión antes de tomarla. Nada de esto cambia tus datos." />
-        {tabs}
+        {tabs}{privacyNotice}
       <div className="split sim">
           {/* Al calcular, la pantalla baja sola hasta el resultado (en el celular queda debajo del formulario). */}
-          <form className="card" method="get" action="/app/simulador#resultado" style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "start" }}>
+          <ActionForm action={privateSimulationAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "start" }}>
             <h3>¿Qué querés probar?</h3>
             <label className="field">Es…<select name="tipo" defaultValue={loan ? "prestamo" : "compra"}><option value="compra">Una compra en cuotas</option><option value="prestamo">Un préstamo (te prestan plata)</option></select></label>
             <label className="field">{loan ? "¿Cuánto te prestan?" : "Precio de contado"}<input name="precio" inputMode="decimal" placeholder="0,00" defaultValue={sp.precio ?? ""} /></label>
@@ -47,14 +55,14 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
               <label className="field">{loan ? "Total a devolver (todas las cuotas)" : "Total financiado"}<input name="total" inputMode="decimal" placeholder={loan ? "Ej.: cuota × cantidad" : "Solo si es con interés"} defaultValue={sp.total ?? ""} /></label></div>
             {loan && <p className="sub" style={{ margin: 0 }}>Para un préstamo, elegí “Con interés” y poné cuánto devolvés en total. La plata entra este mes y las cuotas salen después.</p>}
             <label className="field">Colchón mínimo que querés mantener<input name="colchon" inputMode="decimal" placeholder="0,00" defaultValue={sp.colchon ?? ""} /></label>
-            <div><button className="btn pri" type="submit">Calcular</button></div>
+            <div><Submit pending="Calculando…">Calcular</Submit></div>
             <p className="sub">Mira tu dinero de hoy y todo lo que ya sabés que entra y sale, mes a mes, y le suma las cuotas.</p>
-          </form>
+          </ActionForm>
           <div id="resultado" style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, scrollMarginTop: 72 }}>
             {!r ? <div className="empty">Cargá el precio y las cuotas para ver si te alcanza.</div> : (
               <>
                 <div className={`card verdict ${r.ok ? "yes" : "no"}`}>
-                  <div className="verdict-big">{r.ok ? (loan ? "Sí, lo podés pagar" : "Sí, podés") : "No te conviene"}</div>
+                  <div className="verdict-big">{r.ok ? "Alcanza según tu proyección" : "Tu proyección queda por debajo del colchón"}</div><p className="sub">Depende de los ingresos, gastos y estimaciones que cargaste. No es una garantía ni mueve dinero.</p>
                   {loan && price && <p className="sub" style={{ margin: "4px 0 0" }}>Te prestan {fm(price)} y devolvés {fm(r.total)}: el préstamo te cuesta {fm(r.total.minus(price))}.</p>}
                   <p style={{ margin: "6px 0 0" }}>{r.installments > 1 ? `${r.installments} cuotas de ${fm(r.cuota)}` : `Un pago de ${fm(r.total)}`}. {r.ok
                     ? `Tu saldo más bajo sería ${fm(r.worst.min)}${r.worst.minDate ? ` (${fmtDate(r.worst.minDate)})` : ""}, sin bajar de tu colchón.`
@@ -83,7 +91,7 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
   // Escenario guardado abierto: sus ajustes se usan como si fueran los del formulario.
   const open = sp.esc ? saved.find((x) => x.id === sp.esc) : undefined;
   if (open) Object.assign(sp, open.params as SP);
-  const PRESETS: Record<string, SP> = { base: {}, optimista: { gastos: "-10", extra: "1000000" }, pesimista: { gastos: "20", sin: incomeRules[0]?.id } };
+  const PRESETS: Record<string, SP> = { base: {}, custom: {}, optimista: { gastos: "-10", extra: "1000000" }, pesimista: { gastos: "20", sin: incomeRules[0]?.id } };
   const preset = sp.preset && PRESETS[sp.preset] ? sp.preset : sp.gastos || sp.extra || sp.sin || sp.invertir ? "custom" : "base";
   const v = preset === "custom" ? sp : PRESETS[preset];
   const months = 12;
@@ -103,8 +111,8 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHead crumb="Planificar" title="Simulador" desc="Probá una decisión antes de tomarla. Nada de esto cambia tus datos." />
-      {tabs}
-      <div className="presets">{["base", "optimista", "pesimista", "custom"].map((k) => <a key={k} className={`preset ${preset === k ? "on" : ""}`} href={k === "custom" ? "/app/simulador?tab=escenarios&gastos=0" : `/app/simulador?tab=escenarios&preset=${k}`}><b>{k === "base" ? "Base" : k === "optimista" ? "Optimista" : k === "pesimista" ? "Pesimista" : "Personalizado"}</b><span>{desc[k]}</span></a>)}</div>
+      {tabs}{privacyNotice}
+      <div className="presets">{["base", "optimista", "pesimista", "custom"].map((k) => <a key={k} className={`preset ${preset === k ? "on" : ""}`} href={k === "custom" ? "/app/simulador?tab=escenarios&preset=custom" : `/app/simulador?tab=escenarios&preset=${k}`}><b>{k === "base" ? "Base" : k === "optimista" ? "Optimista" : k === "pesimista" ? "Pesimista" : "Personalizado"}</b><span>{desc[k]}</span></a>)}</div>
       {saved.length > 0 && (
         <div className="card"><div className="chead"><h3>Tus escenarios guardados</h3><span className="sub">{saved.length} de {MAX_SCENARIOS}</span></div>
           <div className="list">{saved.map((x) => (
@@ -117,15 +125,15 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
       )}
       {sp.lleno && <div className="notice a"><span>Ya tenés {MAX_SCENARIOS} escenarios guardados. Borrá uno para guardar otro.</span></div>}
       <div className="split sim">
-        <form className="card" method="get" action="/app/simulador#resultado" style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "start" }}>
+        <ActionForm action={privateSimulationAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "start" }}>
           <input type="hidden" name="tab" value="escenarios" />
-          <h3>Ajustes</h3>
+          <h3>Ajustes</h3><p className="sub">Los importes se envían de forma privada y no quedan visibles en la dirección. Cada cálculo vence después de una hora.</p>
           <label className="field">Cambio en tus gastos (%)<input name="gastos" inputMode="numeric" defaultValue={String(expensePct)} /></label>
           <label className="field">Ingreso extra el mes que viene<input name="extra" inputMode="decimal" defaultValue={v.extra ?? ""} placeholder="0,00" /></label>
           <label className="field">Invertir por mes<input name="invertir" inputMode="decimal" defaultValue={v.invertir ?? ""} placeholder="0,00" /></label>
           <label className="field">Perder un ingreso<select name="sin" defaultValue={v.sin ?? ""}><option value="">Ninguno</option>{incomeRules.map((r) => <option key={r.id} value={r.id}>{r.description}</option>)}</select></label>
-          <div><button className="btn pri" type="submit">Simular</button></div>
-        </form>
+          <div><Submit pending="Simulando…">Simular</Submit></div>
+        </ActionForm>
         <div id="resultado" style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0, scrollMarginTop: 72 }}>
           <div className="card" style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <div className="fstep"><span>En 12 meses (base)</span><b className="num">{fm(base.rows.at(-1)!.end)}</b></div>

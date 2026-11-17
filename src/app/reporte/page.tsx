@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { monthlyReport } from "@/server/financial-summaries";
 import type { Metadata } from "next";
 import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { dec, formatMoney, ZERO } from "@/lib/money";
-import { addMonths, fmtDateNum, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
+import { validPeriod, addMonths, fmtDateNum, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { BRAND } from "@/lib/brand";
 import { PrintButton } from "./print-button";
 
@@ -11,47 +13,42 @@ export const metadata: Metadata = { title: "Reporte del mes", robots: { index: f
 export const dynamic = "force-dynamic";
 
 // Reporte de un mes para imprimir o guardar como PDF (Pro): totales, gastos por categoría y todos los movimientos.
-export default async function Report({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+export default async function Report({ searchParams }: { searchParams: Promise<{ mes?: string; cuenta?: string }> }) {
   const { workspace, plan } = await requireWorkspace();
   const sp = await searchParams;
   const p0 = period(todayIn(workspace.timezone));
-  const p = /^\d{4}-\d{2}$/.test(sp.mes ?? "") && sp.mes! <= p0 ? sp.mes! : p0;
+  const p = validPeriod(sp.mes) && sp.mes! <= p0 ? sp.mes! : p0;
   if (!(await canUse(plan, "informes"))) {
     return <main className="report"><h1>Reporte en PDF</h1><p>Guardar el reporte del mes en PDF es parte de Pro. <Link className="lnk" href="/app/configuracion?tab=plan">Ver Pro</Link></p></main>;
   }
-  const cur = workspace.baseCurrency;
-  const tx = await getDb().transaction.findMany({
-    where: { workspaceId: workspace.id, effectiveDate: { gte: periodStart(p), lte: periodEnd(p) }, reversalOfId: null, reversedBy: null, NOT: { type: "TRANSFER", direction: "IN" } },
-    include: { account: { select: { name: true } }, category: { select: { name: true } } },
-    orderBy: [{ effectiveDate: "asc" }, { createdAt: "asc" }],
-  });
-  const inBase = tx.filter((t) => t.currency === cur);
-  const spent = inBase.filter((t) => t.type === "EXPENSE" || t.type === "DEBT_PAYMENT");
-  const income = inBase.filter((t) => t.type === "INCOME").reduce((s, t) => s.plus(dec(t.amount)), ZERO);
-  const expense = spent.reduce((s, t) => s.plus(dec(t.amount)), ZERO);
-  const byCat = new Map<string, typeof ZERO>();
-  for (const t of spent) { const k = t.category?.name ?? "Sin categoría"; byCat.set(k, (byCat.get(k) ?? ZERO).plus(dec(t.amount))); }
-  const cats = [...byCat.entries()].sort((a, b) => b[1].comparedTo(a[1]));
+  const cur = workspace.baseCurrency, db = getDb();
+  const data = await monthlyReport(db, workspace.id, cur, p, sp.cuenta);
+  if (!data) notFound();
+  const { account, movements: tx, summary } = data;
+  const { income, expense } = summary.totals[0];
+  const cats = summary.rows.map((r) => [r.name, r.values[0]] as const);
+  const monthLink = (mes: string) => `/reporte?${new URLSearchParams({ mes, ...(account ? { cuenta: account.id } : {}) })}`;
   const f = (v: Parameters<typeof formatMoney>[0]) => formatMoney(v, cur);
   return (
     <main className="report">
       <div className="report-bar no-print">
-        <Link className="btn" href="/app/informes">← Volver</Link>
+        <Link className="btn" href={`/app/informes?${new URLSearchParams({ mes: p, ...(account ? { cuenta: account.id } : {}) })}`}>← Volver</Link>
         <div className="acts">
-          <Link className="btn sm" href={`/reporte?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link>
+          <Link className="btn sm" href={monthLink(addMonths(p, -1))} aria-label="Mes anterior">‹</Link>
           <b>{fmtPeriod(p)}</b>
-          {p < p0 && <Link className="btn sm" href={`/reporte?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link>}
+          {p < p0 && <Link className="btn sm" href={monthLink(addMonths(p, 1))} aria-label="Mes siguiente">›</Link>}
         </div>
         <PrintButton />
       </div>
       <header className="report-h">
         <b className="report-brand">{BRAND.name}</b>
         <h1>Reporte de {fmtPeriod(p).toLowerCase()}</h1>
-        <p>{workspace.name} · en {cur} · generado el {fmtDateNum(new Date())}</p>
+        <p>{workspace.name}{account ? ` · ${account.name}` : ""} · en {cur} · generado el {fmtDateNum(new Date())}</p>
       </header>
+      <p>Por mes del gasto. Las fechas de los movimientos pueden corresponder a otro mes de pago. Los reintegros reducen el gasto; transferencias y correcciones no son ingresos o gastos.</p>
       <section className="report-kpis">
-        <div><small>Entró</small><b>{f(income)}</b></div>
-        <div><small>Salió</small><b>{f(expense)}</b></div>
+        <div><small>Ingresos netos</small><b>{f(income)}</b></div>
+        <div><small>Gastos netos</small><b>{f(expense)}</b></div>
         <div><small>Resultado</small><b>{formatMoney(income.minus(expense), cur, { sign: true })}</b></div>
       </section>
       {cats.length > 0 && (

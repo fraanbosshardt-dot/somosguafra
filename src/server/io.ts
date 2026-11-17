@@ -46,8 +46,9 @@ export const csvCell = (v: unknown) => {
 
 const MOVE_HEAD = ["Fecha", "Concepto", "Tipo", "Corresponde a", "Cuenta", "Categoría", "Moneda", "Importe"];
 const TYPE_ES: Record<string, string> = { INCOME: "Ingreso", EXPENSE: "Gasto", TRANSFER: "Transferencia", ADJUSTMENT: "Corrección de saldo", DEBT_PAYMENT: "Cuota de deuda", CARD_PAYMENT: "Pago de tarjeta", INVESTMENT: "Inversión", DEBT_DISBURSEMENT: "Préstamo recibido" };
-async function movementList(db: Db, ws: string) {
-  return db.transaction.findMany({ where: { workspaceId: ws }, include: { account: true, category: true }, orderBy: { effectiveDate: "asc" } });
+export type MovementExportFilter = { from: string; to: string; currency: string; accountId?: string };
+async function movementList(db: Db, ws: string, filter?: MovementExportFilter) {
+  return db.transaction.findMany({ where: { workspaceId: ws, ...(filter ? { economicPeriod: { gte: filter.from, lte: filter.to }, currency: filter.currency, ...(filter.accountId ? { accountId: filter.accountId } : {}) } : {}) }, include: { account: true, category: true }, orderBy: { effectiveDate: "asc" } });
 }
 
 export async function exportMovementsCsv(db: Db, ws: string) {
@@ -57,8 +58,8 @@ export async function exportMovementsCsv(db: Db, ws: string) {
 }
 
 // Excel de verdad (.xlsx): fechas como fecha y montos como número, listos para sumar o filtrar.
-export async function exportMovementsXlsx(db: Db, ws: string) {
-  const tx = await movementList(db, ws);
+export async function exportMovementsXlsx(db: Db, ws: string, filter?: MovementExportFilter) {
+  const tx = await movementList(db, ws, filter);
   const rows = tx.map((t) => [t.effectiveDate, t.description, TYPE_ES[t.type] ?? t.type, t.economicPeriod, t.account.name, t.category?.name ?? "", t.currency, (t.direction === "IN" ? 1 : -1) * Number(t.amount)]);
   return writeXlsx("Movimientos", MOVE_HEAD, rows);
 }
