@@ -14,6 +14,7 @@ import { CASE_STATUS } from "@/lib/chat-help";
 import { ReplyBox } from "../../reply-box";
 import { SupportRefresh } from "@/components/support-refresh";
 import { savedReplies } from "@/server/settings";
+import { botChatStatus } from "@/lib/chat-session";
 export default async function Conversation({
   params,
 }: {
@@ -30,6 +31,7 @@ export default async function Conversation({
     });
     if (!chat) notFound();
     if (chat.contactId) redirect(`/admin/soporte/contact/${chat.contactId}`);
+    const status = botChatStatus(chat.botResolved, chat.updatedAt);
     return (
       <>
         <Link className="lnk" href="/admin/soporte?canal=bot">
@@ -40,7 +42,7 @@ export default async function Conversation({
           <h1>{chat.code}</h1>
           <p className="sub">
             Atención automática ·{" "}
-            {chat.botResolved ? "Resuelta por la persona" : "Sin derivación"}.
+            {status === "RESOLVED" ? "Resuelta por la persona" : status === "CLOSED" ? "Finalizada por inactividad" : "Sin derivación"}.
             La persona puede pedir atención del equipo desde Guafra.
           </p>
           <SupportThread
