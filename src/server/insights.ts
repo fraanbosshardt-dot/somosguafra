@@ -24,7 +24,7 @@ export async function insights(db: Db, ws: string, currency: string, today: Date
     forecast(db, ws, { currency, today, months: 6 }),
     db.debt.findMany({ where: { workspaceId: ws, status: "ACTIVE", cft: { not: null } }, orderBy: { cft: "desc" }, take: 1 }),
     db.creditCard.count({ where: { workspaceId: ws, active: true, parentId: null, alertPct: { not: null } } }),
-    budgetFor(db, ws, period(today), currency),
+    budgetFor(db, ws, period(today), currency, today),
     goalsOverview(db, ws, today),
     db.account.findMany({ where: { workspaceId: ws, active: true, currency, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } }, select: { id: true } }),
     readBalances(db, ws, null),
@@ -67,7 +67,10 @@ export async function insights(db: Db, ws: string, currency: string, today: Date
   }
 
   const over = b.rows.filter((r) => r.pct != null && r.pct > 100);
-  if (over.length) out.push({ level: "warn", title: "Te pasaste del presupuesto", detail: over.map((r) => `${r.name} ${Math.round(r.pct!)}%`).join(" · "), href: "/app/presupuestos" });
+  const spentOver = over.filter((r) => r.limit && r.spent.gt(r.limit));
+  const plannedOver = over.filter((r) => !spentOver.includes(r));
+  if (spentOver.length) out.push({ level: "warn", title: "Superaste el límite de gasto", detail: spentOver.map((r) => r.name).join(" · "), href: "/app/presupuestos" });
+  if (plannedOver.length) out.push({ level: "warn", title: "Vas a superar el presupuesto con lo previsto", detail: plannedOver.map((r) => `${r.name}: ${Math.round(r.pct!)}% entre gastado y previsto`).join(" · "), href: "/app/presupuestos" });
 
   const goals = allGoals.filter((g) => g.onTrack === false);
   if (goals.length) out.push({ level: "info", title: "Objetivos que no llegan a la fecha", detail: goals.map((g) => `${g.goal.name}: necesitás ${formatMoney(g.needed, g.goal.currency)} por mes`).join(" · "), href: "/app/objetivos" });

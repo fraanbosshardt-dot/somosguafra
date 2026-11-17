@@ -366,10 +366,11 @@ export async function saveBudgetAction(_: FormState, fd: FormData): Promise<Form
   return { ok: "Presupuesto guardado. La proyección quedó actualizada." };
 }
 
-export async function copyBudgetAction(fd: FormData) {
+export async function copyBudgetAction(_: FormState, fd: FormData): Promise<FormState> {
   const { workspace } = await requireWorkspace();
-  try { await copyBudget(getDb(), workspace.id, str(fd, "from"), str(fd, "to"), workspace.baseCurrency); } catch { /* sin presupuesto previo: no hace nada */ }
+  try { await copyBudget(getDb(), workspace.id, str(fd, "from"), str(fd, "to"), workspace.baseCurrency); } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
+  redirect(`/app/presupuestos?mes=${encodeURIComponent(str(fd, "to"))}&copiado=1`);
 }
 
 export async function createGoalAction(_: FormState, fd: FormData): Promise<FormState> {

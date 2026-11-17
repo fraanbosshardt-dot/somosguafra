@@ -1,8 +1,9 @@
+import { insights } from "@/server/insights";
 import { matchChatHelp } from "@/lib/chat-help";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { startTestDb } from "./helpers/testdb";
 import { createWorkspaceForUser } from "@/server/workspace";
-import { budgetFor, copyBudget, saveBudget } from "@/server/planning";
+import { budgetFor, budgetDetail, copyBudget, saveBudget } from "@/server/planning";
 import { forecast } from "@/server/forecast";
 import { budgetProjection } from "@/server/budget-projection";
 import { createAccount, recordMovement, payObligation, cancelObligation, reverseTransaction } from "@/server/ledger";
@@ -175,4 +176,85 @@ it("el bot distingue revisión de registros de reclamos por cobros reales de Pro
   expect(matchChatHelp("Veo pagos repetidos en próximos").topic?.id).toBe("duplicate-payments");
   expect(matchChatHelp("Me cobraron Pro dos veces")).toMatchObject({ topic: null, escalate: true, urgent: true, area: "pagos" });
   expect(matchChatHelp("Cómo armo un presupuesto").topic?.id).toBe("budgets");
+});
+
+it("el margen incluye programación sin activar proyección y no cambia al activarla ni al materializar", async () => {
+  const s = await setup(false);
+  const rule = await createRule(t.db, s.ws, { direction: "PAYABLE", description: "Servicio futuro", amount: "100000", currency: "ARS", categoryId: s.cat.id, frequency: "MONTHLY", dayOfMonth: 20, startDate: d("2026-11-20") });
+  const row = async () => (await budgetFor(t.db, s.ws, "2026-11", "ARS", today)).rows.find((r) => r.id === s.cat.id)!;
+  expect((await row()).available?.toString()).toBe("400000");
+  expect((await row()).estimate.toString()).toBe("0");
+  expect((await row()).scheduledItems[0].description).toBe("Servicio futuro");
+  await saveBudget(t.db, s.ws, "2026-11", "ARS", [{ categoryId: s.cat.id, limit: "500000", projectRemaining: true }]);
+  expect((await row()).available?.toString()).toBe("400000");
+  expect((await row()).estimate.toString()).toBe("400000");
+  await materializeOccurrence(t.db, s.ws, rule.id, d("2026-11-20"));
+  expect((await row()).available?.toString()).toBe("400000");
+  expect((await row()).scheduled.toString()).toBe("0");
+  expect((await row()).committed.toString()).toBe("100000");
+});
+
+it("programación de tarjeta y exceso previsto se calculan aunque la estimación esté apagada", async () => {
+  const s = await setup(false);
+  const card = await createCard(t.db, s.ws, { issuer: "Demo", name: "Tarjeta demo", currency: "ARS", closingDay: 25, dueDay: 5, limit: "900000", startDate: today });
+  await addSubscription(t.db, s.ws, { cardId: card.id, description: "Servicio", amount: "600000", categoryId: s.cat.id, dayOfMonth: 20, startDate: d("2026-11-20") });
+  const row = (await budgetFor(t.db, s.ws, "2026-11", "ARS", today)).rows.find((r) => r.id === s.cat.id)!;
+  expect(row.spent.toString()).toBe("0"); expect(row.scheduled.toString()).toBe("600000");
+  expect(row.pct).toBe(120); expect(row.available?.toString()).toBe("-100000"); expect(row.estimate.toString()).toBe("0");
+});
+
+it("copiar no silencia origen vacío, meses inválidos ni reemplaza límites existentes", async () => {
+  const s = await setup();
+  await expect(copyBudget(t.db, s.ws, "2026-10", "2026-12", "ARS")).rejects.toThrow(/no tiene presupuesto/);
+  await expect(copyBudget(t.db, s.ws, "2026-99", "2026-12", "ARS")).rejects.toThrow(/meses/);
+  await expect(copyBudget(t.db, s.ws, "2026-11", "2026-11", "ARS")).rejects.toThrow(/meses/);
+  await saveBudget(t.db, s.ws, "2026-12", "ARS", [{ categoryId: s.cat.id, limit: "123456.78" }]);
+  await expect(copyBudget(t.db, s.ws, "2026-11", "2026-12", "ARS")).rejects.toThrow(/ya tiene/);
+  expect((await budgetFor(t.db, s.ws, "2026-12", "ARS", today)).totals.limit.toString()).toBe("123456.78");
+});
+
+it("detalle concilia mes económico, subcategorías, reintegros y pendientes; aísla espacios y moneda", async () => {
+  const s = await setup(); const other = await setup();
+  const child = await t.db.category.create({ data: { workspaceId: s.ws, kind: "EXPENSE", name: "Detalle", parentId: s.cat.id } });
+  const tx = await recordMovement(t.db, s.ws, { kind: "EXPENSE", description: "Compra", amount: "100000", accountId: s.bank.id, categoryId: child.id, status: "PAID", effectiveDate: today });
+  await recordMovement(t.db, s.ws, { kind: "EXPENSE", description: "Pendiente", amount: "30000", accountId: s.bank.id, categoryId: s.cat.id, status: "PENDING", dueDate: d("2026-11-10") });
+  const expense = await budgetDetail(t.db, s.ws, "2026-11", "ARS", s.cat.id, "gastos", 1, today);
+  expect(expense?.count).toBe(1); expect(expense?.expenses[0].description).toBe("Compra");
+  const pending = await budgetDetail(t.db, s.ws, "2026-11", "ARS", s.cat.id, "previstos", 1, today);
+  expect(pending?.pending).toHaveLength(1); expect(pending?.row.committed.toString()).toBe("30000");
+  expect(await budgetDetail(t.db, other.ws, "2026-11", "ARS", s.cat.id, "gastos", 1, today)).toBeNull();
+  expect((await budgetDetail(t.db, s.ws, "2026-11", "USD", s.cat.id, "gastos", 1, today))?.expenses).toHaveLength(0);
+  await reverseTransaction(t.db, s.ws, tx.transactionId!);
+  const reversed = await budgetDetail(t.db, s.ws, "2026-11", "ARS", s.cat.id, "gastos", 1, today);
+  expect(reversed?.row.spent.toString()).toBe("0"); expect(reversed?.count).toBe(2);
+});
+
+it("copia concurrente conserva un solo presupuesto y avisa si todas las categorías están archivadas", async () => {
+  const s = await setup();
+  const results = await Promise.allSettled([copyBudget(t.db, s.ws, "2026-11", "2027-01", "ARS"), copyBudget(t.db, s.ws, "2026-11", "2027-01", "ARS")]);
+  expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  expect((await budgetFor(t.db, s.ws, "2027-01", "ARS", today)).totals.limit.toString()).toBe("500000");
+  await t.db.category.update({ where: { id: s.cat.id }, data: { archived: true } });
+  await expect(copyBudget(t.db, s.ws, "2026-11", "2027-02", "ARS")).rejects.toThrow(/categorías activas/);
+});
+
+it("detalle pagina registros completos sin confundir fecha de pago con mes del gasto", async () => {
+  const s = await setup();
+  await t.db.transaction.createMany({ data: Array.from({ length: 51 }, (_, i) => ({ workspaceId: s.ws, accountId: s.bank.id, type: "EXPENSE" as const, direction: "OUT" as const, amount: "10", currency: "ARS", categoryId: s.cat.id, description: `Registro ${i}`, effectiveDate: d("2026-12-01"), economicPeriod: "2026-11" })) });
+  const first = (await budgetDetail(t.db, s.ws, "2026-11", "ARS", s.cat.id, "gastos", 1, today))!;
+  const last = (await budgetDetail(t.db, s.ws, "2026-11", "ARS", s.cat.id, "gastos", 999, today))!;
+  expect(first.count).toBe(51); expect(first.expenses).toHaveLength(50); expect(last.page).toBe(2); expect(last.expenses).toHaveLength(1);
+  expect(first.row.spent.toString()).toBe("510"); expect(first.expenses.some((tx) => tx.id === last.expenses[0].id)).toBe(false);
+});
+
+it("alertas distinguen exceso real de exceso por compromisos sin exigir proyección", async () => {
+  const s = await setup(false);
+  await createRule(t.db, s.ws, { direction: "PAYABLE", description: "Compromiso", amount: "600000", currency: "ARS", categoryId: s.cat.id, frequency: "MONTHLY", dayOfMonth: 20, startDate: d("2026-11-20") });
+  const predicted = await insights(t.db, s.ws, "ARS", today);
+  expect(predicted.some((a) => a.title === "Vas a superar el presupuesto con lo previsto")).toBe(true);
+  expect(predicted.some((a) => a.title === "Superaste el límite de gasto")).toBe(false);
+  await recordMovement(t.db, s.ws, { kind: "EXPENSE", description: "Compra", amount: "600001", accountId: s.bank.id, categoryId: s.cat.id, status: "PAID", effectiveDate: today });
+  const actual = await insights(t.db, s.ws, "ARS", today);
+  expect(actual.some((a) => a.title === "Superaste el límite de gasto")).toBe(true);
+  expect(actual.some((a) => a.title === "Vas a superar el presupuesto con lo previsto")).toBe(false);
 });

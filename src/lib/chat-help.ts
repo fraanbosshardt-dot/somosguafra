@@ -191,7 +191,7 @@ export const CHAT_TOPICS = [
     words: ["presupuesto", "limites de gasto", "categoria de gasto"],
     area: "soporte",
     answer:
-      "En Presupuestos elegí el mes y agregá las categorías que querés controlar. Cada una tiene su límite, gasto real y pendientes. Un límite no es un gasto. Activá «Incluir lo que queda en la proyección» para estimar el remanente al fin de ese mes, descontando lo gastado y lo ya previsto, incluidos recurrentes y suscripciones por categoría. La estimación no crea pagos ni movimientos y no se extiende sola a otros meses. Las categorías sin límite se muestran por separado y no descuentan del presupuesto. Podés corregir los límites sin borrar movimientos.",
+      "En Presupuestos elegí el mes y un límite por categoría. El margen es el límite menos lo gastado, pendiente y programado; no es tu saldo bancario. «Ver gastos» y «Ver previstos» explican los importes. Con «Contar el margen en mi flujo de caja» se estima lo restante al final de ese mes, sin crear gastos ni pagos. Para repetirlo otro mes, copiá el presupuesto.",
     link: "/app/presupuestos",
     linkLabel: "Ver Presupuestos",
   },

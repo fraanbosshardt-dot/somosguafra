@@ -1391,3 +1391,11 @@ input[list]{appearance:none;-webkit-appearance:none}
 
 .bud-name b{overflow-wrap:anywhere}
 @media(max-width:420px){.bud-row{grid-template-columns:minmax(0,1fr) 36px;gap:12px}.bud-row>.bud-name{grid-column:1;grid-row:1}.bud-row>.bud-amt{grid-column:1 / -1;grid-row:2}.bud-row>.dots{grid-column:2;grid-row:1}.bud-row>.budget-project{grid-row:3}.bud-total{flex-wrap:wrap;gap:8px}}
+
+/* Presupuestos: desglose legible y explicaciones bajo demanda. */
+.budget-breakdown{display:grid;gap:10px;margin:0;font-size:14px}
+.budget-breakdown>div{display:flex;justify-content:space-between;gap:16px}
+.budget-breakdown dt{color:var(--muted)}.budget-breakdown dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.budget-status{margin:0;line-height:1.5}.budget-project-preview{display:block;font-size:12px;line-height:1.5;margin-top:4px}
+.budget-project>span{min-width:0}.bdg .acts{flex-wrap:wrap;gap:10px}.bdg .budget-estimate{margin:0}
+@media(max-width:640px){.bdg{padding:18px}.bdg-top{flex-wrap:wrap}.bdg-left{margin-left:auto}.budget-breakdown{gap:12px}.bdg .btn{min-height:44px}.budget-project{align-items:flex-start;padding:8px 0}.budget-project input{margin-top:3px}}

@@ -157,7 +157,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
           {dueNow.length > toConfirm.length && <div className="acts" style={{ justifyContent: "center", paddingTop: 10 }}><Link className="btn sm" href="/app/proximos">Ver {dueNow.length - toConfirm.length} más en Próximos pagos</Link></div>}
         </div>
       )}
-      <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
+      <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste ni el margen de tus presupuestos. Para contemplar esas estimaciones, revisá Flujo de caja.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
       {stepsLeft > 0 && (
         <div className="card">
           <div className="chead"><div><h3>Terminá de configurar</h3><p className="sub">{steps.length - stepsLeft} de {steps.length} listos. Con esto Somos Guafra te muestra cuánto vas a tener cada mes.</p></div></div>
