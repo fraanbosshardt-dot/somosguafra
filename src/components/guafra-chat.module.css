@@ -378,23 +378,24 @@
   min-height: 0;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: 18px 16px;
+  padding: 16px;
   background: var(--chat-bg);
 }
 .handoff h2 {
   font-size: 17px;
   font-weight: 600;
   line-height: 1.35;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 .panel > :is(.header,.toolbar,.foot) { flex-shrink: 0; }
 .handoff p {
   font-size: 12px;
-  margin: 6px 0 12px !important;
+  margin: 0 0 8px !important;
 }
+.handoff .options { margin: 12px 0 0; }
 .handoff label {
   display: block;
-  margin: 10px 0;
+  margin: 8px 0;
   font-size: 12px;
 }
 .handoff input,
