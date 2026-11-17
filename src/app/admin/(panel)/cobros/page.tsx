@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Cobros y cupones" };
 export default async function Billing({ searchParams }: { searchParams: Promise<{ pagoerror?: string; suscripciones?: string; pagos?: string }> }) {
   const { pagoerror, suscripciones, pagos } = await searchParams;
   const subPage = pageNumber(suscripciones), paymentPage = pageNumber(pagos);
-  const admin = await requireAdmin();
+  const admin = await requireAdmin("operations");
   const owner = can(admin.role, "owner");
   const db = getDb();
   const [report, coupons] = await Promise.all([adminBillingReport(db, subPage, paymentPage), db.coupon.findMany({ orderBy: { createdAt: "desc" } })]);

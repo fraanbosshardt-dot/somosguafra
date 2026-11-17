@@ -75,6 +75,8 @@ export async function createContactMessage(db: PrismaClient, i: ContactInput) {
         }
         const urgent = i.area === "arrepentimiento" || i.area === "pagos" && i.management === "cancellation";
         const m = await tx.contactMessage.create({ data: { code: ticketCode(), area: i.area, name: i.name.slice(0, 120), email: i.email.toLowerCase().slice(0, 200), subject: i.subject.slice(0, 160), body: i.body.slice(0, 5000), ip: i.ip, userId: i.userId, priority: urgent ? "HIGH" : "NORMAL" } });
+        const { notifySupportTeam } = await import("./support-operations");
+        await notifySupportTeam(tx,"contact",m.id,"NEW",m.createdAt);
         // La constancia queda en la misma transacción. Un fallo de Resend no pierde ni duplica el trámite.
         const links = caseLinks("contact", m.id, m.email, (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, ""));
         await tx.emailOutbox.create({ data: { replyTo: links.replyTo, dedupeKey: `contact/${m.id}/received`, to: m.email, purpose: "support", subject: `Recibimos tu consulta (${m.code})`, text: `Hola ${m.name.split(" ")[0]}:\n\nRecibimos tu consulta sobre "${m.subject}" (${areaName(m.area)}). Tu número de trámite es ${m.code}.\n${BRAND.supportHours}. ${urgent ? "Tu solicitud tiene atención prioritaria. Este número confirma la recepción; la baja o devolución se confirma por separado." : "Soporte Pro tiene prioridad dentro de 1 día hábil; las demás consultas, normalmente en menos de 48 horas hábiles."}\n\n${m.area === "arrepentimiento" ? "Guardá este número: es la constancia de tu pedido de arrepentimiento.\n\n" : ""}Podés ver y continuar esta consulta desde tu enlace privado: ${links.url}\n\nSomos Guafra` } });

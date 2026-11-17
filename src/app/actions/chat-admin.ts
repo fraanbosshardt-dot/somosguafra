@@ -5,6 +5,12 @@ import { CASE_STATUS } from "@/lib/chat-help";
 import { revalidatePath } from "next/cache";
 import type { FormState } from "./auth";
 import { CHAT_TOPICS } from "@/lib/chat-help";
+export async function adminReadSupportNoticesAction(fd:FormData) {
+  const a=await requireAdmin("support"),before=new Date(String(fd.get("before")));
+  if(!Number.isFinite(before.getTime())||before.getTime()>Date.now())return;
+  await getDb().adminSupportNotice.updateMany({where:{recipient:a.email,readAt:null,updatedAt:{lte:before}},data:{readAt:new Date()}});
+  revalidatePath("/admin/soporte/avisos");
+}
 export async function adminChatHelpAction(
   _: FormState,
   fd: FormData,

@@ -38,7 +38,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
     if (sp.plan === "inactivos") return (u.lastSeenAt ?? u.createdAt).getTime() < Date.now() - 30 * 864e5;
     return sp.plan === "pro" ? p === "PRO" : sp.plan === "gratis" ? p === "FREE" : true;
   });
-  const support = can(admin.role, "support");
+  const support = can(admin.role, "owner");
   return (
     <>
       <PageHead title="Clientes" desc="Buscá una cuenta para ver su plan, sesiones y consultas. Nunca se ven sus montos." actions={can(admin.role, "owner") ? <a className="btn" href="/admin/export/usuarios">Descargar lista (Excel)</a> : undefined} />

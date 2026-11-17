@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
@@ -12,6 +13,7 @@ const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ sinpermiso?: string }> }) {
   const admin = await requireAdmin();
+  if(!can(admin.role,"operations"))redirect("/admin/soporte");
   const { sinpermiso } = await searchParams;
   const db = getDb();
   const settings = await planSettings(db);

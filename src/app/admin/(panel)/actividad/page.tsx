@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Actividad" };
 const FILTERS: [string, string, string | null][] = [["", "Todo", null], ["equipo", "Equipo", "admin."], ["ingresos", "Ingresos", "auth."], ["cobros", "Cobros", "billing."], ["tareas", "Tareas", "cron."]];
 
 export default async function Activity({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string }> }) {
-  await requireAdmin();
+  await requireAdmin("operations");
   const sp = await searchParams;
   const f = FILTERS.find(([k]) => k === (sp.ver ?? "")) ?? FILTERS[0];
   const q = (sp.q ?? "").trim().toLowerCase();

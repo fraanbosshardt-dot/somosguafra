@@ -12,6 +12,7 @@ import { reserveSecurityAttempt } from "./security-limits";
 import { BRAND } from "@/lib/brand";
 import { effectivePlan } from "./plans";
 import { botChatStatus } from "@/lib/chat-session";
+import { notifySupportTeam } from "./support-operations";
 
 type Store = Prisma.TransactionClient;
 export type ChatActor = {
@@ -570,6 +571,7 @@ export async function handoffChat(
         priority: urgent ? "HIGH" : "NORMAL",
       },
     });
+    await notifySupportTeam(tx,"contact",m.id,"NEW",m.createdAt);
     await tx.supportMessage.updateMany({
       where: { chatId: c.id },
       data: { contactId: m.id },

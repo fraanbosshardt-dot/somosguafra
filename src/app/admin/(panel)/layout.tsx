@@ -7,20 +7,21 @@ import { AdminNav } from "./nav";
 import { LogoMark } from "@/components/logo-mark";
 import { getDb } from "@/lib/db";
 import "./admin.css";
+import { SupportNotices } from "@/components/support-notices";
 
 export const metadata: Metadata = { title: { default: "Panel interno", template: "%s · Panel Somos Guafra" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 const SECTIONS: { href: string; label: string; icon: string; perm: Perm }[] = [
-  { href: "/admin", label: "Resumen", icon: "chart", perm: "view" },
+  { href: "/admin", label: "Resumen", icon: "chart", perm: "operations" },
   { href: "/admin/usuarios", label: "Clientes", icon: "user", perm: "view" },
-  { href: "/admin/cobros", label: "Cobros y cupones", icon: "card", perm: "view" },
+  { href: "/admin/cobros", label: "Cobros y cupones", icon: "card", perm: "operations" },
   { href: "/admin/soporte", label: "Conversaciones", icon: "help", perm: "support" },
   { href: "/admin/consultas", label: "Consultas del sitio", icon: "info", perm: "view" },
-  { href: "/admin/comunicaciones", label: "Comunicaciones", icon: "bell", perm: "view" },
+  { href: "/admin/comunicaciones", label: "Comunicaciones", icon: "bell", perm: "operations" },
   { href: "/admin/finanzas", label: "Finanzas", icon: "wallet", perm: "owner" },
-  { href: "/admin/sistema", label: "Sistema y seguridad", icon: "shield", perm: "view" },
-  { href: "/admin/actividad", label: "Actividad", icon: "clock", perm: "view" },
+  { href: "/admin/sistema", label: "Sistema y seguridad", icon: "shield", perm: "operations" },
+  { href: "/admin/actividad", label: "Actividad", icon: "clock", perm: "operations" },
   { href: "/admin/equipo", label: "Equipo", icon: "lock", perm: "owner" },
   { href: "/admin/ajustes", label: "Ajustes", icon: "gear", perm: "owner" },
 ];
@@ -37,6 +38,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <Link href="/admin" className="brand" style={{ textDecoration: "none" }}><LogoMark /><b className="wordmark">somosguafra</b></Link>
           <span className="pill b adm-panel-badge">Panel interno</span>
           <span style={{ flex: 1 }} />
+          {can(admin.role,"support")&&<SupportNotices/>}
           <span className="adm-who"><b>{admin.name ?? admin.email}</b><small>{admin.email} · {ROLE_NAMES[admin.role]}</small></span>
           <form action={adminLogoutAction}><button className="btn sm" type="submit">Salir</button></form>
         </div>

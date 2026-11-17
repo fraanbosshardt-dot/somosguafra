@@ -11,7 +11,8 @@ import {
 } from "@/app/actions/admin";
 import { adminChatStateAction } from "@/app/actions/chat-admin";
 import { CASE_STATUS } from "@/lib/chat-help";
-import { ReplyBox } from "../../reply-box";
+import { SupportComposer } from "@/components/support-composer";
+import { activeSupportTeam } from "@/server/support-operations";
 import { SupportRefresh } from "@/components/support-refresh";
 import { savedReplies } from "@/server/settings";
 import { botChatStatus } from "@/lib/chat-session";
@@ -20,7 +21,7 @@ export default async function Conversation({
 }: {
   params: Promise<{ kind: string; id: string }>;
 }) {
-  await requireAdmin("support");
+  const admin = await requireAdmin("support");
   const { kind, id } = await params,
     db = getDb();
   if (!["contact", "ticket", "bot"].includes(kind)) notFound();
@@ -72,6 +73,7 @@ export default async function Conversation({
           },
         });
   if (!c) notFound();
+  const editing=await db.supportReplyLease.findFirst({where:{id:`${kind}/${id}`,expiresAt:{gt:new Date()}},select:{ownerEmail:true}});
   const name = "name" in c ? c.name : c.user.name,
     email = "email" in c ? c.email : c.user.email,
     chat = "chatSession" in c && !!c.chatSession;
@@ -105,27 +107,11 @@ export default async function Conversation({
           kind={kind as "contact" | "ticket"}
           id={id}
           assignedTo={c.assignedTo}
+          revision={c.updatedAt.toISOString()} me={admin.email} team={await activeSupportTeam(db)}
         />
-        <ActionForm
-          resetOnOk
-          action={
-            kind === "contact"
-              ? adminReplyContactAction
-              : adminReplyTicketAction
-          }
-          style={{ display: "grid", gap: 14 }}
-        >
-          <input type="hidden" name="id" value={id} />
-          <ReplyBox
-            replies={await savedReplies(db)}
-            name={name.split(" ")[0]}
-          />
-          <p className="sub">
-            La respuesta queda en el caso. El correo del chat avisa para volver
-            a esta conversación.
-          </p>
-          <Submit pending="Guardando…">Responder al cliente</Submit>
-        </ActionForm>
+        <div>{editing&&<p className="notice">{editing.ownerEmail} está preparando una respuesta. La reserva es temporal.</p>}</div>
+        <SupportComposer key={`composer/${kind}/${id}`} kind={kind as "contact"|"ticket"} id={id} revision={c.updatedAt.toISOString()}
+          name={name.split(" ")[0]} code={c.code} area={"area" in c && c.area!=="soporte" ? c.area : /contrase|correo|acceso|sesión/i.test(c.subject)?"acceso":"soporte"} replies={await savedReplies(db)}/>
         <hr style={{ margin: "28px 0" }} />
         <ActionForm
           key={`${c.status}/${c.priority}`}

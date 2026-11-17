@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const mocks=vi.hoisted(()=>({billing:vi.fn(),alerts:vi.fn(),audit:vi.fn(),authorized:true}));
+vi.mock("@/lib/db",()=>({getDb:()=>({auditLog:{create:mocks.audit}})}));
+vi.mock("@/lib/cron-auth",()=>({cronAuthorized:()=>mocks.authorized}));
+vi.mock("@/server/billing-maintenance",()=>({runBillingMaintenance:mocks.billing}));
+vi.mock("@/server/support-operations",()=>({runSupportOverdueAlerts:mocks.alerts}));
+import {GET} from "@/app/api/cron/cobros/route";
+beforeEach(()=>{vi.clearAllMocks();mocks.authorized=true;mocks.billing.mockResolvedValue({ok:true,checked:2});mocks.alerts.mockResolvedValue(0);mocks.audit.mockResolvedValue({});});
+it("una falla de avisos no modifica el resultado de la conciliación",async()=>{mocks.alerts.mockRejectedValueOnce(Error("temporary"));const r=await GET(new Request("https://example.invalid"));expect(r.status).toBe(200);expect(await r.json()).toEqual({ok:true,checked:2});expect(mocks.audit).toHaveBeenCalledOnce();});
+it("conserva el estado financiero fallido y nunca lo convierte en éxito por avisos",async()=>{mocks.billing.mockResolvedValueOnce({ok:false});expect((await GET(new Request("https://example.invalid"))).status).toBe(503);});
+it("no ejecuta mantenimiento sin autorización",async()=>{mocks.authorized=false;expect((await GET(new Request("https://example.invalid"))).status).toBe(401);expect(mocks.billing).not.toHaveBeenCalled();expect(mocks.alerts).not.toHaveBeenCalled();});

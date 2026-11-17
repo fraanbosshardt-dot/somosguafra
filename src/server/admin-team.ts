@@ -5,15 +5,15 @@ export type AdminRole = "OWNER" | "SUPPORT" | "VIEWER";
 export const ROLE_NAMES: Record<AdminRole, string> = { OWNER: "Dueño", SUPPORT: "Soporte", VIEWER: "Solo mirar" };
 export const ROLE_HELP: Record<AdminRole, string> = {
   OWNER: "Todo: precios, cobros, equipo, borrar cuentas y exportar.",
-  SUPPORT: "Responde consultas, regala días de Pro, cierra sesiones y suspende.",
+  SUPPORT: "Atiende y deriva consultas, usa respuestas guardadas y agrega notas internas. No modifica planes, seguridad ni cobros.",
   VIEWER: "Ve números y listas. No cambia nada.",
 };
 
 // view: mirar. support: atender clientes. owner: dinero, equipo, datos y configuración.
-export type Perm = "view" | "support" | "owner";
+export type Perm = "view" | "support" | "owner" | "operations";
 const RANK: Record<AdminRole, number> = { VIEWER: 0, SUPPORT: 1, OWNER: 2 };
-const NEED: Record<Perm, number> = { view: 0, support: 1, owner: 2 };
-export const can = (role: AdminRole, perm: Perm) => RANK[role] >= NEED[perm];
+const NEED: Record<Exclude<Perm,"operations">, number> = { view: 0, support: 1, owner: 2 };
+export const can = (role: AdminRole, perm: Perm) => perm==="operations" ? role==="OWNER"||role==="VIEWER" : RANK[role] >= NEED[perm];
 
 export const ownerEmails = () => (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 

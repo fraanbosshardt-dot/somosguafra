@@ -63,6 +63,9 @@ export async function drainEmailOutbox(db: Db, limit = 20, timeBudgetMs = 20_000
     if (row.dedupeKey.startsWith("access/")) {
       const { validAccessNotice } = await import("./access-notices");
       relevant = await validAccessNotice(db, row.dedupeKey, new Date(), row.to);
+    } else if (row.dedupeKey.startsWith("staff/")) {
+      const { staffNoticeStillRelevant } = await import("./support-operations");
+      relevant = await staffNoticeStillRelevant(db,row);
     } else if (row.dedupeKey.startsWith("billing/")) {
       relevant = await billingNoticeStillRelevant(db, row);
     }

@@ -13,7 +13,7 @@ import { adminAddNewsAction, adminClearAnnouncementAction, adminDeleteNewsAction
 export const metadata: Metadata = { title: "Comunicaciones" };
 
 export default async function Comms() {
-  const admin = await requireAdmin();
+  const admin = await requireAdmin("operations");
   const owner = can(admin.role, "owner");
   const db = getDb();
   const [ann, news] = await Promise.all([

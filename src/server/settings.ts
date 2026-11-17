@@ -42,7 +42,9 @@ export function announcementFor(a: Announcement, plan: "FREE" | "PRO", now = new
   return a;
 }
 
-export async function savedReplies(db: PrismaClient): Promise<{ title: string; text: string }[]> {
-  const v = await read<{ items?: { title: string; text: string }[] }>(db, "savedReplies");
-  return Array.isArray(v?.items) ? v.items : [];
+export async function savedReplies(db: PrismaClient): Promise<import("@/lib/support-replies").SavedSupportReply[]> {
+  const { DEFAULT_SUPPORT_REPLIES, REPLY_AREAS } = await import("@/lib/support-replies");
+  const v = await read<{ version?:number; items?: import("@/lib/support-replies").SavedSupportReply[] }>(db, "savedReplies");
+  const custom = Array.isArray(v?.items) ? v.items.filter(r=>typeof r?.title==="string" && typeof r?.text==="string").map(r=>({...r,area:r.area && Object.hasOwn(REPLY_AREAS,r.area) ? r.area : "general"})) : [];
+  return v?.version===2 ? custom : [...new Map([...DEFAULT_SUPPORT_REPLIES,...custom].map(r=>[r.title,r])).values()];
 }

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 import type { Db } from "./ledger";
 import { UserError } from "./ledger";
+import { notifySupportTeam, releaseSupportEditor } from "./support-operations";
 export type CaseKind = "ticket" | "contact";
 export const parentWhere = (kind: CaseKind, id: string) => kind === "ticket" ? { ticketId: id } : { contactId: id };
 const secret = () => process.env.AUTH_SECRET && process.env.AUTH_SECRET.length >= 32 ? process.env.AUTH_SECRET : undefined;
@@ -41,6 +42,8 @@ export async function customerReply(db: Db, kind: CaseKind, id: string, input: s
     if (kind === "ticket") await tx.supportTicket.update({ where: { id }, data: { status: "OPEN" } });
     else await tx.contactMessage.update({ where: { id }, data: { status: "OPEN" } });
     if(chat)await tx.chatSession.update({where:{id:chat.id},data:{updatedAt:new Date()}});
+    await releaseSupportEditor(tx,kind,id);
+    await notifySupportTeam(tx,kind,id,"CUSTOMER");
   });
 }
 export const replyKey = (kind: CaseKind, id: string, text: string, lastCustomerId: string) => `reply/${kind}/${id}/${createHash("sha256").update(`${lastCustomerId}:${text}`).digest("hex")}`;
