@@ -193,3 +193,5 @@
 .adm .adm-client-data .kv{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:12px}.adm .adm-client-data .kv dt{margin-top:0}.adm .adm-client-data .kv dd{text-align:right!important}
 
 .adm .adm-tab-panel{align-items:start}.adm .adm-client-secondary{display:grid;gap:16px;align-content:start}
+
+.adm .adm-stats{gap:1px;background:var(--line)}.adm .adm-stats>div{border:0!important;background:var(--surface)}

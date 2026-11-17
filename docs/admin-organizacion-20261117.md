@@ -6,6 +6,7 @@
 - Los chats derivados y los formularios se etiquetaban como Chat/contacto.
 - La ficha del cliente mostraba todas las tareas y hasta 25 eventos en una sola página. Las tarjetas contiguas se estiraban con el historial.
 - El detalle del caso apilaba mensajes, reserva, respuestas guardadas, redacción, responsable y cierre.
+- Una tabla accesible posicionada como tabla absoluta producía desplazamiento vacío bajo los gráficos. Se conserva su contenido dentro de un contenedor visualmente oculto de altura limitada.
 
 ## Organización aplicada
 
@@ -43,6 +44,8 @@ Navegación agrupada en Negocio, Atención y Administración. Los enlaces antigu
 - Recorrido de las once secciones en escritorio y ancho de 390 px. Sin desbordamiento horizontal de página.
 - Borrador conservado al alternar entre conversación y gestión del caso; reserva liberada sin enviar.
 - Página 2 de Consultas permanece en su bandeja y conserva filtros y contador.
+- VIEWER abrió un formulario real de la base ficticia: cero botones de respuesta y cero selectores de estado.
+- Resumen en escritorio: altura de documento reducida de 1916 a 900 px en la misma ventana, conservando los datos accesibles.
 - Capturas de demostración en .data/chat-qa; no contienen información de clientes reales.
 
 ## Límites y reversión

@@ -37,7 +37,7 @@ export function Bars({ data, format = int, label }: { data: { key: string; n: nu
       <div className="bc-x" aria-hidden="true">
         <span>{data[0]?.tick}</span><span>{data[Math.floor(last / 2)]?.tick}</span><span>{data[last]?.tick}</span>
       </div>
-      <table className="sr-only"><tbody>{data.map((d) => <tr key={d.key}><th>{d.tick}</th><td>{format(d.n)}</td></tr>)}</tbody></table>
+      <div className="sr-only"><table><tbody>{data.map((d) => <tr key={d.key}><th>{d.tick}</th><td>{format(d.n)}</td></tr>)}</tbody></table></div>
     </figure>
   );
 }
