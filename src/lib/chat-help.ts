@@ -1,4 +1,6 @@
+import { PRODUCT_CHAT_TOPICS } from "./product-help";
 export const CHAT_TOPICS = [
+  ...PRODUCT_CHAT_TOPICS,
   {
     id: "start",
     title: "Empezar a usar Guafra",

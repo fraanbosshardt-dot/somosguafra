@@ -4,13 +4,13 @@ import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { forecast, type Certainty } from "@/server/forecast";
 import { formatMoney, ZERO } from "@/lib/money";
-import { fmtDate, fmtPeriod, todayIn } from "@/lib/dates";
+import { fmtDate, fmtPeriod, todayIn, period, validPeriod } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { Help } from "@/components/help";
 
 export const metadata: Metadata = { title: "Flujo de caja" };
 
-export default async function Flow({ searchParams }: { searchParams: Promise<{ h?: string; c?: string; detalle?: string }> }) {
+export default async function Flow({ searchParams }: { searchParams: Promise<{ h?: string; c?: string; detalle?: string; mes?: string; pagina?: string }> }) {
   const { workspace, plan } = await requireWorkspace();
   const sp = await searchParams;
   const long = await canUse(plan, "flujo5");
@@ -39,7 +39,11 @@ export default async function Flow({ searchParams }: { searchParams: Promise<{ h
   const f = (v: Parameters<typeof formatMoney>[0], o?: Parameters<typeof formatMoney>[2]) => formatMoney(v, cur, o);
   const max = rows.reduce((m, r) => (r.end.abs().gt(m) ? r.end.abs() : m), ZERO);
   const red = rows.filter((r) => r.min.lt(0));
-  const q = (o: Record<string, string>) => `/app/flujo?${new URLSearchParams({ h: String(h), c, ...(sp.detalle ? { detalle: "1" } : {}), ...o })}`;
+  const q = (o: Record<string, string>) => `/app/flujo?${new URLSearchParams({ h: String(h), c, ...(sp.detalle ? { detalle: "1" } : {}), ...(sp.mes ? {mes:sp.mes} : {}), ...o })}`;
+  const selectedMonth = validPeriod(sp.mes) && rows.some(r => r.period === sp.mes) ? sp.mes! : rows[0].period;
+  const monthEvents = events.filter(e => period(e.date) === selectedMonth);
+  const page = Math.min(Math.max(1, Number.parseInt(sp.pagina ?? "1",10) || 1), Math.max(1,Math.ceil(monthEvents.length/30)));
+  const eventLabels = {pending:"Pendiente", recurring:"Recurrente proyectado", card:"Tarjeta", sim:"Simulación", budget:"Presupuesto estimado"};
   const step = (l: string, v: (typeof rows)[number]["end"]) => <div className="fstep"><span>{l}</span><b className={`num ${v.isNegative() ? "neg" : ""}`}>{f(v)}</b></div>;
   return (
     <>
@@ -66,13 +70,14 @@ export default async function Flow({ searchParams }: { searchParams: Promise<{ h
         <div className="tw"><table>
           <thead><tr>{sp.detalle ? <><th>Mes</th><th className="n">Saldo inicial</th><th className="n">Ya entró</th><th className="n">Ya salió</th><th className="n">Falta entrar</th><th className="n">Falta salir</th><th className="n">Saldo final</th><th className="n">Punto más bajo</th></> : <><th>Mes</th><th className="n mh">Entra</th><th className="n mh">Sale</th><th className="n">Resultado</th><th className="n">Saldo final</th><th className="mh" style={{ width: "26%" }} /></>}</tr></thead>
           <tbody>{rows.map((r) => sp.detalle ? (
-            <tr key={r.period}><td style={{ whiteSpace: "nowrap" }}>{fmtPeriod(r.period)}</td><td className="n">{f(r.start)}</td><td className="n">{f(r.realizedIn)}</td><td className="n">{f(r.realizedOut.neg())}</td><td className="n">{f(r.pendingIn)}</td><td className="n">{f(r.pendingOut.neg())}</td><td className="n"><b className={r.end.isNegative() ? "neg" : ""}>{f(r.end)}</b></td><td className={`n ${r.min.isNegative() ? "neg" : ""}`}>{f(r.min)}</td></tr>
+            <tr key={r.period}><td style={{ whiteSpace: "nowrap" }}><Link className="lnk" href={`${q({mes:r.period,pagina:"1"})}#detalle-mes`}>{fmtPeriod(r.period)}</Link></td><td className="n">{f(r.start)}</td><td className="n">{f(r.realizedIn)}</td><td className="n">{f(r.realizedOut.neg())}</td><td className="n">{f(r.pendingIn)}</td><td className="n">{f(r.pendingOut.neg())}</td><td className="n"><b className={r.end.isNegative() ? "neg" : ""}>{f(r.end)}</b></td><td className={`n ${r.min.isNegative() ? "neg" : ""}`}>{f(r.min)}</td></tr>
           ) : (
-            <tr key={r.period}><td style={{ whiteSpace: "nowrap" }}>{fmtPeriod(r.period)}</td><td className="n pos mh">{f(r.realizedIn.plus(r.pendingIn))}</td><td className="n mh">{f(r.realizedOut.plus(r.pendingOut).neg())}</td><td className="n"><span className={`pill ${r.result.isNegative() ? "r" : "g"}`}>{f(r.result, { sign: true })}</span></td><td className="n"><b className={r.end.isNegative() ? "neg" : ""}>{f(r.end)}</b></td>
+            <tr key={r.period}><td style={{ whiteSpace: "nowrap" }}><Link className="lnk" href={`${q({mes:r.period,pagina:"1"})}#detalle-mes`}>{fmtPeriod(r.period)}</Link></td><td className="n pos mh">{f(r.realizedIn.plus(r.pendingIn))}</td><td className="n mh">{f(r.realizedOut.plus(r.pendingOut).neg())}</td><td className="n"><span className={`pill ${r.result.isNegative() ? "r" : "g"}`}>{f(r.result, { sign: true })}</span></td><td className="n"><b className={r.end.isNegative() ? "neg" : ""}>{f(r.end)}</b></td>
               <td className="mh"><div className="bar" style={{ height: 6 }}><i style={{ width: `${max.isZero() ? 0 : r.end.abs().dividedBy(max).times(100).toNumber()}%`, background: r.end.isNegative() ? "var(--red)" : "var(--ink)" }} /></div></td></tr>
           ))}</tbody>
         </table></div>
       </div>
+      <section id="detalle-mes" className="card product-section" style={{scrollMarginTop:90}}><div className="chead"><div><h2>Qué compone {fmtPeriod(selectedMonth).toLowerCase()}</h2><p className="sub">Abrí otro mes desde la tabla. Estos eventos explican lo que falta desde hoy; los realizados ya están en el saldo inicial.</p></div></div><div className="list">{monthEvents.slice((page-1)*30,page*30).map((e,i) => <div className="li" key={`${e.kind}-${i}`}><div className="grow"><b>{e.description}</b><div className="s">{fmtDate(e.date)} · {eventLabels[e.kind]} · {e.certainty === "CONFIRMED" ? "Confirmado" : e.certainty === "PROBABLE" ? "Estimado" : "Hipotético"}</div></div><span className={`num ${e.amount.isNegative()?"neg":"pos"}`}>{f(e.amount,{sign:true})}</span></div>)}</div>{!monthEvents.length && <p className="sub">No hay eventos futuros en este mes para la vista elegida.</p>}{monthEvents.length > 30 && <nav className="acts" aria-label="Páginas de eventos">{page>1 && <Link className="btn sm" href={`${q({mes:selectedMonth,pagina:String(page-1)})}#detalle-mes`}>Anterior</Link>}<span>Página {page} de {Math.ceil(monthEvents.length/30)}</span>{page*30<monthEvents.length && <Link className="btn sm" href={`${q({mes:selectedMonth,pagina:String(page+1)})}#detalle-mes`}>Siguiente</Link>}</nav>}</section>
       <div className="card">
         <div className="chead"><div><h3>Día a día</h3><p className="sub">Tu saldo proyectado en los próximos 60 días. Las estimaciones de presupuesto se ubican al final de su mes; no son vencimientos reales.</p></div>{lowest && long && <span className={`pill ${lowest.balance.isNegative() ? "r" : ""}`}>Lo más bajo: {f(lowest.balance)} el {fmtDate(lowest.date)}</span>}</div>
         {!long ? (

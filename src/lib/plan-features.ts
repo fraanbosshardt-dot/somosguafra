@@ -5,6 +5,8 @@ export type PlanFeature = { name: string; plan: "free" | "pro"; beta?: boolean; 
 // beta: todavía en desarrollo; se habilita para Pro sin costo extra cuando esté lista.
 export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Cuentas, movimientos, ingresos y gastos", plan: "free" },
+  { name: "Favoritos, compras divididas y resumen mensual", plan: "free" },
+  { name: "Calculadora básica de compras en cuotas", plan: "free" },
   { name: "Tarjetas, cuotas y deudas", plan: "free" },
   { name: "Próximos pagos y calendario", plan: "free" },
   { name: "Presupuestos y objetivos de ahorro", plan: "free" },
@@ -15,9 +17,12 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Importar y exportar CSV", plan: "free" },
   { name: "Verificación en dos pasos", plan: "free" },
   { name: "Flujo de caja a 2, 3 y 5 años", plan: "pro", feature: "flujo5" },
-  { name: "Simulador de escenarios", plan: "pro", feature: "simulador" },
+  { name: "Escenarios comparativos", plan: "pro", feature: "simulador" },
   { name: "Módulo Agro: ventas de granos", plan: "pro", feature: "cereal" },
   { name: "Informes avanzados", plan: "pro", feature: "informes" },
+  { name: "Reglas de categoría y revisión asistida de extractos", plan: "pro", feature: "informes" },
+  { name: "Traslado opcional de margen de presupuestos", plan: "pro", feature: "informes" },
+  { name: "Costo anual orientativo de servicios", plan: "pro", feature: "informes" },
   { name: "Leer el resumen de la tarjeta desde el PDF", plan: "pro", feature: "pdf" },
   { name: "Saldo día a día en el flujo de caja", plan: "pro", feature: "flujo5" },
   { name: "Exportar a Excel y PDF", plan: "pro", feature: "informes" },

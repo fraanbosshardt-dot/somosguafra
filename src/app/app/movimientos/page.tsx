@@ -66,7 +66,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHead crumb="Mi dinero" title="Movimientos" desc="Lo que ya entró y salió de tus cuentas. Lo que falta está en Próximos pagos." />
+      <PageHead crumb="Mi dinero" title="Movimientos" desc="Lo que ya entró y salió de tus cuentas. Lo que falta está en Próximos pagos." actions={<><Link className="btn" href="/app/resumen">Resumen del mes</Link><Link className="btn" href="/app/movimientos/preferencias">Favoritos y reglas</Link></>} />
       {sp.borrado && <p className="notice g" role="status">Listo, eliminamos el movimiento. El saldo de la cuenta volvió a como estaba.</p>}
       {sp.guardado && <div className="notice g" role="status"><span>{sp.unido ? "Listo. Ya figuraba como pendiente en Próximos pagos, así que lo marcamos como cobrado o pagado con este importe (no queda duplicado)." : "Listo, quedó guardado."}</span><span className="acts" style={{ marginLeft: "auto" }}><Link className="btn sm" href="/app/movimientos/nuevo">+ Cargar otro</Link>{/^[a-z0-9]{20,}$/.test(sp.guardado) && <Link className="btn sm" href={`/app/movimientos/${sp.guardado}`}>Ver o corregir</Link>}</span></div>}
       <div className="acts" style={{ justifyContent: "space-between", alignItems: "center" }}>
@@ -129,7 +129,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
                     return sel ? (
                         <label className="li sel-row" key={t.id} style={{ opacity: off ? 0.55 : 1 }}>
                           <input type="checkbox" name="ids" value={t.id} form="bulk" aria-label={`Elegir ${t.description}`} />
-                          <div className="grow"><div className="t">{t.description}</div><div className="s">{[TYPE_LABEL[t.type], t.category?.name, t.account.name].filter(Boolean).join(" · ")}</div></div>
+                          <div className="grow"><div className="t">{t.description}</div><div className="s">{[TYPE_LABEL[t.type], t.tags.some(tag => tag.startsWith("guafra:split:")) ? "Parte de compra dividida" : null, t.category?.name, t.account.name].filter(Boolean).join(" · ")}</div></div>
                           <b className={`num ${t.type === "TRANSFER" ? "" : isIn ? "pos" : "neg"}`}>{isIn ? "+" : "−"}{formatMoney(t.amount, t.currency)}</b>
                         </label>
                       ) : (
@@ -137,7 +137,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
                         {(() => { const ic = t.type === "TRANSFER" ? "swap" : categoryIcon(t.category?.name ?? (t.direction === "IN" ? "ingreso" : null)); return <span className={`cat-ic m-only t-${ICON_TONE[ic as keyof typeof ICON_TONE] ?? "s"}`}><Icon name={ic as IconName} /></span>; })()}
                         <div className="grow">
                           <div className="t" style={off ? { textDecoration: "line-through" } : undefined}>{t.description}</div>
-                          <div className="s">{[TYPE_LABEL[t.type], t.category?.name, t.account.name, off ? (t.reversedBy ? "Anulado" : "Anulación") : null].filter(Boolean).join(" · ")}</div>
+                          <div className="s">{[TYPE_LABEL[t.type], t.tags.some(tag => tag.startsWith("guafra:split:")) ? "Parte de compra dividida" : null, t.category?.name, t.account.name, off ? (t.reversedBy ? "Anulado" : "Anulación") : null].filter(Boolean).join(" · ")}</div>
                         </div>
                         <b className={`num ${t.type === "TRANSFER" ? "" : isIn ? "pos" : "neg"}`}>{isIn ? "+" : "−"}{formatMoney(t.amount, t.currency)}</b>
                       </Link>

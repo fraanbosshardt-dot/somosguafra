@@ -120,6 +120,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
         </div>
       </div>
       <QuickButtons cereal={!!modules.cereal} />
+      <div className="home-next-actions acts"><Link className="btn sm" href="/app/resumen">Resumen del mes</Link><Link className="btn sm" href="/app/revision">Revisar mis datos</Link><Link className="btn sm" href="/app/movimientos/preferencias">Mis favoritos</Link></div>
       {(incomeRules === 0 || expenseRules === 0) && <p className="notice a home-data-notice"><span>El disponible usa lo que cargaste. Revisá que estén todos tus cobros y gastos fijos.</span><Link className="lnk" href="/app/revision">Revisar mis datos</Link></p>}
       {solomirar && <p className="notice a" role="status">En este espacio solo podés mirar: no se guardó ningún cambio. Si necesitás cargar, pedile a quien te invitó que te dé permiso.</p>}
       {compartido && <p className="notice g" role="status">Listo, ya estás en el espacio compartido. Para volver al tuyo, abrí el menú de tu cuenta.</p>}

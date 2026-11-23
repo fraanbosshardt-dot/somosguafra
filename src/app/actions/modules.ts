@@ -624,16 +624,18 @@ export async function importAction(_: FormState, fd: FormData): Promise<FormStat
     const special = ext === "xlsx" || ext === "ofx" || ext === "qfx";
     if (special && !(await canUse(plan, "informes"))) throw new UserError("Importar Excel u OFX es parte de Pro. Con Gratis podés importar CSV.");
     if (ext === "xls") throw new UserError("Ese es el formato viejo de Excel (.xls). Abrilo en Excel y guardalo como .xlsx o como CSV.");
+    if (!["csv","xlsx","ofx","qfx"].includes(ext)) throw new UserError("Usá un archivo CSV, Excel (.xlsx) u OFX.");
     const { xlsxToCsv, ofxToCsv } = await import("@/server/io");
     const text = ext === "xlsx" ? xlsxToCsv(Buffer.from(await file.arrayBuffer())) : special ? ofxToCsv(await file.text()) : await file.text();
     const map: Record<number, string> = {};
     for (const [k, v] of fd.entries()) if (k.startsWith("col:")) map[Number(k.slice(4))] = String(v);
     const accountId = str(fd, "accountId");
-    const acc = await getDb().account.findFirst({ where: { id: accountId, workspaceId: workspace.id } });
+    const acc = await getDb().account.findFirst({ where: { id: accountId, workspaceId: workspace.id, active: true, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } } });
     if (!acc) throw new UserError("Elegí la cuenta de los movimientos.");
     const preview = await previewImport(getDb(), workspace.id, acc.id, text, Object.keys(map).length ? map : autoMap(text));
     if (fd.get("confirm") !== "1") return { ok: `Listo para importar ${preview.ok.length} movimientos. ${preview.duplicates} ya estaban cargados y ${preview.errors.length} tienen errores${preview.errors.length ? ` (líneas ${preview.errors.slice(0, 5).map((e) => e.line).join(", ")})` : ""}. Si está bien, tocá "Importar".` };
-    const b = await applyImport(getDb(), workspace.id, acc.id, file.name, preview, user.id);
+    if (preview.ok.length > 2000) throw new UserError("Importá hasta 2.000 movimientos por archivo.");
+    const b = await applyImport(getDb(), workspace.id, acc.id, file.name, preview, user.id, {text,map:Object.keys(map).length ? map : autoMap(text),fingerprint:str(fd,"reviewFingerprint"),assisted:await canUse(plan,"informes"),excluded:fd.getAll("exclude").map(String)});
     await audit("import.applied", { userId: user.id, workspaceId: workspace.id, entity: "importBatch", entityId: b.id, meta: { rows: b.rows } });
   } catch (e) { return fail(e); }
   redirect(done("/app/importar?ok=1"));

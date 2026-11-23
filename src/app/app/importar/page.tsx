@@ -1,3 +1,4 @@
+import { ImportForm } from "./import-form";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { canUse, requireWorkspace } from "@/lib/auth/session";
@@ -5,8 +6,7 @@ import { getDb } from "@/lib/db";
 import { pageNumber } from "@/lib/pagination";
 import { fmtDate } from "@/lib/dates";
 import { PageHead, SettingsTabs } from "@/components/page";
-import { ActionForm, Submit } from "@/components/forms";
-import { importAction, revertImportAction } from "@/app/actions/modules";
+import { revertImportAction } from "@/app/actions/modules";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 
 export const metadata: Metadata = { title: "Importar y exportar" };
@@ -31,13 +31,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
       <div className="card">
         <div className="chead"><h3>Importar un archivo</h3></div>
         {accounts.length ? (
-          <ActionForm action={importAction} style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 560 }}>
-            <label className="field">Archivo<input type="file" name="file" accept=".csv,.xlsx,.ofx,.qfx,text/csv,text/plain" required /></label>
-            <label className="field">Cuenta de los movimientos<select name="accountId">{accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}</select></label>
-            <p className="sub" style={{ margin: 0 }}>CSV, Excel (.xlsx) u OFX del banco. Tiene que tener fecha, concepto e importe (o entradas y salidas en columnas separadas, como el extracto de Mercado Pago). Los importes negativos son gastos y los positivos, ingresos. Las filas que ya estaban cargadas se saltean.{pro ? "" : " Excel y OFX son parte de Pro."}</p>
-            <p className="sub" style={{ margin: 0 }}>Primero tocá <b>Revisar</b>: te decimos cuántos movimientos vamos a cargar, sin guardar nada. Si está bien, tocá <b>Importar</b>.</p>
-            <div className="acts"><button className="btn" type="submit" name="confirm" value="0">Revisar</button><Submit pending="Importando…" name="confirm" value="1">Importar</Submit></div>
-          </ActionForm>
+          <ImportForm key={total} accounts={accounts.map(a => ({ id:a.id,name:a.name,currency:a.currency }))} pro={pro} />
         ) : <div className="empty">Primero creá una cuenta para los movimientos.</div>}
       </div>
       {batches.length > 0 && (
@@ -46,7 +40,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
           <div className="list">
             {batches.map((b) => (
               <div className="li" key={b.id}>
-                <div className="grow"><div className="t">{b.fileName}</div><div className="s">{fmtDate(b.createdAt)} · {b.rows} movimientos{b.status === "REVERTED" ? " · deshecha" : ""}</div></div>
+                <div className="grow"><div className="t">{b.fileName}</div><div className="s">{fmtDate(b.createdAt)} · {b.rows} {b.rows === 1 ? "movimiento" : "movimientos"}{b.status === "REVERTED" ? " · deshecha" : ""}</div></div>
                 {b.status !== "REVERTED" && <form action={revertImportAction}><input type="hidden" name="id" value={b.id} /><ConfirmSubmit question="¿Deshacer esta importación? Se anulan sus movimientos." yes="Sí, deshacer">Deshacer</ConfirmSubmit></form>}
               </div>
             ))}

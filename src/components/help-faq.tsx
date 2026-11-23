@@ -19,6 +19,6 @@ export function HelpFaq({ items }: { items: [string, string][] }) {
     </div>
     <p className="sub" role="status">{shown.length} {shown.length === 1 ? "respuesta" : "respuestas"}{query.trim() && ` para «${query.trim()}»`}</p>
     <div className="list">{shown.map(([q, a]) => <details className="li" key={q} style={{ display: "block" }}><summary style={{ cursor: "pointer" }}>{q}</summary><p className="sub" style={{ margin: "10px 0 0", fontSize: 14 }}>{a}</p></details>)}</div>
-    {!shown.length && <p>No encontramos una respuesta con esos filtros. Probá con otra palabra o escribinos desde el formulario.</p>}
+    {!shown.length && <p>No encontramos una respuesta con esos filtros. Probá con otra palabra o abrí el chat Guafra para pedir ayuda al equipo.</p>}
   </>;
 }

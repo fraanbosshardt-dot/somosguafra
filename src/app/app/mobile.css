@@ -142,3 +142,72 @@
   .app .view .home-data-notice{font-size:13px;gap:8px 14px}
 }
 @media(max-width:359px){.app .view .home-summary .hero-main{padding:22px 20px;min-height:220px}}
+
+/* Controles de producto: espacio estable para textos largos, formularios y acciones. */
+.app .view .product-section h2{font-size:18px;line-height:1.4;margin:0}
+.app .view .product-section{min-width:0}
+.app .view .product-section > .more{margin-top:18px}
+.app .view .product-form{display:flex;flex-direction:column;gap:16px;padding-top:18px}
+.app .view .product-guide{margin-top:10px;max-width:70ch;font-size:13px;font-weight:400}
+.app .view .product-guide summary{cursor:pointer;color:var(--muted);padding:6px 0;line-height:1.5}
+.app .view .product-guide > div{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);line-height:1.65}
+.app .view .product-guide p{margin:8px 0 12px;font-size:13px;line-height:1.65}
+.app .view .product-filters{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.app .view .product-part{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,1fr) auto;gap:12px;align-items:end;margin:14px 0}
+.app .view .split-purchase{border:1px solid var(--line);border-radius:14px;padding:18px}
+.app .view .home-next-actions{margin:16px 0;gap:10px}
+.app .view .review-outcome h2{font-size:18px;margin:0 0 10px}
+.app .view .product-section .li{gap:16px;align-items:center;flex-wrap:wrap}
+.app .view .product-section .grow{min-width:180px;overflow-wrap:anywhere}
+.app .view .product-form .field{min-width:0}
+.app .view .product-form input:not([type=checkbox]):not([type=radio]),.app .view .product-form select{width:100%;min-width:0}
+@media(max-width:640px){
+ .app .view .ph{gap:16px;align-items:flex-start}
+ .app .view .ph > div,.app .view .ph .acts{min-width:0;max-width:100%}
+ .app .view .ph .acts{flex-wrap:wrap;gap:10px}
+ .app .view .product-part{grid-template-columns:minmax(0,1fr) minmax(90px,.7fr)}
+ .app .view .product-part > button{grid-column:1/-1;justify-self:end}
+ .app .view .product-filters > .field{flex:1 1 140px;min-width:0}
+ .app .view .product-section .chead{align-items:flex-start;gap:12px;flex-wrap:wrap}
+ .app .view .product-section .chead p{margin:8px 0 0}
+ .app .view .product-section .li .grow{min-width:0;flex:1 1 180px}
+ .app .view .home-next-actions{gap:10px}
+ .app .view .home-next-actions .btn{flex:1 1 auto;min-height:40px}
+ .app .view .split-purchase{padding:14px}
+}
+
+.app .view .import-review{margin-top:8px;border-top:1px solid var(--line);padding-top:20px}
+.app .view .import-review-row{display:flex;gap:18px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--line);align-items:start}
+.app .view .import-review-row .grow{flex:1 1 260px;min-width:0;overflow-wrap:anywhere}
+.app .view .import-review-row .simtg{flex-shrink:0;min-height:40px;gap:8px}
+.app .view .cal-day .li{gap:12px;flex-wrap:wrap}
+@media(max-width:640px){.app .view .cal-day{order:-1}.app .view .cal-day .grow{flex:1 1 150px;min-width:0}}
+
+.app .view .calendar-layout{display:flex;flex-direction:column;gap:18px;min-width:0}
+.app .view .calendar-layout .cal-day{margin-top:0}
+
+.app .view .product-guide summary:focus-visible,.app .view .product-section summary:focus-visible{outline:2px solid var(--ink);outline-offset:4px;border-radius:4px}
+.app .view .product-section .acts,.app .view .product-section nav{gap:12px;flex-wrap:wrap;align-items:center}
+.app .view .product-section .tw{max-width:100%;overflow:auto}
+.app .view .product-section p{line-height:1.65}
+
+@media(max-width:480px){.app .view .movement-main-fields{grid-template-columns:minmax(0,1fr)!important}}
+.app .view .field > .hint{font-weight:400;line-height:1.6;font-size:12px}
+
+.app .view .monthly-totals{gap:20px}
+.app .view .monthly-totals > div{min-width:0}
+.app .view .monthly-totals b{display:block;font-size:clamp(20px,4vw,26px)!important;line-height:1.4;margin-top:6px;overflow-wrap:anywhere}
+
+.app .view .product-form .simtg{display:flex;align-items:flex-start;gap:10px;font-weight:400;min-width:0;line-height:1.6}
+.app .view .product-form .simtg input{width:20px;min-width:20px;flex:0 0 20px;margin-top:2px}
+.app .view .product-form .simtg span{flex:1 1 auto;min-width:0}
+
+@media(max-width:640px){
+ .app .view .carry-table{width:100%;min-width:0}
+ .app .view .carry-table thead{display:none}
+ .app .view .carry-table tbody{display:grid;gap:14px}
+ .app .view .carry-table tr{display:grid;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+ .app .view .carry-table td{display:flex;justify-content:space-between;align-items:start;gap:14px;padding:0;border:0;white-space:normal;text-align:right;overflow-wrap:anywhere}
+ .app .view .carry-table td::before{content:attr(data-label);color:var(--muted);font-weight:400;text-align:left;flex:1 1 90px;min-width:0}
+ .app .view .carry-table td > b{min-width:0}
+}

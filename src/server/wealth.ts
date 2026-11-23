@@ -177,8 +177,8 @@ export async function investmentsOverview(db: Db, ws: string) {
       const gain = value.minus(cost);
       return {
         inv: i, invested: cost, value, gain, pct: cost.gt(0) ? gain.dividedBy(cost).times(100).toNumber() : null,
-        valuedAt: q?.fetchedAt ?? i.manualPriceAt ?? null,
-        holding: { qty, price, per100: per100(i.assetClass), auto: !!q && !noRate, quoteCurrency: q?.currency ?? null, converted: !!fx, noRate, changePct: q?.changePct != null ? Number(q.changePct) : null, realized, unitLabel: ASSET_CLASSES.find((a) => a.key === i.assetClass)?.unit ?? "unidades" },
+        valuedAt: q && !noRate ? q.fetchedAt : i.manualPriceAt ?? null,
+        holding: { qty, price, per100: per100(i.assetClass), auto: !!q && !noRate, priceSource: q && !noRate ? q.source : i.manualPrice ? "manual" : null, quoteCurrency: q?.currency ?? null, converted: !!fx, noRate, changePct: q && !noRate && q.changePct != null ? Number(q.changePct) : null, realized, unitLabel: ASSET_CLASSES.find((a) => a.key === i.assetClass)?.unit ?? "unidades" },
       };
     }
     const moved = i.movements.reduce((s, m) => (m.kind === "CONTRIBUTION" ? s.plus(dec(m.amount)) : m.kind === "WITHDRAWAL" ? s.minus(dec(m.amount)) : s), ZERO);

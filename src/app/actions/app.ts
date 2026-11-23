@@ -206,7 +206,13 @@ export async function createMovementAction(_: FormState, fd: FormData): Promise<
         categoryId = (existing ?? (await db.category.create({ data: { workspaceId: workspace.id, kind: k, name: newCat } }))).id;
       }
       const economicPeriod = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(fd.get("economicPeriod") ?? "")) ? String(fd.get("economicPeriod")) : undefined;
+      const splitMode = fd.get("split") === "on";
+      if (splitMode && fd.get("repeat") === "on") throw new UserError("Una compra dividida se registra una sola vez. Para un gasto recurrente, cargá sus categorías por separado.");
+      const splitCategories = fd.getAll("splitCategory").map(String), splitAmounts = fd.getAll("splitAmount");
+      if (splitMode && splitCategories.length !== splitAmounts.length) throw new UserError("Revisá las partes de la compra.");
+      const splits = splitMode ? splitCategories.map((categoryId, i) => ({ categoryId, amount: money(splitAmounts[i], "el importe de cada categoría") })) : undefined;
       const res = await recordMovement(db, workspace.id, {
+        splits,
         kind,
         description: String(fd.get("description") ?? ""),
         amount: money(fd.get("amount"), "el importe"),
@@ -224,7 +230,7 @@ export async function createMovementAction(_: FormState, fd: FormData): Promise<
         userId: user.id,
       });
       // Si ya estaba como pendiente (por ej. el sueldo de este mes), se une con ese: no queda duplicado.
-      if (status === "PAID" && res.transactionId && !res.duplicate) {
+      if (!splitMode && status === "PAID" && res.transactionId && !res.duplicate) {
         const acc = await db.account.findFirst({ where: { id: String(fd.get("accountId")), workspaceId: workspace.id }, select: { currency: true } });
         const match = acc && (await matchingPending(db, workspace.id, { kind, description: String(fd.get("description") ?? ""), currency: acc.currency, date: date(fd.get("effectiveDate"), "la fecha de pago") }));
         if (match) { await linkToPending(db, workspace.id, res.transactionId, match.id); joined = true; }
@@ -355,7 +361,12 @@ export async function saveModulesAction(_: FormState, fd: FormData): Promise<For
   const on = fd.getAll("modules").map(String);
   const current = readModules(workspace.modules);
   for (const m of MODULES) current[m.key] = on.includes(m.key);
-  await getDb().workspace.update({ where: { id: workspace.id }, data: { modules: current } });
+  await getDb().$transaction(async tx => {
+    await lockWorkspace(tx, workspace.id);
+    const fresh = await tx.workspace.findUniqueOrThrow({ where: { id: workspace.id }, select: { modules: true } });
+    const extra = fresh.modules && typeof fresh.modules === "object" && !Array.isArray(fresh.modules) ? fresh.modules : {};
+    await tx.workspace.update({ where: { id: workspace.id }, data: { modules: { ...extra, ...current } } });
+  });
   revalidatePath("/app", "layout");
   return { ok: "Funciones actualizadas." };
 }

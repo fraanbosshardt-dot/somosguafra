@@ -35,6 +35,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
         <div className="chead" style={{ marginBottom: 8 }}><div>{a.institution && <div className="sub" style={{ margin: 0 }}>{a.institution}</div>}<h3>{a.name}</h3></div><span className="pill">{a.type === "INVESTMENT" ? "Inversión" : a.currency}</span></div>
         <div className={`num ${odd ? "neg" : ""}`} style={{ fontFamily: "var(--f-display)", fontSize: 22, fontWeight: 600 }}>{formatMoney(bal, a.currency)}</div>
         <p className="sub">{odd ? "Saldo negativo: ¿falta cargar un ingreso? Entrá para corregir el saldo." : ACCOUNT_TYPE_LABEL[a.type]}</p>
+      <p className="sub" style={{margin:"10px 0 0",fontSize:12}}>{a.lastReconciledAt ? `Saldo revisado: ${a.lastReconciledAt.toLocaleDateString("es-AR",{timeZone:"UTC"})}` : "Saldo todavía no revisado"}</p>
       </Link>
     );
   };
