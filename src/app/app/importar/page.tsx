@@ -31,7 +31,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
       <div className="card">
         <div className="chead"><h3>Importar un archivo</h3></div>
         {accounts.length ? (
-          <ImportForm accounts={accounts.map(a => ({ id:a.id,name:a.name,currency:a.currency }))} pro={pro} />
+          <ImportForm key={total} accounts={accounts.map(a => ({ id:a.id,name:a.name,currency:a.currency }))} pro={pro} />
         ) : <div className="empty">Primero creá una cuenta para los movimientos.</div>}
       </div>
       {batches.length > 0 && (

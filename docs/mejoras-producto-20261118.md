@@ -59,3 +59,5 @@ Las mejoras generales de tarjetas, deudas, patrimonio, Agro, objetivos y compart
 1. Revisar diff y tipos; aprobar suite completa y compilación/smoke en CI del commit exacto. Preview de la rama deshabilitada para evitar infraestructura compartida.
 2. Fusionar y comprobar despliegue y salud. Solo lectura sobre producción; no probar registros financieros con datos reales.
 3. Para revertir: revertir la entrega y publicar. No restaurar base ni borrar movimientos nuevos. Las partes son registros EXPENSE normales, compatibles con la versión anterior. La configuración adicional se conserva aunque una versión anterior no muestre las herramientas; guardar funciones antes de reactivar la versión nueva podría quitar estas preferencias en una versión antigua.
+
+Revisión final adicional: elegir un favorito conserva el estado Pendiente (comprobado en navegador sin guardar). No copia una división anterior. El editor de preferencias conserva su tipo seleccionado después de guardar y la importación limpia la revisión al agregar un nuevo lote.
