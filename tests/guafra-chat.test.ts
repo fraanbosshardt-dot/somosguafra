@@ -24,6 +24,11 @@ const guest = (n: string): ChatActor => ({
 });
 const message = (a: ChatActor, text = "Cómo empezar", extra = {}) =>
   sendChatMessage(t.db, a, { text, nonce: crypto.randomUUID(), ...extra });
+it("las guías de pantalla no reemplazan la bienvenida ni la derivación de pagos", () => {
+  expect(matchChatHelp("Cómo empezar").topic?.id).toBe("start");
+  expect(matchChatHelp("Cómo volver a ver la guía paso a paso").topic?.id).toBe("first-use-guides");
+  expect(matchChatHelp("Pagué y no tengo acceso, necesito una guía paso a paso").escalate).toBe(true);
+});
 beforeAll(async () => {
   t = await startTestDb();
   vi.stubEnv("AUTH_SECRET", "chat-test-secret-at-least-32-characters");

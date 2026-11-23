@@ -152,6 +152,18 @@
 .app .view .product-guide summary{cursor:pointer;color:var(--muted);padding:6px 0;line-height:1.5}
 .app .view .product-guide > div{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);line-height:1.65}
 .app .view .product-guide p{margin:8px 0 12px;font-size:13px;line-height:1.65}
+.app .view .first-use-guide{width:100%;max-width:70ch}
+.app .view .guide-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;width:100%;padding:8px 0;background:none;border:0;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.app .view .first-use-guide .guide-content{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);line-height:1.65}
+.app .view .guide-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;color:var(--muted);font-size:12px}
+.app .view .first-use-guide h2{font-size:16px;line-height:1.4;margin:12px 0 8px;font-weight:600;overflow-wrap:anywhere}
+.app .view .first-use-guide p{white-space:normal;overflow-wrap:anywhere;color:var(--ink);margin:8px 0 18px}
+.app .view .guide-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.app .view .guide-step-buttons{display:flex;flex-wrap:wrap;gap:10px}
+.app .view .guide-controls .btn{min-height:44px;white-space:normal;text-align:center}
+.app .view .first-use-guide small{display:block;color:var(--muted);font-size:12px;line-height:1.6}
+.app .view .guide-toggle:focus-visible,.app .view .first-use-guide h2:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
+@media(max-width:480px){.app .view .first-use-guide .guide-content{padding:14px}.app .view .guide-step-buttons{width:100%;justify-content:flex-end}.app .view .guide-step-buttons .btn{flex:1 1 100px}}
 .app .view .product-filters{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .app .view .product-part{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,1fr) auto;gap:12px;align-items:end;margin:14px 0}
 .app .view .split-purchase{border:1px solid var(--line);border-radius:14px;padding:18px}

@@ -15,7 +15,8 @@
       "fix/admin-formularios-correo": false,
       "fix/presupuestos-claridad": false,
       "fix/inicio-movil": false,
-      "feat/usabilidad-producto": false
+      "feat/usabilidad-producto": false,
+      "feat/guias-primer-uso": false
     }
   },
   "regions": [
