@@ -1,9 +1,10 @@
 "use client";
+import { ruleSuggestion, type Favorite, type CategoryRule } from "@/lib/experience";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ActionForm, Submit } from "@/components/forms";
 import { createMovementAction } from "@/app/actions/app";
-import { formatMoney, parseAmount } from "@/lib/money";
+import { ZERO, formatMoney, parseAmount } from "@/lib/money";
 
 type Account = { id: string; name: string; currency: string; type?: string };
 type Category = { id: string; name: string; kind: "INCOME" | "EXPENSE"; parentId: string | null };
@@ -27,16 +28,19 @@ const HINTS: [RegExp, string][] = [
   [/afip|arba|impuesto|monotributo|abl|patente/, "impuesto"],
 ];
 
-export function MovementForm({ accounts, categories, today, initialKind, initialAccount, initialStatus, baseCurrency, idem, history, back, cards = [] }: { cards?: { id: string; name: string; issuer: string }[]; accounts: Account[]; categories: Category[]; today: string; initialKind: Kind; initialAccount?: string; initialStatus?: Status; baseCurrency: string; idem: string; history: History; back?: string }) {
+export function MovementForm({ accounts, categories, today, initialKind, initialAccount, initialStatus, baseCurrency, idem, history, back, cards = [], favorites = [], rules = [], initialDescription = "", initialCategory = "" }: { favorites?: Favorite[]; rules?: CategoryRule[]; initialDescription?: string; initialCategory?: string; cards?: { id: string; name: string; issuer: string }[]; accounts: Account[]; categories: Category[]; today: string; initialKind: Kind; initialAccount?: string; initialStatus?: Status; baseCurrency: string; idem: string; history: History; back?: string }) {
+  const [splitMode, setSplitMode] = useState(false);
+  const [parts, setParts] = useState([{ categoryId: "", amount: "" }, { categoryId: "", amount: "" }]);
   const [kind, setKind] = useState<Kind>(initialKind);
   const [status, setStatus] = useState<Status>(initialStatus ?? "PAID");
-  const [desc, setDesc] = useState("");
+  const [desc, setDesc] = useState(initialDescription);
   const [amount, setAmount] = useState("");
   const [paid, setPaid] = useState("");
-  const [cat, setCat] = useState("");
+  const [cat, setCat] = useState(initialCategory);
   const [catTouched, setCatTouched] = useState(false);
   const [account, setAccount] = useState(accounts.find((a) => a.id === initialAccount)?.id ?? accounts[0].id);
   const [repeat, setRepeat] = useState(false);
+  const splitting = splitMode && kind === "EXPENSE" && status === "PAID" && !repeat;
   const [freq, setFreq] = useState("MONTHLY");
   const [more, setMore] = useState(initialStatus === "PENDING");
   // "Corresponde al mes": sigue a la fecha (de pago o de vencimiento) hasta que lo cambies a mano.
@@ -59,6 +63,8 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
     const t = norm(text);
     if (t.length < 3) return "";
     const ok = new Set(cats.map((c) => c.id));
+    const rule = ruleSuggestion(rules, kind, text);
+    if (rule && ok.has(rule)) return rule;
     const h = history.find((x) => norm(x.d) === t) ?? history.find((x) => norm(x.d).startsWith(t));
     if (h && ok.has(h.c)) return h.c;
     const hint = HINTS.find(([re]) => re.test(t))?.[1];
@@ -88,6 +94,7 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="idem" value={idem} />
+      {favorites.length > 0 && <label className="field">Usar un favorito<select value="" onChange={e => { const f = favorites.find(x => x.id === e.target.value); if (!f) return; setKind(f.kind); setDesc(f.name); setCat(f.categoryId ?? ""); setCatTouched(!!f.categoryId); setAccount(f.accountId); setAmount(""); setPaid(""); setStatus("PAID"); setRepeat(false); }}><option value="">Elegí un concepto habitual…</option>{favorites.map(f => <option key={f.id} value={f.id}>{f.name} · {f.kind === "EXPENSE" ? "Gasto" : "Ingreso"}</option>)}</select><span className="hint">Completamos cuenta y categoría. Ingresá el importe y revisá antes de guardar.</span></label>}
       {seg(kind, (k) => { setKind(k); setCat(""); setCatTouched(false); }, [["EXPENSE", "Gasto"], ["INCOME", "Ingreso"], ["TRANSFER", "Transferencia"]])}
 
       {kind === "TRANSFER" ? (
@@ -107,7 +114,7 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
         </>
       ) : (
         <>
-          <div className="frow" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1.4fr)" }}>
+          <div className="frow movement-main-fields" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1.4fr)" }}>
             <label className="field">Importe<input name="amount" className="amount-in" inputMode="decimal" placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /></label>
             <label className="field">Concepto<input name="description" placeholder={g ? "Ej.: Supermercado" : "Ej.: Sueldo"} value={desc} onChange={(e) => onDesc(e.target.value)} list="mv-history" autoComplete="off" /></label>
           </div>
@@ -127,14 +134,16 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
             );
           })()}
           <datalist id="mv-history">{[...new Set(history.map((h) => h.d))].slice(0, 40).map((d) => <option key={d} value={d} />)}</datalist>
-          <label className="field">Categoría
-            <select name="categoryId" value={cat} onChange={(e) => { setCat(e.target.value); setCatTouched(true); }}>
+          <label className="field" hidden={splitting}>Categoría
+            <select name="categoryId" disabled={splitting} value={cat} onChange={(e) => { setCat(e.target.value); setCatTouched(true); }}>
               <option value="">Sin categoría</option>
               {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               <option value="__new">+ Nueva categoría…</option>
             </select>
           </label>
-          {cat === "__new" && <label className="field">Nombre de la categoría nueva<input name="newCategory" placeholder="Ej.: Mascotas" autoFocus /></label>}
+          {kind === "EXPENSE" && status === "PAID" && !repeat && <label className="simtg"><input type="checkbox" checked={splitMode} onChange={e => setSplitMode(e.target.checked)} /><span>Dividir esta compra entre categorías</span></label>}
+          {splitting && <section className="split-purchase product-section"><input type="hidden" name="split" value="on" /><p className="sub">Ingresá el total arriba y repartilo acá. Se guardan partes vinculadas que suman una sola salida de dinero. Cada parte se puede corregir o eliminar por separado.</p>{parts.map((part, i) => <div className="product-part" key={i}><label className="field">Categoría {i + 1}<select name="splitCategory" value={part.categoryId} onChange={e => setParts(x => x.map((p,j) => j === i ? {...p,categoryId:e.target.value}:p))}><option value="">Elegí categoría</option>{cats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></label><label className="field">Importe<input name="splitAmount" inputMode="decimal" value={part.amount} onChange={e => setParts(x => x.map((p,j) => j === i ? {...p,amount:e.target.value}:p))} /></label>{parts.length > 2 && <button className="btn sm ghost" type="button" aria-label={`Quitar parte ${i+1}`} onClick={() => setParts(x => x.filter((_,j) => j !== i))}>Quitar</button>}</div>)}<div className="acts">{parts.length < 10 && <button className="btn sm" type="button" onClick={() => setParts(x => [...x,{categoryId:"",amount:""}])}>Agregar categoría</button>}<span role="status">Distribuido: {formatMoney(parts.reduce((sum,p) => sum.plus(parseAmount(p.amount) ?? ZERO), ZERO), cur)} de {formatMoney(parseAmount(amount) ?? ZERO, cur)}</span></div></section>}
+          {!splitting && cat === "__new" && <label className="field">Nombre de la categoría nueva<input name="newCategory" placeholder="Ej.: Mascotas" autoFocus /></label>}
           {!more && <p className="sub" style={{ margin: 0 }}>{statusLabel} hoy · {g ? "desde" : "en"} {accName} · una sola vez</p>}
           <details className="more" open={more} onToggle={(e) => setMore((e.target as HTMLDetailsElement).open)}>
             <summary>{more ? "Menos opciones" : "Más opciones: otra fecha, cuenta, pendiente o que se repita"}</summary>
@@ -181,6 +190,7 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
       )}
       {hint && <div className="calc" aria-live="polite">{hint}</div>}
       {back && <input type="hidden" name="back" value={back} />}
+      {kind !== "TRANSFER" && <div className="calc" aria-live="polite"><b>Antes de guardar</b><p className="sub" style={{margin:"6px 0 0"}}>{status === "PENDING" ? "No cambia el saldo todavía" : `${g ? "Sale de" : "Entra en"} ${accName}`} · {splitting ? "Compra distribuida entre categorías" : cats.find(c => c.id === cat)?.label ?? "Sin categoría"}. {status === "PAID" ? "Se registra una sola vez; no realiza una operación bancaria." : "Revisá la fecha y lo que queda pendiente."}</p></div>}
       <div className="acts" style={{ justifyContent: "flex-end" }}><Submit>Guardar</Submit></div>
     </ActionForm>
   );

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
+import { ZERO, formatMoney } from "@/lib/money";
 import { fmtDate, isoDate } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
@@ -19,6 +19,8 @@ export default async function MovementDetail({ params, searchParams }: { params:
   const db = getDb();
   const t = await db.transaction.findFirst({ where: { id, workspaceId: workspace.id }, include: { account: true, category: true, reversedBy: true, reversalOf: true, obligation: true } });
   if (!t) notFound();
+  const splitTag = t.tags.find(tag => tag.startsWith("guafra:split:"));
+  const splitParts = splitTag ? await db.transaction.findMany({where:{workspaceId:workspace.id,tags:{has:splitTag},reversalOfId:null},include:{category:{select:{name:true}},reversedBy:{select:{id:true}}},orderBy:[{createdAt:"asc"},{id:"asc"}]}) : [];
   const kind = t.type === "INCOME" ? "INCOME" : "EXPENSE";
   const [cats, plan, legs, accounts] = await Promise.all([
     db.category.findMany({ where: { workspaceId: workspace.id, archived: false, kind }, orderBy: [{ parentId: "asc" }, { name: "asc" }] }),
@@ -47,7 +49,9 @@ export default async function MovementDetail({ params, searchParams }: { params:
   return (
     <div className="narrow">
       <Link className="lk" href="/app/movimientos">← Movimientos</Link>
-      <PageHead crumb="Mi dinero" title={t.description} desc={`${fmtDate(t.effectiveDate)} · ${t.account.name}${transfer && legs[0] ? ` → ${legs[0].account.name}` : ""}`} />
+      <PageHead crumb="Mi dinero" title={t.description} actions={(t.type === "INCOME" || t.type === "EXPENSE") && !reversed ? <Link className="btn" href={`/app/movimientos/nuevo?similar=${t.id}`}>Cargar uno parecido</Link> : undefined} desc={`${fmtDate(t.effectiveDate)} · ${t.account.name}${transfer && legs[0] ? ` → ${legs[0].account.name}` : ""}`} />
+      {t.tags.some(tag => tag.startsWith("guafra:split:")) && <p className="notice">Esta es una parte de una compra dividida. El importe corresponde solo a esta categoría. Corregir o eliminar esta parte cambia únicamente su importe, no las otras partes.</p>}
+      {splitParts.length > 0 && <details className="card more"><summary>Ver las partes de esta compra</summary><div className="list">{splitParts.map(part => <Link className="li" href={`/app/movimientos/${part.id}`} key={part.id}><span className="grow">{part.category?.name ?? "Sin categoría"}{part.reversedBy ? " · anulada" : ""}</span><b className="num">{formatMoney(part.amount,part.currency)}</b></Link>)}</div><p className="sub">Total de las partes vigentes: {formatMoney(splitParts.filter(p=>!p.reversedBy).reduce((s,p)=>s.plus(p.amount.toString()),ZERO),t.currency)}. Cada fila es una parte, no una compra adicional.</p></details>}
       {error && <p className="notice a" role="alert">{error}</p>}
       <div className="card">
         <div className="big" style={{ fontSize: 32 }}><span className={transfer ? "" : isIn ? "pos" : "neg"}>{transfer ? "" : isIn ? "+" : "−"}{formatMoney(t.amount, t.currency)}</span></div>

@@ -41,10 +41,10 @@ export function ActionForm({ action, children, className, style, id, resetOnOk =
   );
 }
 
-export function Submit({ children, className = "btn pri", pending = "Guardando…", name, value }: { children: ReactNode; className?: string; pending?: string; name?: string; value?: string }) {
+export function Submit({ children, className = "btn pri", pending = "Guardando…", name, value, disabled = false }: { children: ReactNode; className?: string; pending?: string; name?: string; value?: string; disabled?: boolean }) {
   const busy = useContext(Pending);
   return (
-    <button className={className} type="submit" disabled={busy} aria-busy={busy} name={name} value={value}>
+    <button className={className} type="submit" disabled={busy || disabled} aria-busy={busy} name={name} value={value}>
       {busy ? pending : children}
     </button>
   );

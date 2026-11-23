@@ -1,7 +1,8 @@
+import { experienceFrom } from "@/lib/experience";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { randomUUID } from "node:crypto";
-import { requireWorkspace } from "@/lib/auth/session";
+import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { isoDate, todayIn } from "@/lib/dates";
 import { PageHead } from "@/components/page";
@@ -9,8 +10,8 @@ import { MovementForm } from "./movement-form";
 
 export const metadata: Metadata = { title: "Nuevo movimiento" };
 
-export default async function NewMovement({ searchParams }: { searchParams: Promise<{ tipo?: string; cuenta?: string; estado?: string }> }) {
-  const { workspace } = await requireWorkspace();
+export default async function NewMovement({ searchParams }: { searchParams: Promise<{ tipo?: string; cuenta?: string; estado?: string; similar?: string }> }) {
+  const { workspace, plan } = await requireWorkspace();
   const sp = await searchParams;
   const db = getDb();
   const cards = await db.creditCard.findMany({ where: { workspaceId: workspace.id, active: true, parentId: null }, select: { id: true, name: true, issuer: true } });
@@ -28,16 +29,23 @@ export default async function NewMovement({ searchParams }: { searchParams: Prom
     );
   }
   // Para cargar rápido: la última cuenta usada y los conceptos ya usados con su categoría.
-  const lastAccount = sp.cuenta ?? recent[0]?.accountId;
+  const similar = sp.similar ? await db.transaction.findFirst({ where: { id: sp.similar, workspaceId: workspace.id, type: { in: ["INCOME", "EXPENSE"] } }, select: { accountId: true, categoryId: true, description: true, type: true } }) : null;
+  const prefs = experienceFrom(workspace.modules);
+  const activeAccounts = new Set(accounts.map(a => a.id)), activeCats = new Set(categories.map(c => c.id));
+  const favorites = prefs.favorites.filter(f => activeAccounts.has(f.accountId) && (!f.categoryId || activeCats.has(f.categoryId)));
+  const rules = await canUse(plan, "informes") ? prefs.rules.filter(r => activeCats.has(r.categoryId)) : [];
+  const lastAccount = sp.cuenta ?? similar?.accountId ?? recent[0]?.accountId;
   const history = recent.filter((t) => t.categoryId).map((t) => ({ d: t.description, c: t.categoryId! }));
-  const kind = sp.tipo === "INCOME" || sp.tipo === "TRANSFER" ? sp.tipo : "EXPENSE";
+  const kind = sp.tipo === "INCOME" || sp.tipo === "TRANSFER" ? sp.tipo : similar?.type === "INCOME" ? "INCOME" : "EXPENSE";
   return (
     <div className="narrow">
       <Link className="lk" href="/app/movimientos">← Movimientos</Link>
       <PageHead crumb="Mi dinero" title="Nuevo movimiento" />
+      {similar && <p className="notice">Estás cargando uno parecido. Revisá el concepto, ingresá el importe y confirmá la fecha; no se copia ningún pago ni pendiente anterior.</p>}
       <div className="card">
-        <MovementForm cards={cards} accounts={accounts} categories={categories} today={isoDate(todayIn(workspace.timezone))} initialKind={kind} initialAccount={lastAccount} initialStatus={sp.estado === "pendiente" ? "PENDING" : undefined} history={history} baseCurrency={workspace.baseCurrency} idem={randomUUID()} back={sp.estado === "pendiente" ? "/app/proximos?guardado=1" : undefined} />
+        <MovementForm favorites={favorites} rules={rules} initialDescription={similar?.description} initialCategory={similar?.categoryId ?? undefined} cards={cards} accounts={accounts} categories={categories} today={isoDate(todayIn(workspace.timezone))} initialKind={kind} initialAccount={lastAccount} initialStatus={sp.estado === "pendiente" ? "PENDING" : undefined} history={history} baseCurrency={workspace.baseCurrency} idem={randomUUID()} back={sp.estado === "pendiente" ? "/app/proximos?guardado=1" : undefined} />
       </div>
+      <p className="sub"><Link className="lnk" href="/app/movimientos/preferencias">Administrar favoritos y reglas</Link></p>
     </div>
   );
 }

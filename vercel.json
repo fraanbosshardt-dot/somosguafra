@@ -14,7 +14,8 @@
       "feat/admin-organizacion": false,
       "fix/admin-formularios-correo": false,
       "fix/presupuestos-claridad": false,
-      "fix/inicio-movil": false
+      "fix/inicio-movil": false,
+      "feat/usabilidad-producto": false
     }
   },
   "regions": [

@@ -81,15 +81,16 @@ export default async function Investments({ searchParams }: { searchParams: Prom
               <details className="inv-row" key={i.inv.id}>
                 <summary>
                   <span className="inv-tk"><b>{i.inv.ticker}</b><span className="sub">{i.inv.kind}{i.inv.name !== i.inv.ticker ? ` · ${i.inv.name}` : ""}</span></span>
-                  <span className="inv-q"><span>{qtyFmt(h.qty.toNumber())} {h.unitLabel}</span><span className="sub">{h.price ? `${fm(h.price)}${h.per100 ? " c/100" : ""}${h.changePct != null ? ` · ${pct(h.changePct)} hoy` : ""}` : "Sin precio"}</span></span>
+                  <span className="inv-q"><span>{qtyFmt(h.qty.toNumber())} {h.unitLabel}</span><span className="sub">{h.price ? `${fm(h.price)}${h.per100 ? " c/100" : ""}${h.changePct != null ? ` · ${pct(h.changePct)} de referencia` : ""}` : "Sin precio"}</span></span>
                   <span className="inv-v"><b className="num">{fm(i.value)}</b><span className={`sub ${i.gain.isNegative() ? "neg" : "pos"}`}>{fm(i.gain, { sign: true })}{i.pct != null ? ` (${pct(i.pct)})` : ""}</span></span>
                 </summary>
                 <div className="inv-body">
+                  {i.valuedAt && Date.now()-i.valuedAt.getTime()>864e5 && <p className="notice a">La valoración disponible tiene más de 24 horas. Puede corresponder al último cierre o a un precio manual: revisá la fecha antes de decidir.</p>}
                   <dl className="ctile-kv">
                     <div><dt>Pagaste (costo)</dt><dd>{fm(i.invested)}</dd></div>
                     {h.qty.gt(0) && <div><dt>Precio promedio</dt><dd>{fm(round2(i.invested.dividedBy(h.qty).times(h.per100 ? 100 : 1)))}{h.per100 ? " c/100" : ""}</dd></div>}
                     {!h.realized.isZero() && <div><dt>Ganancia ya cobrada</dt><dd className={h.realized.isNegative() ? "neg" : "pos"}>{fm(h.realized, { sign: true })}</dd></div>}
-                    <div><dt>Precio</dt><dd>{h.auto ? "Automático" : "Cargado a mano"}{i.valuedAt ? ` · ${fmtDate(i.valuedAt)}` : ""}{h.converted ? ` · cotiza en ${h.quoteCurrency}, pasado a ${i.inv.currency}` : ""}</dd></div>
+                    <div><dt>Precio</dt><dd>{h.auto ? `Automático · ${h.priceSource}` : h.price ? "Cargado a mano" : "Sin cotización: se muestra el costo registrado"}{i.valuedAt ? ` · ${fmtDate(i.valuedAt)}` : ""}{h.converted ? ` · cotiza en ${h.quoteCurrency}, pasado a ${i.inv.currency}` : ""}</dd></div>
                   </dl>
                   <div className="grid g2" style={{ gap: 16 }}>
                     <ActionForm action={holdingTradeAction} className="inv-form">

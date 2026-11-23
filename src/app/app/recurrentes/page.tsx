@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -100,6 +101,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
     <>
       <PageHead crumb="Configuración" title="Pagos que se repiten" desc="Sueldos, servicios, cuotas y cosechas que se repiten solos. Son los que el flujo de caja proyecta a futuro. Las suscripciones que pagás con tarjeta (Netflix, gimnasio) se cargan en la tarjeta." />
       <SettingsTabs current="recurrentes" />
+      <p className="sub"><Link className="lnk" href="/app/recurrentes/costos">Ver el costo anual orientativo de mis servicios · Pro</Link></p>
       {sp.borrada && <p className="notice g" role="status">Listo, se borró. Lo ya pagado o cobrado quedó en tus movimientos.</p>}
       {sp.guardada && <p className="notice g" role="status">Listo, se guardaron los cambios. Lo anterior quedó como estaba.</p>}
       {sp.terminada && <p className="notice g" role="status">Listo, dejó de repetirse desde hoy. La ves abajo, en Terminadas.</p>}

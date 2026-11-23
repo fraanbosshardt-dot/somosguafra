@@ -1,3 +1,4 @@
+import { PRODUCT_FAQ } from "@/lib/product-help";
 import { SupportGuide } from "@/components/support-guide";
 import { randomUUID } from "node:crypto";
 import { SupportThread } from "@/components/support-thread";
@@ -18,6 +19,7 @@ import { BRAND } from "@/lib/brand";
 export const metadata: Metadata = { title: "Ayuda" };
 
 const FAQ: [string, string][] = [
+  ...PRODUCT_FAQ,
   ["¿Por qué los importes de Inicio y Flujo pueden ser distintos?", "Inicio muestra saldo menos pagos cargados hasta la fecha indicada. La vista de flujo con estimaciones también puede incluir recurrentes y el margen de presupuestos activados. Revisá el alcance indicado: disponible, saldo proyectado y margen del presupuesto son cosas distintas."],
   ["¿Cómo se muestran mis deudas en distintas monedas?", "Cada moneda tiene su propio resumen. Las cuotas del mes y atrasadas descuentan lo que ya pagaste parcialmente. Si hay pagos parciales con intereses o cargos, el capital se estima proporcionalmente al cronograma; confirmá el saldo con el acreedor antes de cancelar. El capital pendiente es distinto de las cuotas, que pueden incluir intereses: no sumes ambos importes."],
   ["¿El PDF y el Excel respetan mis filtros?", "Desde Informes, el Excel conserva los meses y la cuenta seleccionados; el PDF corresponde al mes indicado en su botón y conserva la cuenta. El informe usa el mes del gasto y los reintegros lo reducen. Desde Importar y exportar podés descargar todos tus movimientos."],

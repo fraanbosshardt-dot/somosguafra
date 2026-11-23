@@ -1,3 +1,4 @@
+import { ProductGuide } from "./product-guide";
 import Link from "next/link";
 import { SettingsNavigation } from "./settings-navigation";
 
@@ -8,6 +9,7 @@ export function PageHead({ crumb, title, desc, actions }: { crumb?: string; titl
         {crumb && <div className="crumb">{crumb}</div>}
         <h1>{title}</h1>
         {desc && <p>{desc}</p>}
+        <ProductGuide />
       </div>
       {actions && <div className="acts">{actions}</div>}
     </div>

@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
+import { remaining } from "@/server/ledger";
+import { ZERO, formatMoney } from "@/lib/money";
 import { parseDate, validPeriod, addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { PageHead, Tabs } from "@/components/page";
 import { projectedItems } from "@/server/recurring";
@@ -16,7 +17,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const p = validPeriod(sp.mes) ? sp.mes! : period(today);
   const from = periodStart(p), to = periodEnd(p);
-  const obs = await getDb().obligation.findMany({ where: { workspaceId: workspace.id, dueDate: { gte: from, lte: to }, status: { not: "CANCELLED" } }, orderBy: { dueDate: "asc" } });
+  const obs = await getDb().obligation.findMany({ where: { workspaceId: workspace.id, dueDate: { gte: from, lte: to }, status: { not: "CANCELLED" } }, orderBy: { dueDate: "asc" }, include: { payments: true } });
   // Proyectados: lo que tus pagos que se repiten van a generar este mes (desde hoy en adelante).
   const proj = to < today ? [] : await projectedItems(getDb(), workspace.id, from > today ? from : today, to);
   const projByDay = new Map<string, typeof proj>();
@@ -33,11 +34,18 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   const selItems = sel ? byDay.get(sel) ?? [] : [];
   const selProj = sel ? projByDay.get(sel) ?? [] : [];
   const selDate = sel ? new Date(`${sel}T00:00:00Z`) : null;
+  const totals = new Map<string, {incoming: typeof ZERO; outgoing: typeof ZERO}>();
+  for (const item of [...selItems.filter(o => o.status !== "SETTLED").map(o => ({currency:o.currency,direction:o.direction,amount:remaining(o)})),...selProj]) {
+    const value = totals.get(item.currency) ?? {incoming:ZERO,outgoing:ZERO};
+    if (item.direction === "RECEIVABLE") value.incoming=value.incoming.plus(item.amount); else value.outgoing=value.outgoing.plus(item.amount);
+    totals.set(item.currency,value);
+  }
   return (
     <>
       <PageHead crumb="Pagos y deudas" title="Calendario" desc="Tocá un día para ver qué vence y registrar el pago o el cobro."
         actions={<><Link className="btn" href={`/app/calendario?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><span className="btn" style={{ minWidth: 150, justifyContent: "center" }}>{fmtPeriod(p)}</span><Link className="btn" href={`/app/calendario?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></>} />
       <Tabs current="cal" items={[{ key: "lista", label: "Lista", href: "/app/proximos" }, { key: "cal", label: "Calendario", href: "/app/calendario" }]} />
+      <div className="calendar-layout">
       <div className="legend"><span><i style={{ background: "var(--green)" }} />Cobros</span><span><i style={{ background: "var(--ink)" }} />Pagos</span><span><i style={{ background: "var(--red)" }} />Atrasados</span><span><i style={{ background: "var(--line-2)" }} />Ya pagados</span><span><i style={{ background: "transparent", border: "1px dashed var(--line-2)" }} />Proyectados (se repiten)</span></div>
       <div className="tw" style={{ margin: 0, padding: 0 }}>
         <div className="cal cal-real">
@@ -67,16 +75,17 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
         </div>
       </div>
       {!obs.length && !proj.length && <div className="empty">No hay pagos ni cobros este mes.</div>}
-      {selDate && (obs.length > 0 || proj.length > 0) && (
+      {selDate && (
         <div className="card cal-day">
           <div className="chead"><h3>{selDate.getUTCDate()} de {fmtPeriod(p).split(" ")[0].toLowerCase()}</h3><span className="sub">{selItems.length + selProj.length ? `${selItems.length + selProj.length} ${selItems.length + selProj.length === 1 ? "pago o cobro" : "pagos y cobros"}` : "Nada para este día"}</span></div>
+          {[...totals].map(([currency,t]) => <p className="sub" key={currency}>{currency} · Por cobrar: {formatMoney(t.incoming,currency)} · Por pagar: {formatMoney(t.outgoing,currency)}</p>)}
           {selItems.length + selProj.length > 0 && <div className="list">
             {selItems.map((o) => {
               const settled = o.status === "SETTLED", rec = o.direction === "RECEIVABLE";
               return (
                 <div className="li" key={o.id}>
                   <div className="grow"><div className="t">{o.description}</div><div className="s">{settled ? (rec ? "Cobrado" : "Pagado") : o.dueDate < today ? <span className="neg">Atrasado</span> : rec ? "A cobrar" : "A pagar"}</div></div>
-                  <b className={`num ${rec ? "pos" : "neg"}`}>{rec ? "+" : "−"}{formatMoney(o.amount, o.currency)}</b>
+                  <b className={`num ${rec ? "pos" : "neg"}`}>{rec ? "+" : "−"}{formatMoney(settled ? o.amount : remaining(o), o.currency)}</b>
                   {!settled && <Link className="btn sm" href={`/app/proximos/${o.id}`}>{rec ? "Cobrar" : "Pagar"}</Link>}
                 </div>
               );
@@ -91,6 +100,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
           </div>}
         </div>
       )}
+      </div>
     </>
   );
 }

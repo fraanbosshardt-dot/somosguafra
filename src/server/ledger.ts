@@ -116,6 +116,7 @@ async function refreshStatus(db: Tx, obligationId: string) {
 }
 
 export type MovementInput = {
+  splits?: { categoryId: string; amount: MoneyValue }[];
   kind: "INCOME" | "EXPENSE";
   description: string;
   amount: MoneyValue; // importe total (previsto)
@@ -145,6 +146,9 @@ export async function recordMovement(db: Db, ws: string, input: MovementInput) {
   if (input.status !== "PAID" && !input.dueDate) throw new UserError("Falta la fecha de vencimiento de lo pendiente.");
   if (input.status !== "PENDING" && !input.effectiveDate) throw new UserError("Falta la fecha del pago o cobro.");
 
+  const splits = input.splits;
+  if (splits && (input.kind !== "EXPENSE" || input.status !== "PAID" || !paid.eq(amount) || splits.length < 2 || splits.length > 10 || new Set(splits.map(s => s.categoryId)).size !== splits.length || splits.some(s => !s.categoryId || !round2(s.amount).isFinite() || !round2(s.amount).gt(0)) || !splits.reduce((sum, s) => sum.plus(round2(s.amount)), ZERO).eq(amount))) throw new UserError("La división necesita de 2 a 10 categorías distintas, importes positivos y una suma igual al total. Solo se divide un gasto pagado completo.");
+
   if (input.idempotencyKey) {
     const dup = await db.transaction.findFirst({ where: { workspaceId: ws, idempotencyKey: input.idempotencyKey } });
     if (dup) return { transactionId: dup.id, obligationId: dup.obligationId, duplicate: true };
@@ -164,6 +168,27 @@ export async function recordMovement(db: Db, ws: string, input: MovementInput) {
     const economicPeriod = input.economicPeriod ?? period(refDate);
     if (!/^\d{4}-\d{2}$/.test(economicPeriod)) throw new UserError("El mes al que corresponde no es válido.");
     const direction = input.kind === "INCOME" ? "IN" : "OUT";
+
+    // Una compra dividida son asientos de categoría cuya suma es la salida real.
+    // Se validan todos antes de escribir y se guardan en la misma transacción.
+    if (splits) {
+      if (["CREDIT_CARD", "INVESTMENT"].includes(account.type)) throw new UserError("Dividí la compra desde una cuenta de dinero. Las compras con tarjeta se cargan en Tarjetas.");
+      const categories = await Promise.all(splits.map(s => ownCategory(tx, ws, s.categoryId, "EXPENSE")));
+      const group = `guafra:split:${randomUUID()}`;
+      let firstId = "";
+      for (const [i, part] of splits.entries()) {
+        const item = await tx.transaction.create({ data: {
+          workspaceId: ws, accountId: account.id, type: "EXPENSE", direction: "OUT",
+          amount: money(round2(part.amount)), currency: account.currency, description,
+          categoryId: categories[i]!.id, effectiveDate: input.effectiveDate!, economicPeriod,
+          notes: input.notes?.trim() || null, tags: [...(input.tags ?? []), group],
+          idempotencyKey: input.idempotencyKey ? (i === 0 ? input.idempotencyKey : `${input.idempotencyKey}/part/${i}`) : null,
+          createdById: input.userId ?? null,
+        } });
+        if (!firstId) firstId = item.id;
+      }
+      return { transactionId: firstId, obligationId: null, duplicate: false };
+    }
 
     // Pagado justo por lo previsto: alcanza con el movimiento.
     // Si hay diferencia, parcial o pendiente: se guarda la obligación con el importe previsto.

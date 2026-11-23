@@ -2,9 +2,10 @@ import { lockWorkspace } from "./workspace-lock";
 // Informes, exportación e importación de movimientos.
 import { createHash } from "node:crypto";
 import type { Db } from "./ledger";
-import { recordMovement, UserError } from "./ledger";
+import type { Prisma } from "@/generated/prisma/client";
+import { UserError } from "./ledger";
 import { readXlsx, writeXlsx } from "@/lib/xlsx";
-import { dec, parseAmount, ZERO } from "@/lib/money";
+import { dec, parseAmount, round2, ZERO } from "@/lib/money";
 import { addMonths, fmtDateNum, parseDate, period } from "@/lib/dates";
 import type Decimal from "decimal.js";
 
@@ -165,16 +166,18 @@ export function autoMap(text: string): Record<number, ColumnKind> {
   return Object.fromEntries(headers.map((h, i) => [i, guessColumn(h)]));
 }
 
-export type ImportPreview = { ok: { date: Date; description: string; amount: Decimal; category: string; key: string }[]; errors: { line: number; reason: string }[]; duplicates: number };
+export type ImportPreview = { ok: { date: Date; description: string; amount: Decimal; category: string; key: string; repeatedInFile?: boolean }[]; errors: { line: number; reason: string }[]; duplicates: number };
 
-export async function previewImport(db: Db, ws: string, accountId: string, text: string, map: Record<number, string>): Promise<ImportPreview> {
+export async function previewImport(db: Pick<Db, "transaction">, ws: string, accountId: string, text: string, map: Record<number, string>): Promise<ImportPreview> {
   const { rows } = parseCsv(text);
+  if(rows.length>2000) throw new UserError("Revisá hasta 2.000 movimientos por archivo. Dividí el extracto en archivos más chicos.");
   const col = (k: string) => Number(Object.entries(map).find(([, v]) => v === k)?.[0] ?? -1);
   const [cf, cc, ci, ck, cin, cout] = [col("fecha"), col("concepto"), col("importe"), col("categoria"), col("credito"), col("debito")];
   // Entradas y salidas en columnas separadas (como Mercado Pago): el importe es entrada menos salida.
   const split = cin >= 0 || cout >= 0;
   if (cf < 0 || (ci < 0 && !split)) throw new UserError("Indicá qué columna es la fecha y cuál el importe.");
   const ok: ImportPreview["ok"] = [], errors: ImportPreview["errors"] = [];
+  const occurrences = new Map<string,number>();
   rows.forEach((r, i) => {
     const date = parseDate(r[cf]);
     const amount = split ? (parseAmount(r[cin] || "0") ?? ZERO).minus(parseAmount(r[cout] || "0") ?? ZERO) : parseAmount(r[ci]);
@@ -183,23 +186,45 @@ export async function previewImport(db: Db, ws: string, accountId: string, text:
     if (!amount) return errors.push({ line: i + 2, reason: "Importe inválido" });
     const description = (cc >= 0 ? r[cc] : "") || "Movimiento importado";
     const key = "imp:" + createHash("sha256").update(`${accountId}|${date.toISOString()}|${amount.toFixed(2)}|${description}`).digest("hex").slice(0, 32);
-    ok.push({ date, description, amount, category: ck >= 0 ? r[ck] ?? "" : "", key });
+    const occurrence=(occurrences.get(key)??0)+1;occurrences.set(key,occurrence);
+    ok.push({ date, description, amount, category: ck >= 0 ? r[ck] ?? "" : "", key:occurrence===1?key:`${key}:occ:${occurrence}`, repeatedInFile:occurrence>1 });
   });
   const existing = await db.transaction.findMany({ where: { workspaceId: ws, idempotencyKey: { in: ok.map((o) => o.key) } }, select: { idempotencyKey: true } });
   const dup = new Set(existing.map((e) => e.idempotencyKey));
-  return { ok: ok.filter((o) => !dup.has(o.key)), errors, duplicates: dup.size };
+  let duplicates = 0;
+  const unique = ok.filter(o => { if (dup.has(o.key)) { duplicates++; return false; } dup.add(o.key); return true; });
+  return { ok: unique, errors, duplicates };
 }
 
-export async function applyImport(db: Db, ws: string, accountId: string, fileName: string, preview: ImportPreview, userId?: string) {
+export async function applyImport(db: Db, ws: string, accountId: string, fileName: string, preview: ImportPreview, userId?: string, review?: {text:string;map:Record<number,string>;fingerprint:string;assisted:boolean;excluded:string[]}) {
   if (!preview.ok.length) throw new UserError("No hay movimientos nuevos para importar.");
-  const cats = await db.category.findMany({ where: { workspaceId: ws } });
-  const batch = await db.importBatch.create({ data: { workspaceId: ws, source: "csv", fileName, rows: preview.ok.length } });
-  for (const r of preview.ok) {
-    const kind = r.amount.gt(0) ? "INCOME" : "EXPENSE";
-    const cat = cats.find((c) => c.kind === kind && c.name.toLowerCase() === r.category.toLowerCase());
-    await recordMovement(db, ws, { kind, description: r.description, amount: r.amount.abs(), accountId, categoryId: cat?.id ?? null, status: "PAID", effectiveDate: r.date, economicPeriod: period(r.date), idempotencyKey: r.key, notes: `import:${batch.id}`, userId });
-  }
-  return batch;
+  return db.$transaction(async tx => {
+    await lockWorkspace(tx, ws);
+    const account = await tx.account.findFirst({where:{id:accountId,workspaceId:ws,active:true,type:{notIn:["CREDIT_CARD","INVESTMENT"]}}});
+    if(!account) throw new UserError("Elegí una cuenta activa de dinero de este espacio.");
+    let checked = preview;
+    if(review) {
+      const {importFingerprint,importMatches,selectedImport} = await import("./import-review");
+      const fresh = await previewImport(tx,ws,accountId,review.text,review.map);
+      const matches = review.assisted ? await importMatches(tx,ws,accountId,fresh) : [];
+      if(importFingerprint(accountId,review.text,fresh,matches)!==review.fingerprint) throw new UserError("El archivo, la cuenta o sus coincidencias cambiaron. Tocá Revisar archivo antes de confirmar.");
+      checked=selectedImport(fresh,review.excluded);
+    }
+    if(!checked.ok.length || checked.ok.length>2000) throw new UserError("Elegí entre 1 y 2.000 movimientos nuevos por archivo.");
+    const cats = await tx.category.findMany({ where: { workspaceId: ws, archived: false } });
+    const batch = await tx.importBatch.create({ data: { workspaceId: ws, source: "csv", fileName, rows: 0 } });
+    const data: Prisma.TransactionCreateManyInput[] = checked.ok.map(r => {
+      const kind = r.amount.gt(0) ? "INCOME" : "EXPENSE";
+      const cat = cats.find(c => c.kind === kind && c.name.toLowerCase() === r.category.toLowerCase());
+      const description=r.description.trim();
+      const rounded=round2(r.amount);
+      if(!description || !rounded.isFinite() || rounded.isZero() || rounded.abs().gte("10000000000000000") || !Number.isFinite(r.date.getTime())) throw new UserError("Revisá el concepto, el importe y la fecha de cada fila.");
+      return {workspaceId:ws,accountId,type:kind,direction:kind==="INCOME"?"IN":"OUT",amount:rounded.abs().toFixed(2),currency:account.currency,description,categoryId:cat?.id??null,effectiveDate:r.date,economicPeriod:period(r.date),idempotencyKey:r.key,notes:`import:${batch.id}`,createdById:userId??null};
+    });
+    const {count:rows}=await tx.transaction.createMany({data,skipDuplicates:true});
+    if (!rows) throw new UserError("Estos movimientos ya estaban cargados. Volvé a revisar el archivo.");
+    return tx.importBatch.update({ where: { id: batch.id }, data: { rows } });
+  }, { timeout: 60_000 });
 }
 
 // Revertir una importación completa sin tocar el resto.
