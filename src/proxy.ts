@@ -25,6 +25,10 @@ export function proxy(request: NextRequest) {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("Cache-Control", "private, no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
+  // La app de Android vive en /movil: se recuerda para volver ahí después de ingresar con Google.
+  if (request.nextUrl.pathname.startsWith("/movil") && request.cookies.get("somosguafra_app")?.value !== "movil") {
+    response.cookies.set("somosguafra_app", "movil", { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 365 });
+  }
   return response;
 }
 

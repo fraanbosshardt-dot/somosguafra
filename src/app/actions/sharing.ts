@@ -1,7 +1,7 @@
 "use server";
 import { reportError } from "@/lib/diagnostics";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { audit, canUse, requireOwner, requireUser } from "@/lib/auth/session";
@@ -58,7 +58,7 @@ export async function leaveWorkspaceAction(fd: FormData) {
     await removeMember(db, m.workspaceId, m.id);
     await audit("sharing.left", { userId: user.id, workspaceId: m.workspaceId });
   }
-  redirect("/app");
+  redirect(((await headers()).get("x-audit-path") ?? "").startsWith("/movil") ? "/movil" : "/app");
 }
 
 // Cambiar el espacio que estás viendo. Usa requireUser: quien "solo mira" también puede cambiar de espacio.
@@ -66,7 +66,7 @@ export async function switchWorkspaceAction(fd: FormData) {
   const { user } = await requireUser();
   try { await switchWorkspace(getDb(), user.id, String(fd.get("workspaceId"))); } catch (e) { if (!(e instanceof UserError)) throw e; }
   revalidatePath("/app", "layout");
-  redirect("/app");
+  redirect(((await headers()).get("x-audit-path") ?? "").startsWith("/movil") ? "/movil" : "/app");
 }
 
 export async function acceptInviteAction(_: FormState, fd: FormData): Promise<FormState> {

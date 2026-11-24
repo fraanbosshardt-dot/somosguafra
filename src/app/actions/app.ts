@@ -8,12 +8,13 @@ function revalidatePath(path: string, type?: "layout" | "page") {
   if (path.startsWith("/app")) revalidateWeb("/movil", "layout");
 }
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { lockWorkspace } from "@/server/workspace-lock";
 import { resourceQuotaAvailable } from "@/server/resource-quota";
 import { getDb } from "@/lib/db";
-import { audit, canUse, requireUser, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
+import { appPath, audit, canUse, requireUser, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
 import { quarterHour, reserveSecurityAttempt } from "@/server/security-limits";
 import { consumeTotp } from "@/server/totp-check";
 import { parseAmount } from "@/lib/money";
@@ -31,6 +32,11 @@ const currencyOf = (v: FormDataEntryValue | null, fallback: string) => (isCurren
 const countryOf = (v: FormDataEntryValue | null, fallback: string) => (COUNTRIES.some((c) => c.code === String(v)) ? String(v) : fallback);
 
 const ACCOUNT_TYPES = ["CASH", "SAVINGS", "CHECKING", "WALLET", "FOREIGN", "INVESTMENT", "OTHER"] as const;
+
+// La pantalla de configuración desde donde se envió (la app de Android usa /movil; el proxy pone la ruta).
+async function settingsPath() {
+  return ((await headers()).get("x-audit-path") ?? "").startsWith("/movil") ? "/movil/explorar/configuracion" : "/app/configuracion";
+}
 
 function fail(e: unknown): FormState {
   if (e instanceof UserError) return { error: e.message };
@@ -101,7 +107,7 @@ export async function finishOnboardingAction(_: FormState, fd: FormData): Promis
   } catch (e) {
     return fail(e);
   }
-  redirect("/app");
+  redirect(await appPath("/app"));
 }
 
 // ---------- Cuentas ----------
@@ -384,8 +390,8 @@ export async function saveModulesAction(_: FormState, fd: FormData): Promise<For
 export async function start2faAction() {
   const { user, session } = await requireUser();
   if (user.totpEnabledAt) return;
-  if (Date.now() - session.createdAt.getTime() > quarterHour) redirect(`/app/configuracion?tab=seguridad&seguridaderror=${encodeURIComponent("Por seguridad, cerrá sesión e ingresá de nuevo antes de activar la verificación.")}`);
-  if (!await reserveSecurityAttempt(getDb(), "twofactor-setup", [{ key: user.id, limit: 3, windowMs: quarterHour }])) redirect(`/app/configuracion?tab=seguridad&seguridaderror=${encodeURIComponent("Demasiados intentos. Probá de nuevo en 15 minutos.")}`);
+  if (Date.now() - session.createdAt.getTime() > quarterHour) redirect(`${await settingsPath()}?tab=seguridad&seguridaderror=${encodeURIComponent("Por seguridad, cerrá sesión e ingresá de nuevo antes de activar la verificación.")}`);
+  if (!await reserveSecurityAttempt(getDb(), "twofactor-setup", [{ key: user.id, limit: 3, windowMs: quarterHour }])) redirect(`${await settingsPath()}?tab=seguridad&seguridaderror=${encodeURIComponent("Demasiados intentos. Probá de nuevo en 15 minutos.")}`);
   await getDb().user.update({ where: { id: user.id }, data: { totpSecretEnc: encryptSecret(generateTotpSecret()) } });
   revalidatePath("/app/configuracion");
 }

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/auth/password";
-import { audit, createSession, destroySession, getSession, landingPath, markTwoFactorVerified } from "@/lib/auth/session";
+import { appPath, audit, createSession, destroySession, getSession, landingPath, markTwoFactorVerified } from "@/lib/auth/session";
 import { consumeTotp } from "@/server/totp-check";
 import { createUserWithWorkspace, ensureUserWorkspace } from "@/server/workspace";
 import { authBuckets, quarterHour, reserveSecurityAttempt } from "@/server/security-limits";
@@ -72,13 +72,13 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
   try { const { notifyNewDevice } = await import("@/server/account-mail"); await notifyNewDevice(db, user, h.get("user-agent"), ip); } catch (e) { reportError("aviso de ingreso", e); }
   await createSession(user.id, { twoFactorVerified: !user.totpEnabledAt, remember: fd.get("remember") === "on" });
   await audit("auth.login", { userId: user.id });
-  redirect(user.totpEnabledAt ? "/verificar" : await landingPath("/app"));
+  redirect(user.totpEnabledAt ? await appPath("/verificar") : await landingPath("/app"));
 }
 
 export async function verifyLoginCodeAction(_: FormState, fd: FormData): Promise<FormState> {
   const s = await getSession();
-  if (!s) redirect("/ingresar");
-  if (!s.user.totpSecretEnc || !s.user.totpEnabledAt) redirect("/app");
+  if (!s) redirect(await appPath("/ingresar"));
+  if (!s.user.totpSecretEnc || !s.user.totpEnabledAt) redirect(await appPath("/app"));
   const code = String(fd.get("code") ?? "").replace(/\D/g, "");
   const db = getDb();
   if (!(await reserveSecurityAttempt(db, "twofactor", [{ key: s.userId, limit: 5, windowMs: quarterHour }]))) {
@@ -101,8 +101,9 @@ export async function verifyLoginCodeAction(_: FormState, fd: FormData): Promise
 }
 
 export async function logoutAction() {
+  const to = await appPath("/");
   await destroySession();
-  redirect("/");
+  redirect(to);
 }
 
 // ---------- Recuperar contraseña ----------

@@ -224,14 +224,15 @@
 .mv-flow summary::-webkit-details-marker { display: none; }
 
 /* Formularios de la web reusados dentro de la app: mismos colores y tamaños que la app. */
-.mv-web {
+.mv-web, .mv-theme {
   --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #EEF6F1; --canvas: #F6F7F5; --line: #EEF0EE; --line-2: #E1E5E1;
   --fg: #0E1A15; --muted: #4E5B55; --faint: #6B7771;
   --ink: #16493A; --ink-h: #0F3A2D; --on-ink: #FFFFFF; --ink-soft: #DDEEE3; --ink-txt: #0F3A2D;
   --green: #1E7A3B; --green-soft: #DDEEE3; --red: #C5221F; --red-soft: #FDECEA; --amber: #A35200; --amber-soft: #FFF5E8;
   --blue: #16493A; --blue-soft: #DDEEE3; --r: 14px;
-  color: var(--fg); display: flex; flex-direction: column; gap: 12px;
+  color: var(--fg);
 }
+.mv-web { display: flex; flex-direction: column; gap: 12px; }
 .mv-web .frow { grid-template-columns: 1fr; gap: 12px; }
 .mv-web .field { font-size: 13px; font-weight: 800; color: var(--muted); gap: 6px; }
 .mv-web .field input, .mv-web .field select, .mv-web .field textarea { min-height: 50px; border-radius: 14px; border: 1.5px solid var(--line-2); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--fg); background: #fff; }
@@ -257,3 +258,37 @@
 .mv-web .seg { display: flex; gap: 6px; flex-wrap: wrap; }
 .mv-web .seg button, .mv-web .seg .segl { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line-2); background: #fff; font-weight: 800; font-size: 13px; }
 .mv-web .seg [aria-selected="true"], .mv-web .seg .on { background: var(--fg); color: #fff; border-color: var(--fg); }
+
+/* Interruptor (funciones) */
+.mv-switch { position: relative; width: 46px; height: 28px; flex: none; }
+.mv-switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.mv-switch i { position: absolute; inset: 0; border-radius: 99px; background: #D5DAD6; transition: background .2s; pointer-events: none; }
+.mv-switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.mv-switch input:checked + i { background: var(--brand); }
+.mv-switch input:checked + i::after { transform: translateX(18px); }
+.mv-switch input:focus-visible + i { outline: 2px solid var(--brand); outline-offset: 2px; }
+.mv-web .card { background: var(--surface); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.mv-web .list .li { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+
+/* Ingreso, registro y verificación */
+.mv-auth { min-height: 100dvh; max-width: 480px; margin: 0 auto; padding: calc(28px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 18px; }
+.mv-auth h1 { margin: 8px 0 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+.mv-auth .lead { margin: 0; font-size: 15px; font-weight: 600; color: var(--muted); }
+.mv-auth .mv-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--brand); }
+.mv-auth .gbtn { min-height: 52px; border-radius: 14px; border: 1.5px solid var(--field-line); background: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 800; font-size: 15px; color: var(--ink); }
+.mv-or { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: var(--faint); }
+.mv-or::before, .mv-or::after { content: ""; flex: 1; height: 1px; background: var(--field-line); }
+.mv-theme { background: var(--bg); min-height: 100dvh; }
+.mv-logo .logo { width: 30px; height: 30px; display: inline-flex; }
+.mv-logo .logo svg { width: 100%; height: 100%; }
+
+/* La app es solo clara: la bienvenida de la web (.nx) y el fondo de la página también, aunque el sistema esté en modo oscuro. */
+.mv .mv-theme .nx.nx, .mv .nx.nx {
+  --nx-bg:#FFFFFF; --nx-canvas:#F6F7F5; --nx-sunk:#F2F4F2; --nx-ink:#0E1A15; --nx-ink2:#33403A; --nx-ink3:#4E5B55;
+  --nx-line:#EEF0EE; --nx-line2:#E1E5E1; --nx-accent:#16493A; --nx-accent-h:#0F3A2D; --nx-on-accent:#FFFFFF; --nx-accent-soft:#DDEEE3; --nx-accent-ink:#0F3A2D;
+  --nx-pos:#1E7A3B; --nx-neg:#C5221F; --nx-neg-soft:#FDECEA; --nx-warn:#A35200;
+  --nx-shadow-s:0 1px 2px rgba(60,64,67,.2),0 1px 3px 1px rgba(60,64,67,.1);
+  color-scheme: light;
+}
+html:has(.mv), html:has(.mv) body { background: #F6F7F5; color-scheme: light; }
+.mv { --logo-dark: #16493A; }

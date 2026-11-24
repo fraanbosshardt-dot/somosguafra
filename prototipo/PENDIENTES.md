@@ -12,7 +12,8 @@ Cuando algo se termina, pasa a "Completado" con la fecha.
 - [ ] A3b. Falta en Próximos: vista de calendario y deslizar una fila para pagar o cancelar.
 - [x] A4. Explorar (24/11/2026): pantalla con todas las funciones y buscador; Cuentas, Revisión del mes, Tarjetas, Deudas, Pagos que se repiten, Flujo de caja, Presupuestos, Objetivos, Simulador, Patrimonio, Inversiones, Alertas, Informes y Buscar. Las páginas /movil ahora tienen los mismos encabezados de seguridad que /app. Arreglo de paso: dos valuaciones el mismo día ya no se pisan al azar.
 - [ ] A4b. Falta en la app: Ventas de cereal, Categorías e Importar (hoy abren la web). Los textos de algunos formularios reusados de la web (tarjetas, deudas, inversiones) siguen con voseo ("querés", "cargás"); conviene pasarlos a español neutro en la web y en la app a la vez.
-- [ ] A5. Configuración, Ayuda, bienvenida, ingresar y registro con el diseño nuevo.
+- [x] A5. Configuración, Ayuda, Pro, bienvenida, ingresar, registro y verificación en la app (24/11/2026). La app recuerda que se usa desde /movil (cookie) y después de ingresar, crear la cuenta, ingresar con Google o cerrar sesión vuelve a sus pantallas. Borrar la cuenta está en Configuración → Seguridad (lo pide Google Play). La pantalla Pro de la app no enlaza a Mercado Pago: el cobro llega con Google Play (A7).
+- [ ] A5b. Falta en la app: "Olvidé mi contraseña" todavía abre la pantalla de la web.
 - [ ] A6. Empaquetado Android (Bubblewrap, assetlinks.json, ícono, firma) y página web para borrar la cuenta.
 - [ ] A7. Google Play Billing para Pro (necesita productos en Play Console y credenciales tuyas).
 - [ ] A8. Ficha de Play Store, prueba cerrada con 12 testers por 14 días y envío.

@@ -60,11 +60,23 @@ export async function destroySession() {
   jar.delete("somosguafra_purchase");
 }
 
+// La app de Android (/movil) tiene sus propias pantallas de ingreso, verificación y bienvenida.
+// Se reconoce por la ruta que pone el proxy o, al volver de Google, por la cookie que deja /movil.
+export const APP_COOKIE = "somosguafra_app";
+const APP_PATHS: Record<string, string> = { "/ingresar": "/movil/ingresar", "/verificar": "/movil/verificar", "/bienvenida": "/movil/bienvenida", "/app": "/movil", "/": "/movil/ingresar" };
+export async function inMobileApp(useCookie = false) {
+  if (((await headers()).get("x-audit-path") ?? "").startsWith("/movil")) return true;
+  return useCookie && (await cookies()).get(APP_COOKIE)?.value === "movil";
+}
+export async function appPath(web: string, useCookie = false) {
+  return APP_PATHS[web] && (await inMobileApp(useCookie)) ? APP_PATHS[web] : web;
+}
+
 // Exige sesión completa (con el segundo paso hecho si está activado).
 export async function requireUser() {
   const s = await getSession();
-  if (!s) redirect("/ingresar");
-  if (s.user.totpEnabledAt && !s.twoFactorVerified) redirect("/verificar");
+  if (!s) redirect(await appPath("/ingresar"));
+  if (s.user.totpEnabledAt && !s.twoFactorVerified) redirect(await appPath("/verificar"));
   // Última actividad, para las métricas del panel (como mucho una escritura por hora).
   if (!s.user.lastSeenAt || Date.now() - s.user.lastSeenAt.getTime() > 3600_000) {
     await getDb().user.update({ where: { id: s.userId }, data: { lastSeenAt: new Date() } });
@@ -84,14 +96,14 @@ export async function requireUser() {
 export async function requireWorkspace(opts: { allowNotOnboarded?: boolean } = {}) {
   const { session, user } = await requireUser();
   const membership = pickMembership(user.memberships, user.activeWorkspaceId);
-  if (!membership) redirect("/ingresar");
+  if (!membership) redirect(await appPath("/ingresar"));
   let workspace = membership.workspace;
   if (workspace.referralCreditDays > 0) {
     const { applyReferralCredit } = await import("@/server/referral-credit");
     const changed = await getDb().$transaction((tx) => applyReferralCredit(tx, workspace.id));
     if (changed) workspace = await getDb().workspace.findUniqueOrThrow({ where: { id: workspace.id }, include: { subscription: true } });
   }
-  if (!workspace.onboardedAt && !opts.allowNotOnboarded) redirect("/bienvenida");
+  if (!workspace.onboardedAt && !opts.allowNotOnboarded) redirect(await appPath("/bienvenida"));
   return { session, user, membership, workspace, modules: readModules(workspace.modules), plan: effectivePlan(workspace.subscription) };
 }
 
@@ -113,7 +125,7 @@ export async function landingPath(fallback: string) {
     try { jar.delete("somosguafra_after"); } catch { /* en una página no se puede borrar: vence sola */ }
     return after;
   }
-  return fallback;
+  return appPath(fallback, true);
 }
 
 // Lo que solo puede hacer el dueño del espacio (compartirlo, el plan).

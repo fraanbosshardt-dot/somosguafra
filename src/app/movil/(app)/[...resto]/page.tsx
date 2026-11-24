@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 // Puente temporal mientras se construyen las pantallas de la app: lo que todavía no existe en /movil
 // abre su equivalente de la web. Cada pantalla nueva de /movil tiene su propia ruta y deja de pasar por acá.
 const BRIDGE: [RegExp, (m: RegExpMatchArray, q: URLSearchParams) => string][] = [
-  [/^explorar\/pro$/, () => "/app/contratar"],
   [/^explorar\/([\w-]+(?:\/[\w-]+)*)$/, (m) => `/app/${m[1]}`],
 ];
 
