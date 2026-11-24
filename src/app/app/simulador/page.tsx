@@ -47,14 +47,14 @@ export default async function Simulator({ searchParams }: { searchParams: Promis
           {/* Al calcular, la pantalla baja sola hasta el resultado (en el celular queda debajo del formulario). */}
           <ActionForm action={privateSimulationAction} className="card" style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "start" }}>
             <h3>¿Qué querés probar?</h3>
-            <label className="field">Es…<select name="tipo" defaultValue={loan ? "prestamo" : "compra"}><option value="compra">Una compra en cuotas</option><option value="prestamo">Un préstamo (te prestan plata)</option></select></label>
+            <label className="field">Tipo de simulación<select name="tipo" defaultValue={loan ? "prestamo" : "compra"}><option value="compra">Una compra en cuotas</option><option value="prestamo">Un préstamo (te prestan plata)</option></select></label>
             <label className="field">{loan ? "¿Cuánto te prestan?" : "Precio de contado"}<input name="precio" inputMode="decimal" placeholder="0,00" defaultValue={sp.precio ?? ""} /></label>
             <div className="frow"><label className="field">Cuotas<select name="cuotas" defaultValue={String(n)}>{[1, 2, 3, 6, 9, 12, 18, 24, 36].map((x) => <option key={x} value={x}>{x === 1 ? "En un pago" : `${x} cuotas`}</option>)}</select></label>
               <label className="field">Primera cuota<input name="primera" type="date" defaultValue={isoDate(first)} /></label></div>
             <div className="frow"><label className="field">Interés<select name="interes" defaultValue={sp.interes ?? "sin"}><option value="sin">Sin interés</option><option value="con">Con interés</option></select></label>
               <label className="field">{loan ? "Total a devolver (todas las cuotas)" : "Total financiado"}<input name="total" inputMode="decimal" placeholder={loan ? "Ej.: cuota × cantidad" : "Solo si es con interés"} defaultValue={sp.total ?? ""} /></label></div>
             {loan && <p className="sub" style={{ margin: 0 }}>Para un préstamo, elegí “Con interés” y poné cuánto devolvés en total. La plata entra este mes y las cuotas salen después.</p>}
-            <label className="field">Colchón mínimo que querés mantener<input name="colchon" inputMode="decimal" placeholder="0,00" defaultValue={sp.colchon ?? ""} /></label>
+            <label className="field">Saldo mínimo que querés conservar<input name="colchon" inputMode="decimal" placeholder="0,00" defaultValue={sp.colchon ?? ""} /></label>
             <div><Submit pending="Calculando…">Calcular</Submit></div>
             <p className="sub">Mira tu dinero de hoy y todo lo que ya sabés que entra y sale, mes a mes, y le suma las cuotas.</p>
           </ActionForm>

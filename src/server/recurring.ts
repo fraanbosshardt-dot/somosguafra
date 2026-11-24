@@ -1,4 +1,5 @@
 import { lockWorkspace } from "./workspace-lock";
+import { REPLACED_GRAIN } from "@/lib/grain-markers";
 // Reglas recurrentes: generan pendientes (Obligation) sin duplicar y sin tocar el pasado.
 import type { Frequency, ObligationDirection, WeekendRule } from "@/generated/prisma/enums";
 import type { Db } from "./ledger";
@@ -65,12 +66,14 @@ export function amountFor(rule: { amount: MoneyValue; increasePct?: MoneyValue |
 
 // Crea los pendientes de las reglas hasta "until". Es idempotente: la clave (regla, fecha) es única.
 export async function materialize(db: Db, ws: string, until: Date) {
-  const rules = await db.recurringRule.findMany({ where: { workspaceId: ws, pausedAt: null, startDate: { lte: until } } });
+  return db.$transaction(async tx => {
+  await lockWorkspace(tx, ws);
+  const rules = await tx.recurringRule.findMany({ where: { workspaceId: ws, pausedAt: null, startDate: { lte: until } } });
   let created = 0;
   for (const r of rules) {
     const dates = occurrences(r, r.startDate, until);
     if (!dates.length) continue;
-    const res = await db.obligation.createMany({
+    const res = await tx.obligation.createMany({
       skipDuplicates: true,
       data: dates.map((d) => ({
         workspaceId: ws,
@@ -88,6 +91,7 @@ export async function materialize(db: Db, ws: string, until: Date) {
     created += res.count;
   }
   return created;
+  });
 }
 
 export type RuleInput = {
@@ -145,22 +149,34 @@ async function dropFuture(db: Db, ruleId: string, from: Date) {
 }
 
 // "Esta y las futuras": cierra la versión actual el día anterior y crea una nueva. El pasado no cambia.
-export async function changeRuleFrom(db: Db, ws: string, ruleId: string, from: Date, changes: Partial<RuleInput>) {
-  const r = await db.recurringRule.findFirst({ where: { id: ruleId, workspaceId: ws } });
-  if (!r) throw new UserError("No encontramos esa regla.");
+export async function changeRuleFrom(db: Db, ws: string, ruleId: string, from: Date, changes: Partial<RuleInput>, options: { coveredGrain?: boolean } = {}) {
   return db.$transaction(async (tx) => {
     await lockWorkspace(tx, ws);
+    const r = await tx.recurringRule.findFirst({ where: { id: ruleId, workspaceId: ws } });
+    if (!r) throw new UserError("No encontramos esa regla.");
+    if (await tx.recurringRule.count({ where: { workspaceId: ws, previousVersionId: r.id } })) throw new UserError("Esta regla ya tiene una versión nueva. Actualizá la pantalla antes de editar.");
+    if (!Number.isFinite(from.getTime()) || (r.endDate && from > r.endDate)) throw new UserError("Elegí una fecha dentro de la vigencia de esta regla.");
+    if (changes.amount != null && !round2(changes.amount).gt(0)) throw new UserError("El importe tiene que ser mayor a cero.");
+    if (changes.description !== undefined && !changes.description.trim()) throw new UserError("Falta el concepto.");
+    if (changes.direction !== undefined && !["PAYABLE", "RECEIVABLE"].includes(changes.direction)) throw new UserError("Revisá el tipo de pago o cobro.");
+    if (changes.dayOfMonth != null && (!Number.isInteger(changes.dayOfMonth) || changes.dayOfMonth < 1 || changes.dayOfMonth > 31)) throw new UserError("El día del mes va del 1 al 31.");
+    if (changes.endDate && changes.endDate < from) throw new UserError("La fecha de fin es anterior al cambio.");
+    if (changes.accountId && !await tx.account.count({ where: { id: changes.accountId, workspaceId: ws, active: true, currency: r.currency, type: { not: "CREDIT_CARD" } } })) throw new UserError("Elegí una cuenta activa de la misma moneda.");
+    if (changes.categoryId && !await tx.category.count({ where: { id: changes.categoryId, workspaceId: ws } })) throw new UserError("No encontramos esa categoría.");
+    // Una ocurrencia ya confirmada no se puede generar otra vez bajo la versión nueva.
+    const coveredGrain = options.coveredGrain && r.direction === "RECEIVABLE" && r.variableAmount && r.description === "Venta de cereal (estimada)";
+    if (await tx.obligation.count({ where: { workspaceId: ws, recurringRuleId: r.id, occurrenceDate: { gte: from }, OR: [{ status: { in: ["SETTLED", "PARTIAL"] } }, { status: "CANCELLED", ...(coveredGrain ? { OR: [{ notes: null }, { notes: { not: REPLACED_GRAIN } }] } : {}) }, { payments: { some: {} } }] } })) throw new UserError("Hay ocurrencias confirmadas desde esa fecha. Elegí una fecha posterior para conservarlas sin duplicarlas.");
     await tx.recurringRule.update({ where: { id: r.id }, data: { endDate: new Date(from.getTime() - 864e5) } });
     await dropFuture(tx as unknown as Db, r.id, from);
     return tx.recurringRule.create({
       data: {
         workspaceId: ws,
-        direction: r.direction,
+        direction: changes.direction ?? r.direction,
         description: changes.description?.trim() || r.description,
         amount: changes.amount != null ? round2(changes.amount).toFixed(2) : r.amount,
         currency: r.currency,
         categoryId: changes.categoryId !== undefined ? changes.categoryId : r.categoryId,
-        accountId: r.accountId,
+        accountId: changes.accountId !== undefined ? changes.accountId : r.accountId,
         frequency: changes.frequency ?? r.frequency,
         interval: changes.interval ?? r.interval,
         dayOfMonth: changes.dayOfMonth !== undefined ? changes.dayOfMonth : r.dayOfMonth,

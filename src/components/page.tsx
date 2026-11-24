@@ -41,15 +41,19 @@ export function Empty({ children }: { children: React.ReactNode }) {
 // Pestañas de Configuración: también llevan a Categorías, Pagos que se repiten e Importar, que salieron del menú.
 export function SettingsTabs({ current, rules = true }: { current: string; rules?: boolean }) {
   const items = [
-    { key: "general", label: "General", href: "/app/configuracion" },
-    { key: "funciones", label: "Funciones", href: "/app/configuracion?tab=funciones" },
-    { key: "compartir", label: "Compartir", href: "/app/configuracion?tab=compartir" },
-    { key: "categorias", label: "Categorías", href: "/app/categorias" },
-    ...(rules ? [{ key: "recurrentes", label: "Pagos y cobros que se repiten", href: "/app/recurrentes" }] : []),
-    { key: "importar", label: "Importar y exportar", href: "/app/importar" },
-    { key: "seguridad", label: "Seguridad", href: "/app/configuracion?tab=seguridad" },
-    { key: "plan", label: "Plan", href: "/app/configuracion?tab=plan" },
-    { key: "datos", label: "Tus datos", href: "/app/configuracion?tab=datos" },
+    { key: "general", label: "Perfil y preferencias", href: "/app/configuracion", group: "Tu cuenta" },
+    { key: "seguridad", label: "Seguridad", href: "/app/configuracion?tab=seguridad", group: "Tu cuenta" },
+    { key: "datos", label: "Tus datos", href: "/app/configuracion?tab=datos", group: "Tu cuenta" },
+    { key: "categorias", label: "Categorías", href: "/app/categorias", group: "Organizá tus finanzas" },
+    ...(rules ? [{ key: "recurrentes", label: "Pagos y cobros que se repiten", href: "/app/recurrentes", group: "Organizá tus finanzas" }] : []),
+    { key: "importar", label: "Importar y exportar", href: "/app/importar", group: "Organizá tus finanzas" },
+    { key: "funciones", label: "Funciones", href: "/app/configuracion?tab=funciones", group: "Organizá tus finanzas" },
+    { key: "plan", label: "Mi plan", href: "/app/configuracion?tab=plan", group: "Plan y equipo" },
+    { key: "compartir", label: "Compartir", href: "/app/configuracion?tab=compartir", group: "Plan y equipo" },
   ];
   return <SettingsNavigation current={current} items={items} />;
+}
+
+export function SettingsFrame({ current, rules, children }: { current: string; rules?: boolean; children: React.ReactNode }) {
+  return <div className="settings-layout"><SettingsTabs current={current} rules={rules} /><div className="settings-content">{children}</div></div>;
 }

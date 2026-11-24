@@ -1,3 +1,4 @@
+import { REPLACED_GRAIN } from "@/lib/grain-markers";
 import { lockWorkspace } from "./workspace-lock";
 // Ventas de cereal. Se guarda en toneladas y precio por tonelada; 1 t = 10 quintales.
 // Cada venta crea su cobro: si ya se cobró, un ingreso; si no, un pendiente que entra en el flujo de caja.
@@ -18,7 +19,7 @@ export type GrainInput = { saleDate: Date; grain: string; tonnes: MoneyValue; pr
 
 const describe = (grain: string, tonnes: MoneyValue) => `Venta de ${grain.toLowerCase()} — ${dec(tonnes).times(10).toDecimalPlaces(2).toString().replace(".", ",")} qq`;
 const monthOf = (d: Date) => ({ from: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)), to: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)) });
-const REPLACED = "Reemplazada por la venta real de cereal";
+const REPLACED = REPLACED_GRAIN;
 
 // Revisa los datos y calcula el neto (lo mismo al crear y al editar).
 async function prepare(db: Db, ws: string, input: GrainInput) {
@@ -247,8 +248,7 @@ export async function changeMonthlyGrain(db: Db, ws: string, ruleId: string, inp
   const acc = await db.account.findFirst({ where: { id: input.accountId, workspaceId: ws, active: true } });
   if (!acc) throw new UserError("Elegí la cuenta donde entra el dinero.");
   if (acc.currency !== rule.currency) throw new UserError(`Elegí una cuenta en ${rule.currency}.`);
-  const next = await changeRuleFrom(db, ws, rule.id, input.today, { amount: input.amount, dayOfMonth: input.day });
-  await db.recurringRule.update({ where: { id: next.id }, data: { accountId: acc.id } });
+  const next = await changeRuleFrom(db, ws, rule.id, input.today, { amount: input.amount, dayOfMonth: input.day, accountId: acc.id }, { coveredGrain: true });
   await coverMonthsWithSales(db, ws, input.today);
   return next;
 }

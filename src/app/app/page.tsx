@@ -1,3 +1,4 @@
+import { SetupChecklist } from "@/components/setup-checklist";
 import { spendableUntil } from "@/server/spendable";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -43,11 +44,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
   const steps: [boolean, string, string][] = [
     [true, "Cargá tu primera cuenta", "/app/cuentas"],
     // Para un productor, lo que cobra seguido es la venta de cereal.
-    grainOn ? [incomeRules > 0 || grainSales > 0, "Cargá tu venta de cereal o estimá los meses", "/app/cereal"] : [incomeRules > 0, "Cargá tu sueldo o lo que cobrás seguido", "/app/recurrentes?nueva=1"],
-    [expenseRules > 0, "Cargá tus gastos fijos (alquiler, luz, internet)", "/app/recurrentes?nueva=1"],
+    grainOn ? [incomeRules > 0 || grainSales > 0, "Cargá tu venta de cereal o estimá los meses", "/app/cereal"] : [incomeRules > 0, "Programá un ingreso habitual (sueldo, honorarios)", "/app/recurrentes?nueva=1&tipo=ingreso"],
+    [expenseRules > 0, "Cargá tus gastos fijos (alquiler, luz, internet)", "/app/recurrentes?nueva=1&tipo=gasto"],
     [expenses > 0, "Anotá un gasto del día", "/app/movimientos/nuevo"],
   ];
-  const stepsLeft = steps.filter(([ok]) => !ok).length;
   const dayOfMonth = today.getUTCDate();
   const daysInMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)).getUTCDate();
   const monthPct = Math.round((dayOfMonth / daysInMonth) * 100);
@@ -159,13 +159,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
         </div>
       )}
       <details className="more" style={{ marginBottom: 18 }}><summary>¿Cómo se calcula lo que me queda?</summary><p className="sub">Dinero disponible en tus cuentas en {cur}, menos {fm(owed)} de pagos pendientes hasta {fmtDayMonth(until)}, inclusive. No suma cobros sin confirmar ni mezcla monedas. No incluye nuevas compras que todavía no cargaste ni el margen de tus presupuestos. Para contemplar esas estimaciones, revisá Flujo de caja.</p><Link className="lnk" href="/app/revision">Hacer la revisión del mes</Link></details>
-      {stepsLeft > 0 && (
-        <div className="card">
-          <div className="chead"><div><h3>Terminá de configurar</h3><p className="sub">{steps.length - stepsLeft} de {steps.length} listos. Con esto Somos Guafra te muestra cuánto vas a tener cada mes.</p></div></div>
-          <div className="setup-bar" aria-hidden="true"><i style={{ width: `${((steps.length - stepsLeft) / steps.length) * 100}%` }} /></div>
-          <ol className="steps">{steps.map(([ok, label, href]) => <li key={label} className={ok ? "ok" : ""}>{ok ? <span>{label}</span> : <Link className="lnk" href={href}>{label}</Link>}</li>)}</ol>
-        </div>
-      )}
+      <SetupChecklist workspaceId={workspace.id} steps={steps} />
       <InstallApp />
       {modules.alertas && <Suspense fallback={null}><Tip ws={workspace.id} cur={cur} today={today} open={open} skipLate={dueNow.length > 0} /></Suspense>}
       {(() => {

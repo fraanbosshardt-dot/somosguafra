@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { PageHead, Tabs, SettingsTabs } from "@/components/page";
+import { PageHead, Tabs, SettingsFrame } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
 import { createCategoryAction, deleteCategoryAction } from "@/app/actions/app";
 import { ConfirmSubmit } from "@/components/confirm-submit";
@@ -26,7 +26,7 @@ export default async function Categories({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHead crumb="Configuración" title="Categorías" desc="Creá, cambiá el nombre, mové o borrá categorías. También podés crear una desde el formulario de un gasto o un ingreso." />
-      <SettingsTabs current="categorias" />
+      <SettingsFrame current="categorias">
       <Tabs current={kind} items={[{ key: "EXPENSE", label: "Gastos", href: "/app/categorias" }, { key: "INCOME", label: "Ingresos", href: "/app/categorias?tipo=INCOME" }]} />
       {sp.borrada && <p className="notice g" role="status">Categoría borrada. Sus movimientos quedaron donde elegiste.</p>}
       {parents.length > 0 && <ListSearch scope="cat-list" placeholder="Buscar una categoría o subcategoría…" label="Buscar categorías" />}
@@ -76,6 +76,7 @@ export default async function Categories({ searchParams }: { searchParams: Promi
           </ActionForm>
         </details>
       </div>
+    </SettingsFrame>
     </>
   );
 }

@@ -86,7 +86,7 @@ export function MovementForm({ accounts, categories, today, initialKind, initial
   })();
 
   const seg = <T extends string>(value: T, set: (v: T) => void, opts: [T, string][]) => (
-    <div className="seg" style={{ display: "flex" }}>{opts.map(([k, l]) => <button type="button" key={k} className={value === k ? "on" : ""} style={{ flex: 1 }} onClick={() => set(k)}>{l}</button>)}</div>
+    <div className="seg" style={{ display: "flex" }}>{opts.map(([k, l]) => <button type="button" key={k} aria-pressed={value === k} className={value === k ? "on" : ""} style={{ flex: 1 }} onClick={() => set(k)}>{l}</button>)}</div>
   );
 
   return (
