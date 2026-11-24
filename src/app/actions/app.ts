@@ -264,7 +264,9 @@ export async function linkToPendingAction(fd: FormData) {
   const ob = await linkToPending(getDb(), workspace.id, String(fd.get("transactionId") ?? ""), obligationId);
   await audit("obligation.linked", { userId: user.id, workspaceId: workspace.id, entity: "obligation", entityId: obligationId });
   revalidatePath("/app", "layout");
-  redirect(`/app/proximos?listo=${ob.direction === "RECEIVABLE" ? "cobro" : "pago"}`);
+  const done = ob.direction === "RECEIVABLE" ? "cobro" : "pago";
+  if (String(fd.get("back") ?? "") === "/movil") { revalidatePath("/movil", "layout"); redirect(`/movil/proximos?listo=${done}`); }
+  redirect(`/app/proximos?listo=${done}`);
 }
 
 export async function payObligationAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -276,6 +278,7 @@ export async function payObligationAction(_: FormState, fd: FormData): Promise<F
   }
   revalidatePath("/app", "layout");
   const back = String(fd.get("back") || "");
+  if (/^\/movil(\/|\?|$)/.test(back)) { revalidatePath("/movil", "layout"); redirect(back); }
   redirect(back.startsWith("/app") ? back : `/app/proximos?listo=${fd.get("kind") === "cobro" ? "cobro" : "pago"}`);
 }
 
@@ -312,6 +315,7 @@ export async function cancelObligationAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   await cancelObligation(getDb(), workspace.id, String(fd.get("id")));
   revalidatePath("/app", "layout");
+  if (/^\/movil(\/|\?|$)/.test(String(fd.get("back") ?? ""))) { revalidatePath("/movil", "layout"); redirect(String(fd.get("back"))); }
 }
 
 // ---------- Categorías ----------
@@ -471,6 +475,7 @@ export async function updateObligationAction(_: FormState, fd: FormData): Promis
     await audit("obligation.updated", { userId: user.id, workspaceId: workspace.id, entity: "obligation", entityId: id });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
+  if (String(fd.get("back") ?? "") === "/movil") { revalidatePath("/movil", "layout"); redirect("/movil/proximos?corregido=1"); }
   redirect("/app/proximos?corregido=1");
 }
 
@@ -482,6 +487,7 @@ export async function deleteObligationAction(_: FormState, fd: FormData): Promis
     await audit("obligation.deleted", { userId: user.id, workspaceId: workspace.id, entity: "obligation", entityId: id });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
+  if (String(fd.get("back") ?? "") === "/movil") { revalidatePath("/movil", "layout"); redirect("/movil/proximos?borrado=1"); }
   redirect("/app/proximos?borrado=1");
 }
 

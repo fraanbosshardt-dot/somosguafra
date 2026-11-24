@@ -845,13 +845,15 @@ export async function projectedAction(fd: FormData) {
   const occ = new Date(`${str(fd, "occurrence")}T00:00:00Z`);
   if (Number.isNaN(occ.getTime())) redirect("/app/proximos");
   const id = await materializeOccurrence(getDb(), workspace.id, str(fd, "ruleId"), occ);
+  const back = str(fd, "back");
+  const mobile = /^\/movil(\/|\?|$)/.test(back);
   if (str(fd, "do") === "cancelar") {
     await cancelObligation(getDb(), workspace.id, id);
     revalidatePath("/app", "layout");
-    const back = str(fd, "back");
+    if (mobile) { revalidatePath("/movil", "layout"); redirect(back); }
     redirect(/^\/app(\/|\?|$)/.test(back) ? back : "/app/proximos");
   }
-  redirect(`/app/proximos/${id}`);
+  redirect(mobile ? `/movil/proximos/${id}` : `/app/proximos/${id}`);
 }
 
 // ---------- Simulador: escenarios guardados (Pro) ----------

@@ -8,7 +8,8 @@ Cuando algo se termina, pasa a "Completado" con la fecha.
 ### App de Android (rama app-android, plan en docs/app-android/PLAN.md)
 - [x] A1. Base de /movil: diseño, barra de abajo, Inicio con datos reales y animaciones (24/11/2026).
 - [x] A2. Cargar un movimiento en 2 pasos + pantalla "Listo" con lo que te queda (24/11/2026).
-- [ ] A3. Movimientos (corregir y eliminar) y Próximos (calendario, registrar pago y cobro, deslizar).
+- [x] A3. Movimientos y Próximos (24/11/2026): gráfico de la semana (tocar un día filtra), búsqueda, filtros, corregir y eliminar; Próximos con totales de la semana, filtros, registrar pago o cobro, cancelar, proyectados y "+ Agregar" un pago o cobro a futuro que se repite cada mes.
+- [ ] A3b. Falta en Próximos: vista de calendario y deslizar una fila para pagar o cancelar.
 - [ ] A4. Explorar y sus funciones con el diseño nuevo.
 - [ ] A5. Configuración, Ayuda, bienvenida, ingresar y registro con el diseño nuevo.
 - [ ] A6. Empaquetado Android (Bubblewrap, assetlinks.json, ícono, firma) y página web para borrar la cuenta.

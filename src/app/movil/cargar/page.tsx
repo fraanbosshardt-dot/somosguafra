@@ -8,9 +8,9 @@ import { CargarForm } from "./form";
 
 export const metadata: Metadata = { title: "Cargar un movimiento" };
 
-export default async function Cargar({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
+export default async function Cargar({ searchParams }: { searchParams: Promise<{ tipo?: string; estado?: string }> }) {
   const { workspace } = await requireWorkspace();
-  const { tipo } = await searchParams;
+  const { tipo, estado } = await searchParams;
   const db = getDb();
   const [accounts, categories, recent] = await Promise.all([
     db.account.findMany({ where: { workspaceId: workspace.id, active: true, type: { not: "CREDIT_CARD" } }, orderBy: [{ position: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, currency: true } }),
@@ -41,6 +41,7 @@ export default async function Cargar({ searchParams }: { searchParams: Promise<{
       lastAccount={recent[0]?.accountId ?? accounts[0].id}
       today={isoDate(todayIn(workspace.timezone))}
       idem={randomUUID()}
+      pendingMode={estado === "pendiente"}
     />
   );
 }

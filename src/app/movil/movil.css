@@ -162,3 +162,35 @@
   .mv *, .mv *::before, .mv *::after { animation: none !important; transition: none !important; }
   .mv-tick path { stroke-dashoffset: 0 !important; }
 }
+
+/* Casilla grande (Se repite, Fue el total) */
+.mv-check { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1.5px solid var(--field-line); border-radius: 14px; padding: 14px; font-size: 14px; cursor: pointer; }
+.mv-check input { width: 22px; height: 22px; accent-color: var(--brand); flex: none; margin: 0; }
+.mv-check b { font-weight: 800; }
+.mv-check span span { color: var(--muted); font-weight: 600; font-size: 13px; }
+
+/* Elegir una cuenta (radio con forma de chip) */
+.mv-radios { display: flex; flex-wrap: wrap; gap: 8px; }
+.mv-radios label { position: relative; }
+.mv-radios input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.mv-radios span { min-height: 42px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--field-line); background: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; }
+.mv-radios input:checked + span { border-color: var(--brand); background: var(--chip-on); }
+.mv-radios input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Sección que se abre ("Corregir o eliminar") */
+.mv-more summary { cursor: pointer; font-size: 15px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 28px; }
+.mv-more summary::after { content: "+"; font-size: 22px; color: var(--muted); }
+.mv-more[open] summary { margin-bottom: 14px; }
+.mv-more[open] summary::after { content: "−"; }
+.mv-del { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
+
+/* Botones dentro de una fila de Próximos */
+.mv-rowacts { display: flex; gap: 8px; width: 100%; padding-left: 54px; }
+.mv-rowacts > :first-child { flex: 1; min-width: 0; }
+.mv-rowacts .mv-btn { height: 38px; font-size: 13px; white-space: nowrap; }
+.mv-rowacts form { display: flex; }
+.mv-rowacts form:first-child .mv-btn, .mv-rowacts > a.mv-btn { width: 100%; }
+.mv-rowacts form:last-child .mv-btn { flex: none; padding: 0 14px; border-color: var(--field-line); color: var(--muted); }
+
+/* La app es clara: los controles nativos (casillas, fechas, listas) también. */
+.mv { color-scheme: light; }
