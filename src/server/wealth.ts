@@ -71,10 +71,15 @@ export async function addValuation(db: Db, ws: string, input: { investmentId?: s
   if (input.investmentId) {
     const inv = await db.investment.findFirst({ where: { id: input.investmentId, workspaceId: ws } });
     if (!inv) throw new UserError("No encontramos esa inversión.");
+    // Una valuación por día: si ya había una de esa fecha, se reemplaza (si no, quedaban dos y no se sabía cuál era la última).
+    const same = await db.valuation.findFirst({ where: { investmentId: inv.id, date: input.date } });
+    if (same) return db.valuation.update({ where: { id: same.id }, data: { value: v.toFixed(2), currency: inv.currency } });
     return db.valuation.create({ data: { investmentId: inv.id, value: v.toFixed(2), currency: inv.currency, date: input.date } });
   }
   const as = await db.asset.findFirst({ where: { id: input.assetId, workspaceId: ws } });
   if (!as) throw new UserError("No encontramos ese bien.");
+  const same = await db.valuation.findFirst({ where: { assetId: as.id, date: input.date } });
+  if (same) return db.valuation.update({ where: { id: same.id }, data: { value: v.toFixed(2), currency: as.currency } });
   return db.valuation.create({ data: { assetId: as.id, value: v.toFixed(2), currency: as.currency, date: input.date } });
 }
 
