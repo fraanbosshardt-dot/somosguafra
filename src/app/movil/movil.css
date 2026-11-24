@@ -253,3 +253,7 @@
 .mv-ctile { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; }
 .mv-cc { aspect-ratio: 1.586; border-radius: 12px; background: linear-gradient(135deg, #16493A, #0B2A20); color: #fff; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 6px 14px rgba(15,58,45,.25); }
 .mv-cc.big { aspect-ratio: auto; min-height: 176px; padding: 18px; border-radius: 18px; }
+.mv-more summary > span { font-size: 15px; }
+.mv-web .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.mv-web .seg button, .mv-web .seg .segl { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line-2); background: #fff; font-weight: 800; font-size: 13px; }
+.mv-web .seg [aria-selected="true"], .mv-web .seg .on { background: var(--fg); color: #fff; border-color: var(--fg); }

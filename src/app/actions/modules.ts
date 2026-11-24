@@ -8,6 +8,7 @@ function revalidatePath(path: string, type?: "layout" | "page") {
   if (path.startsWith("/app")) revalidateWeb("/movil", "layout");
 }
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { audit, canUse, requireOwner, requireWorkspace as readWorkspace, requireWritableWorkspace as requireWorkspace } from "@/lib/auth/session";
@@ -49,9 +50,11 @@ const int = (fd: FormData, k: string) => (str(fd, k) ? Number.parseInt(str(fd, k
 const FREQ = z.enum(["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "BIMONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"]);
 const done = (path: string) => { revalidatePath("/app", "layout"); return path; };
 // La app de Android (/movil) manda back=/movil: vuelve a su propia pantalla (/movil/explorar/…) en vez de la web.
-const go = (fd: FormData, path: string) => {
+// También se reconoce por la ruta de la pantalla que envió el formulario (la pone el proxy, no el navegador).
+const fromApp = async (fd: FormData) => fd.get("back") === "/movil" || ((await headers()).get("x-audit-path") ?? "").startsWith("/movil");
+const go = async (fd: FormData, path: string) => {
   revalidatePath("/app", "layout");
-  if (fd.get("back") !== "/movil") return path;
+  if (!(await fromApp(fd))) return path;
   revalidatePath("/movil", "layout");
   return path.replace(/^\/app\//, "/movil/explorar/");
 };
@@ -86,7 +89,7 @@ export async function createRuleAction(_: FormState, fd: FormData): Promise<Form
     });
     await refreshRules(workspace.id, workspace.timezone);
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/recurrentes"));
+  redirect(await go(fd, "/app/recurrentes"));
 }
 
 export async function changeRuleAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -131,7 +134,7 @@ export async function saveRuleAction(_: FormState, fd: FormData): Promise<FormSt
     await audit("rule.saved", { userId: user.id, workspaceId: workspace.id, entityId: ruleId, meta: { amountChanged, dayChanged, endChanged } });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/recurrentes?guardada=1"));
+  redirect(await go(fd, "/app/recurrentes?guardada=1"));
 }
 
 export async function setRuleEndAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -152,21 +155,21 @@ export async function deleteRuleAction(fd: FormData) {
   const r = await deleteRule(getDb(), workspace.id, str(fd, "id"));
   await audit("rule.deleted", { userId: user.id, workspaceId: workspace.id, entityId: str(fd, "id"), meta: r });
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/recurrentes?borrada=1"));
+  redirect(await go(fd, "/app/recurrentes?borrada=1"));
 }
 
 export async function pauseRuleAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   await pauseRule(getDb(), workspace.id, str(fd, "id"), fd.get("pause") === "1", todayIn(workspace.timezone));
   if (fd.get("pause") !== "1") await refreshRules(workspace.id, workspace.timezone);
-  go(fd, "");
+  await go(fd, "");
 }
 
 export async function endRuleAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   await endRule(getDb(), workspace.id, str(fd, "id"), todayIn(workspace.timezone));
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/recurrentes?terminada=1"));
+  redirect(await go(fd, "/app/recurrentes?terminada=1"));
 }
 
 // ---------- Tarjetas ----------
@@ -194,7 +197,7 @@ export async function createCardAction(_: FormState, fd: FormData): Promise<Form
     const c = await createCard(getDb(), workspace.id, { ...cardFields(fd, currency), currency, startDate: todayIn(workspace.timezone) });
     id = c.id;
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${id}`));
+  redirect(await go(fd, `/app/tarjetas/${id}`));
 }
 
 export async function updateCardAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -206,7 +209,7 @@ export async function updateCardAction(_: FormState, fd: FormData): Promise<Form
     await updateCard(getDb(), workspace.id, id, { ...cardFields(fd, card?.currency ?? workspace.baseCurrency), active: fd.get("active") !== "off" });
     await audit("card.updated", { userId: user.id, workspaceId: workspace.id, entity: "card", entityId: id });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${id}?editada=1`));
+  redirect(await go(fd, `/app/tarjetas/${id}?editada=1`));
 }
 
 export async function deleteCardAction(fd: FormData) {
@@ -215,7 +218,7 @@ export async function deleteCardAction(fd: FormData) {
   const { deleteCard } = await import("@/server/cards");
   await deleteCard(getDb(), workspace.id, id);
   await audit("card.deleted", { userId: user.id, workspaceId: workspace.id, entity: "card", entityId: id });
-  redirect(go(fd, "/app/tarjetas?borrada=1"));
+  redirect(await go(fd, "/app/tarjetas?borrada=1"));
 }
 
 export async function setCycleAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -225,7 +228,7 @@ export async function setCycleAction(_: FormState, fd: FormData): Promise<FormSt
     const { setCycle } = await import("@/server/cards");
     await setCycle(getDb(), workspace.id, id, { usualClosing: date(fd, "usualClosing", "el cierre"), closingDate: date(fd, "closingDate", "el cierre"), dueDate: date(fd, "dueDate", "el vencimiento") });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${id}?fechas=1`));
+  redirect(await go(fd, `/app/tarjetas/${id}?fechas=1`));
 }
 
 export async function cardPurchaseAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -239,7 +242,7 @@ export async function cardPurchaseAction(_: FormState, fd: FormData): Promise<Fo
       categoryId: str(fd, "categoryId") || null, date: date(fd, "date", "la fecha"), installments: n, currency: str(fd, "currency") || null, holder: str(fd, "holder") || null, userId: user.id,
     });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${cardId}`));
+  redirect(await go(fd, `/app/tarjetas/${cardId}`));
 }
 
 export async function cardRefundAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -249,14 +252,14 @@ export async function cardRefundAction(_: FormState, fd: FormData): Promise<Form
     const { cardRefund } = await import("@/server/cards");
     await cardRefund(getDb(), workspace.id, { cardId, description: str(fd, "description"), amount: money(fd, "amount", "el importe"), date: date(fd, "date", "la fecha"), categoryId: str(fd, "categoryId") || null, currency: str(fd, "currency") || null, holder: str(fd, "holder") || null, userId: user.id });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${cardId}?devolucion=1`));
+  redirect(await go(fd, `/app/tarjetas/${cardId}?devolucion=1`));
 }
 
 export async function advancePlanAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   const { advancePlan } = await import("@/server/cards");
   await advancePlan(getDb(), workspace.id, str(fd, "planId"), todayIn(workspace.timezone));
-  redirect(go(fd, `/app/tarjetas/${str(fd, "cardId")}?adelantada=1`));
+  redirect(await go(fd, `/app/tarjetas/${str(fd, "cardId")}?adelantada=1`));
 }
 
 export async function addSubscriptionAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -268,14 +271,14 @@ export async function addSubscriptionAction(_: FormState, fd: FormData): Promise
     await addSubscription(getDb(), workspace.id, { cardId, description: str(fd, "description"), amount: money(fd, "amount", "el importe"), dayOfMonth: int(fd, "dayOfMonth") ?? 0, categoryId: str(fd, "categoryId") || null, holder: str(fd, "holder") || null, currency: str(fd, "currency") || null, startDate: str(fd, "startDate") ? date(fd, "startDate", "la fecha") : today });
     await chargeSubscriptions(getDb(), workspace.id, today);
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${cardId}?suscripcion=1`));
+  redirect(await go(fd, `/app/tarjetas/${cardId}?suscripcion=1`));
 }
 
 export async function endSubscriptionAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   const { endSubscription } = await import("@/server/cards");
   await endSubscription(getDb(), workspace.id, str(fd, "id"), todayIn(workspace.timezone));
-  redirect(go(fd, `/app/tarjetas/${str(fd, "cardId")}`));
+  redirect(await go(fd, `/app/tarjetas/${str(fd, "cardId")}`));
 }
 
 // ---------- Deudas ----------
@@ -312,7 +315,7 @@ export async function createDebtAction(_: FormState, fd: FormData): Promise<Form
     });
     id = d.id;
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/deudas/${id}`));
+  redirect(await go(fd, `/app/deudas/${id}`));
 }
 
 export async function updateDebtAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -333,7 +336,7 @@ export async function updateDebtAction(_: FormState, fd: FormData): Promise<Form
     await audit("debt.updated", { userId: user.id, workspaceId: workspace.id, entity: "debt", entityId: id, meta: { rebuilt } });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, `/app/deudas/${id}?editada=${rebuilt ? "todo" : "nombre"}`));
+  redirect(await go(fd, `/app/deudas/${id}?editada=${rebuilt ? "todo" : "nombre"}`));
 }
 
 export async function deleteDebtAction(fd: FormData) {
@@ -342,7 +345,7 @@ export async function deleteDebtAction(fd: FormData) {
   await deleteDebt(getDb(), workspace.id, id);
   await audit("debt.deleted", { userId: user.id, workspaceId: workspace.id, entity: "debt", entityId: id });
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/deudas?borrada=1"));
+  redirect(await go(fd, "/app/deudas?borrada=1"));
 }
 
 export async function cancelDebtAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -353,7 +356,7 @@ export async function cancelDebtAction(_: FormState, fd: FormData): Promise<Form
     saved = r.saved.toFixed(2);
     await audit("debt.cancelled", { userId: user.id, workspaceId: workspace.id, entity: "debt", entityId: str(fd, "debtId"), meta: { saved } });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/deudas/${str(fd, "debtId")}?cancelada=1`));
+  redirect(await go(fd, `/app/deudas/${str(fd, "debtId")}?cancelada=1`));
 }
 
 export async function payDebtOnAccountAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -390,7 +393,7 @@ export async function createGoalAction(_: FormState, fd: FormData): Promise<Form
   try {
     await createGoal(getDb(), workspace.id, { name: str(fd, "name"), target: money(fd, "target", "la meta"), currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, targetDate: str(fd, "targetDate") ? date(fd, "targetDate", "la fecha") : null, monthly: optMoney(fd, "monthly", "el aporte"), saved: optMoney(fd, "saved", "lo que ya tenés"), today: todayIn(workspace.timezone) });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/objetivos"));
+  redirect(await go(fd, "/app/objetivos"));
 }
 
 export async function editGoalAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -434,7 +437,7 @@ export async function createInvestmentAction(_: FormState, fd: FormData): Promis
     // Ya lo tenía invertido: se registra lo puesto sin mover ninguna cuenta.
     else if (first && first.gt(0)) await getDb().investmentMovement.create({ data: { investmentId: inv.id, kind: "CONTRIBUTION", amount: first.toFixed(2), date: todayIn(workspace.timezone) } });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/inversiones"));
+  redirect(await go(fd, "/app/inversiones"));
 }
 
 // Inversión por especie (bono, acción, CEDEAR, cripto, FCI): nominales y cuánto pagaste.
@@ -448,7 +451,7 @@ export async function createHoldingAction(_: FormState, fd: FormData): Promise<F
       currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : null, accountId: str(fd, "accountId") || null, date: str(fd, "date") ? date(fd, "date", "la fecha") : todayIn(workspace.timezone), userId: user.id,
     });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/inversiones?guardada=1"));
+  redirect(await go(fd, "/app/inversiones?guardada=1"));
 }
 
 export async function holdingTradeAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -457,7 +460,7 @@ export async function holdingTradeAction(_: FormState, fd: FormData): Promise<Fo
     const { holdingTrade } = await import("@/server/wealth");
     await holdingTrade(getDb(), workspace.id, { investmentId: str(fd, "investmentId"), side: fd.get("side") === "SELL" ? "SELL" : "BUY", quantity: money(fd, "quantity", "la cantidad"), total: money(fd, "total", "el importe"), accountId: str(fd, "accountId") || null, date: str(fd, "date") ? date(fd, "date", "la fecha") : todayIn(workspace.timezone), userId: user.id });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/inversiones?operacion=1"));
+  redirect(await go(fd, "/app/inversiones?operacion=1"));
 }
 
 export async function deleteInvestmentAction(fd: FormData) {
@@ -465,7 +468,7 @@ export async function deleteInvestmentAction(fd: FormData) {
   const { deleteInvestment } = await import("@/server/wealth");
   await deleteInvestment(getDb(), workspace.id, str(fd, "investmentId"));
   await audit("investment.deleted", { userId: user.id, workspaceId: workspace.id, entity: "investment", entityId: str(fd, "investmentId") });
-  redirect(go(fd, "/app/inversiones?borrada=1"));
+  redirect(await go(fd, "/app/inversiones?borrada=1"));
 }
 
 export async function deleteAssetAction(fd: FormData) {
@@ -473,7 +476,7 @@ export async function deleteAssetAction(fd: FormData) {
   const { deleteAsset } = await import("@/server/wealth");
   await deleteAsset(getDb(), workspace.id, str(fd, "assetId"));
   await audit("asset.deleted", { userId: user.id, workspaceId: workspace.id, entity: "asset", entityId: str(fd, "assetId") });
-  redirect(go(fd, "/app/patrimonio?borrado=1"));
+  redirect(await go(fd, "/app/patrimonio?borrado=1"));
 }
 
 export async function manualPriceAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -482,7 +485,7 @@ export async function manualPriceAction(_: FormState, fd: FormData): Promise<For
     const { setManualPrice } = await import("@/server/wealth");
     await setManualPrice(getDb(), workspace.id, str(fd, "investmentId"), money(fd, "price", "el precio"), todayIn(workspace.timezone));
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/inversiones?precio=1"));
+  redirect(await go(fd, "/app/inversiones?precio=1"));
 }
 
 export async function investmentMoveAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -508,7 +511,7 @@ export async function createAssetAction(_: FormState, fd: FormData): Promise<For
   try {
     await createAsset(getDb(), workspace.id, { name: str(fd, "name"), kind: str(fd, "kind") || "Otro", currency: isCurrency(str(fd, "currency")) ? str(fd, "currency") : workspace.baseCurrency, value: money(fd, "value", "el valor"), date: todayIn(workspace.timezone), notes: str(fd, "notes") });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/patrimonio"));
+  redirect(await go(fd, "/app/patrimonio"));
 }
 
 export async function rateAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -539,7 +542,7 @@ export async function grainSaleAction(_: FormState, fd: FormData): Promise<FormS
     await createGrainSale(getDb(), workspace.id, { ...grainForm(fd, workspace.baseCurrency, user.id), replacePlanned: fd.get("replacePlanned") === "on" });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/cereal"));
+  redirect(await go(fd, "/app/cereal"));
 }
 
 export async function updateGrainSaleAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -552,18 +555,18 @@ export async function updateGrainSaleAction(_: FormState, fd: FormData): Promise
     await audit("grain.updated", { userId: user.id, workspaceId: workspace.id, entity: "grainSale", entityId: id });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/cereal?listo=editada"));
+  redirect(await go(fd, "/app/cereal?listo=editada"));
 }
 
 export async function deleteGrainSaleAction(fd: FormData) {
   const { user, workspace, plan } = await requireWorkspace();
-  if (!(await canUse(plan, "cereal"))) redirect(go(fd, "/app/cereal"));
+  if (!(await canUse(plan, "cereal"))) redirect(await go(fd, "/app/cereal"));
   const id = str(fd, "id");
   const { deleteGrainSale } = await import("@/server/grain");
   const r = await deleteGrainSale(getDb(), workspace.id, id, user.id);
   await audit("grain.deleted", { userId: user.id, workspaceId: workspace.id, entity: "grainSale", entityId: id, meta: { reversed: r.reversed.toFixed(2) } });
   revalidatePath("/app", "layout");
-  redirect(go(fd, `/app/cereal?listo=${r.reversed.gt(0) ? "borrada-cobrada" : "borrada"}`));
+  redirect(await go(fd, `/app/cereal?listo=${r.reversed.gt(0) ? "borrada-cobrada" : "borrada"}`));
 }
 
 export async function changeMonthlyGrainAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -576,17 +579,17 @@ export async function changeMonthlyGrainAction(_: FormState, fd: FormData): Prom
     await audit("grain.monthly_changed", { userId: user.id, workspaceId: workspace.id });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/cereal?listo=mensual-cambiada"));
+  redirect(await go(fd, "/app/cereal?listo=mensual-cambiada"));
 }
 
 export async function stopMonthlyGrainAction(fd: FormData) {
   const { user, workspace, plan } = await requireWorkspace();
-  if (!(await canUse(plan, "cereal"))) redirect(go(fd, "/app/cereal"));
+  if (!(await canUse(plan, "cereal"))) redirect(await go(fd, "/app/cereal"));
   const { stopMonthlyGrain } = await import("@/server/grain");
   await stopMonthlyGrain(getDb(), workspace.id, str(fd, "ruleId"), todayIn(workspace.timezone));
   await audit("grain.monthly_stopped", { userId: user.id, workspaceId: workspace.id });
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/cereal?listo=mensual-terminada"));
+  redirect(await go(fd, "/app/cereal?listo=mensual-terminada"));
 }
 
 // Stock de cereal sin vender (suma al patrimonio).
@@ -620,7 +623,7 @@ export async function monthlyGrainAction(_: FormState, fd: FormData): Promise<Fo
     await refreshRules(workspace.id, workspace.timezone);
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, "/app/cereal?mensual=1"));
+  redirect(await go(fd, "/app/cereal?mensual=1"));
 }
 
 // ---------- Importar ----------
@@ -648,7 +651,7 @@ export async function importAction(_: FormState, fd: FormData): Promise<FormStat
     const b = await applyImport(getDb(), workspace.id, acc.id, file.name, preview, user.id);
     await audit("import.applied", { userId: user.id, workspaceId: workspace.id, entity: "importBatch", entityId: b.id, meta: { rows: b.rows } });
   } catch (e) { return fail(e); }
-  redirect(go(fd, "/app/importar?ok=1"));
+  redirect(await go(fd, "/app/importar?ok=1"));
 }
 
 export async function revertImportAction(fd: FormData) {
@@ -792,7 +795,7 @@ export async function loadStatementAction(_: FormState, fd: FormData): Promise<F
     }
     await audit("card.statement_loaded", { userId: user.id, workspaceId: workspace.id, entity: "card", entityId: cardId, meta: { source: str(fd, "source") || "manual" } });
   } catch (e) { return fail(e); }
-  redirect(go(fd, `/app/tarjetas/${cardId}?guardado=1`));
+  redirect(await go(fd, `/app/tarjetas/${cardId}?guardado=1`));
 }
 
 // Lee el PDF del resumen (solo Pro, hasta PDF_MONTHLY_LIMIT por mes). No guarda el archivo ni el resultado:
@@ -875,21 +878,21 @@ const MAX_SCENARIOS = 10; // también en la página del Simulador
 
 export async function saveScenarioAction(fd: FormData) {
   const { workspace, plan } = await requireWorkspace();
-  if (!(await canUse(plan, "simulador"))) redirect(go(fd, "/app/simulador?tab=escenarios"));
+  if (!(await canUse(plan, "simulador"))) redirect(await go(fd, "/app/simulador?tab=escenarios"));
   const name = str(fd, "name").slice(0, 60) || "Mi escenario";
   const params = Object.fromEntries(SCENARIO_KEYS.map((k) => [k, str(fd, k).slice(0, 40)]).filter(([, v]) => v));
   const db = getDb();
-  if ((await db.scenario.count({ where: { workspaceId: workspace.id } })) >= MAX_SCENARIOS) redirect(go(fd, "/app/simulador?tab=escenarios&lleno=1"));
+  if ((await db.scenario.count({ where: { workspaceId: workspace.id } })) >= MAX_SCENARIOS) redirect(await go(fd, "/app/simulador?tab=escenarios&lleno=1"));
   const s = await db.scenario.create({ data: { workspaceId: workspace.id, name, params } });
   revalidatePath("/app/simulador");
-  redirect(go(fd, `/app/simulador?tab=escenarios&esc=${s.id}`));
+  redirect(await go(fd, `/app/simulador?tab=escenarios&esc=${s.id}`));
 }
 
 export async function deleteScenarioAction(fd: FormData) {
   const { workspace } = await requireWorkspace();
   await getDb().scenario.deleteMany({ where: { id: str(fd, "id"), workspaceId: workspace.id } });
   revalidatePath("/app/simulador");
-  redirect(go(fd, "/app/simulador?tab=escenarios"));
+  redirect(await go(fd, "/app/simulador?tab=escenarios"));
 }
 
 // ---------- Deudas: pago anticipado (F6) y refinanciación (F9) ----------
@@ -905,7 +908,7 @@ export async function prepayDebtAction(_: FormState, fd: FormData): Promise<Form
     await audit("debt.prepaid", { userId: user.id, workspaceId: workspace.id, entity: "debt", entityId: id, meta: { mode, saved: r.saved.toFixed(2) } });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, `/app/deudas/${id}?adelanto=${encodeURIComponent(msg)}`));
+  redirect(await go(fd, `/app/deudas/${id}?adelanto=${encodeURIComponent(msg)}`));
 }
 
 export async function refinanceDebtAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -919,5 +922,5 @@ export async function refinanceDebtAction(_: FormState, fd: FormData): Promise<F
     await audit("debt.refinanced", { userId: user.id, workspaceId: workspace.id, entity: "debt", entityId: id, meta: { installments: n } });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
-  redirect(go(fd, `/app/deudas/${id}?refinanciada=1`));
+  redirect(await go(fd, `/app/deudas/${id}?refinanciada=1`));
 }
