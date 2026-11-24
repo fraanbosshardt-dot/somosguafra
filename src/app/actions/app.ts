@@ -121,6 +121,7 @@ export async function createAccountAction(_: FormState, fd: FormData): Promise<F
     return fail(e);
   }
   revalidatePath("/app", "layout");
+  if (String(fd.get("back") ?? "") === "/movil") { revalidatePath("/movil", "layout"); redirect(`/movil/explorar/cuentas/${id}`); }
   redirect(`/app/cuentas/${id}`);
 }
 
@@ -134,6 +135,7 @@ export async function updateAccountAction(_: FormState, fd: FormData): Promise<F
   if (!name) return { error: "Poné un nombre para la cuenta." };
   await db.account.update({ where: { id }, data: { name, institution: String(fd.get("institution") ?? "").trim() || null, notes: String(fd.get("notes") ?? "").trim() || null } });
   revalidatePath(`/app/cuentas/${id}`);
+  revalidatePath("/movil", "layout");
   return { ok: "Cuenta actualizada." };
 }
 
@@ -157,8 +159,10 @@ export async function toggleAccountAction(fd: FormData) {
     await tx.account.update({ where: { id }, data: { active: !a.active } });
     return true;
   });
-  if (!allowed) redirect("/app/cuentas?limite=1");
+  const mobile = String(fd.get("back") ?? "") === "/movil";
+  if (!allowed) redirect(mobile ? "/movil/explorar/cuentas?limite=1" : "/app/cuentas?limite=1");
   revalidatePath("/app", "layout");
+  revalidatePath("/movil", "layout");
 }
 
 export async function reconcileAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -166,6 +170,7 @@ export async function reconcileAction(_: FormState, fd: FormData): Promise<FormS
   try {
     const r = await adjustBalance(getDb(), workspace.id, { accountId: String(fd.get("accountId")), targetBalance: money(fd.get("target"), "el saldo del banco"), date: todayIn(workspace.timezone), userId: user.id });
     revalidatePath("/app", "layout");
+    revalidatePath("/movil", "layout");
     return { ok: r.diff.isZero() ? "Coincide con tu banco: no hay diferencias." : `Listo: se registró un ajuste de ${r.diff.toFixed(2)}.` };
   } catch (e) {
     return fail(e);

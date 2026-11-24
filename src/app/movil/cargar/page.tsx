@@ -23,7 +23,7 @@ export default async function Cargar({ searchParams }: { searchParams: Promise<{
         <section className="mv-card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="mv-h2">Primero carga una cuenta</h1>
           <p style={{ margin: 0, color: "var(--muted)", fontWeight: 600 }}>Para anotar un gasto necesitamos saber de dónde sale el dinero.</p>
-          <Link className="mv-btn pri" href="/movil/explorar/cuentas/nueva" style={{ flex: "none" }}>+ Agregar una cuenta</Link>
+          <Link className="mv-btn pri" href="/movil/explorar/cuentas?nueva=1" style={{ flex: "none" }}>+ Agregar una cuenta</Link>
         </section>
       </main>
     );

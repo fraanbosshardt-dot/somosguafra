@@ -100,7 +100,7 @@ export default async function PagarMovil({ params }: { params: Promise<{ id: str
           <MvSubmit>{inc ? "Registrar cobro" : "Registrar pago"}</MvSubmit>
         </MvForm>
       ) : (
-        <div className="mv-card mv-empty">Necesitas una cuenta activa en {ob.currency}. <Link className="mv-link" href="/movil/explorar/cuentas/nueva">Crear cuenta</Link></div>
+        <div className="mv-card mv-empty">Necesitas una cuenta activa en {ob.currency}. <Link className="mv-link" href="/movil/explorar/cuentas?nueva=1">Crear cuenta</Link></div>
       )}
 
       {editable && (

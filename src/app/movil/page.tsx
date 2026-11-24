@@ -42,7 +42,7 @@ export default async function MovilHome({ searchParams }: { searchParams: Promis
         <section className="mv-card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="mv-h2" style={{ fontSize: 22 }}>Carga tu primera cuenta</h1>
           <p style={{ margin: 0, color: "var(--muted)", fontWeight: 600, lineHeight: 1.5 }}>Tu banco, una billetera virtual o el efectivo, con lo que tienes hoy. Con eso ya ves cuánto puedes gastar.</p>
-          <Link className="mv-btn pri" href="/movil/explorar/cuentas/nueva" style={{ flex: "none", marginTop: 6 }}>+ Agregar una cuenta</Link>
+          <Link className="mv-btn pri" href="/movil/explorar/cuentas?nueva=1" style={{ flex: "none", marginTop: 6 }}>+ Agregar una cuenta</Link>
         </section>
       </main>
     );

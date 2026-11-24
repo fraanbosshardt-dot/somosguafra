@@ -218,3 +218,4 @@
 .mv-procard > span:first-child span { font-size: 13px; color: #CFE3D6; }
 .mv-procard b { color: #fff; }
 .mv-procard .mv-btn { background: #fff; color: var(--brand); border: none; }
+.mv-ok { margin: 0; background: var(--mint); color: #0F3A2D; border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }

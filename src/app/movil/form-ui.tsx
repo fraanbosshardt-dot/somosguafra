@@ -24,6 +24,7 @@ export function MvForm({ action, children, className = "mv-fs" }: { action: Acti
     >
       {children}
       {state?.error && !edited && <p className="mv-error" role="alert">{state.error}</p>}
+      {state?.ok && !edited && <p className="mv-ok" role="status">{state.ok}</p>}
     </form>
   );
 }
