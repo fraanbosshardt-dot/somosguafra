@@ -10,7 +10,8 @@ Cuando algo se termina, pasa a "Completado" con la fecha.
 - [x] A2. Cargar un movimiento en 2 pasos + pantalla "Listo" con lo que te queda (24/11/2026).
 - [x] A3. Movimientos y Próximos (24/11/2026): gráfico de la semana (tocar un día filtra), búsqueda, filtros, corregir y eliminar; Próximos con totales de la semana, filtros, registrar pago o cobro, cancelar, proyectados y "+ Agregar" un pago o cobro a futuro que se repite cada mes.
 - [ ] A3b. Falta en Próximos: vista de calendario y deslizar una fila para pagar o cancelar.
-- [ ] A4. Explorar y sus funciones con el diseño nuevo.
+- [x] A4. Explorar (24/11/2026): pantalla con todas las funciones y buscador; Cuentas, Revisión del mes, Tarjetas, Deudas, Pagos que se repiten, Flujo de caja, Presupuestos, Objetivos, Simulador, Patrimonio, Inversiones, Alertas, Informes y Buscar. Las páginas /movil ahora tienen los mismos encabezados de seguridad que /app. Arreglo de paso: dos valuaciones el mismo día ya no se pisan al azar.
+- [ ] A4b. Falta en la app: Ventas de cereal, Categorías e Importar (hoy abren la web). Los textos de algunos formularios reusados de la web (tarjetas, deudas, inversiones) siguen con voseo ("querés", "cargás"); conviene pasarlos a español neutro en la web y en la app a la vez.
 - [ ] A5. Configuración, Ayuda, bienvenida, ingresar y registro con el diseño nuevo.
 - [ ] A6. Empaquetado Android (Bubblewrap, assetlinks.json, ícono, firma) y página web para borrar la cuenta.
 - [ ] A7. Google Play Billing para Pro (necesita productos en Play Console y credenciales tuyas).
