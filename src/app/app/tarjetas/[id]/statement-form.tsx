@@ -8,7 +8,7 @@ const es = (n: string | null) => (n ? n.replace(".", ",") : "");
 
 // Cargar un resumen: a mano, o leyendo el PDF (Pro). Nada se guarda hasta que la persona lo confirma.
 // Si la tarjeta tiene otra moneda (ej.: dólares), ese resumen se carga en el mismo paso.
-export function StatementForm({ cardId, closing, due, pdf, pdfLeft, currency, second, simple = false, closingDay, estimate = null, loadedClosings = [] }: { cardId: string; closing: string; due: string; pdf: boolean; pdfLeft: number; currency: string; second?: { cardId: string; currency: string } | null; simple?: boolean; closingDay?: number; estimate?: number | null; loadedClosings?: string[] }) {
+export function StatementForm({ cardId, closing, due, pdf, pdfLeft, currency, second, simple = false, closingDay, estimate = null, loadedClosings = [], back }: { back?: string; cardId: string; closing: string; due: string; pdf: boolean; pdfLeft: number; currency: string; second?: { cardId: string; currency: string } | null; simple?: boolean; closingDay?: number; estimate?: number | null; loadedClosings?: string[] }) {
   const [v, setV] = useState({ closingDate: closing, dueDate: due, total: "", minimum: "", totalUsd: "", minimumUsd: "" });
   const [usdOnly, setUsdOnly] = useState<string | null>(null); // dólares encontrados en una tarjeta sin esa moneda
   const [rows, setRows] = useState<Row[]>([]);
@@ -55,6 +55,7 @@ export function StatementForm({ cardId, closing, due, pdf, pdfLeft, currency, se
 
   return (
     <ActionForm action={loadStatementAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {back && <input type="hidden" name="back" value={back} />}
       <input type="hidden" name="cardId" value={cardId} />
       <input type="hidden" name="source" value={source} />
       {pdf ? (

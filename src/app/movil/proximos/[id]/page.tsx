@@ -76,7 +76,7 @@ export default async function PagarMovil({ params }: { params: Promise<{ id: str
           <input type="hidden" name="kind" value={inc ? "cobro" : "pago"} />
           <input type="hidden" name="back" value={`/movil/proximos?listo=${inc ? "cobro" : "pago"}`} />
           {stmt
-            ? <PayChoice total={fmt(left.toNumber())} minimum={fmt(Math.min(Number(stmt.minimumAmount), left.toNumber()))} symbol={symbolOf(ob.currency)} interest={stmt.card.financeRate ? `TNA ${Number(stmt.card.financeRate).toString().replace(".", ",")}%` : null} />
+            ? <div className="mv-web"><PayChoice total={fmt(left.toNumber())} minimum={fmt(Math.min(Number(stmt.minimumAmount), left.toNumber()))} symbol={symbolOf(ob.currency)} interest={stmt.card.financeRate ? `TNA ${Number(stmt.card.financeRate).toString().replace(".", ",")}%` : null} /></div>
             : <label className="mv-lbl">{inc ? "¿Cuánto cobraste?" : "¿Cuánto pagaste?"}<input className="mv-input" name="amount" inputMode="decimal" defaultValue={fmt(left.toNumber())} /></label>}
           <label className="mv-lbl">Fecha<input className="mv-input" name="date" type="date" defaultValue={isoDate(today)} max={isoDate(today)} /></label>
           <fieldset className="mv-fs">

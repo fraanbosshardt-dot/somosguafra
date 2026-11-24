@@ -222,3 +222,34 @@
 .mv-flow { display: block; }
 .mv-flow summary { display: flex; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
 .mv-flow summary::-webkit-details-marker { display: none; }
+
+/* Formularios de la web reusados dentro de la app: mismos colores y tamaños que la app. */
+.mv-web {
+  --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #EEF6F1; --canvas: #F6F7F5; --line: #EEF0EE; --line-2: #E1E5E1;
+  --fg: #0E1A15; --muted: #4E5B55; --faint: #6B7771;
+  --ink: #16493A; --ink-h: #0F3A2D; --on-ink: #FFFFFF; --ink-soft: #DDEEE3; --ink-txt: #0F3A2D;
+  --green: #1E7A3B; --green-soft: #DDEEE3; --red: #C5221F; --red-soft: #FDECEA; --amber: #A35200; --amber-soft: #FFF5E8;
+  --blue: #16493A; --blue-soft: #DDEEE3; --r: 14px;
+  color: var(--fg); display: flex; flex-direction: column; gap: 12px;
+}
+.mv-web .frow { grid-template-columns: 1fr; gap: 12px; }
+.mv-web .field { font-size: 13px; font-weight: 800; color: var(--muted); gap: 6px; }
+.mv-web .field input, .mv-web .field select, .mv-web .field textarea { min-height: 50px; border-radius: 14px; border: 1.5px solid var(--line-2); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--fg); background: #fff; }
+.mv-web .field input:focus, .mv-web .field select:focus { border-color: var(--ink); box-shadow: none; outline: 2px solid var(--ink); outline-offset: 0; }
+.mv-web .sub { font-size: 13px; color: var(--muted); font-weight: 600; }
+.mv-web .btn { min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; }
+.mv-web .btn.pri { background: var(--ink); border-color: var(--ink); color: #fff; }
+.mv-web .acts, .mv-web .stm-foot { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.mv-web form > div:last-child > .btn, .mv-web .stm-foot .btn { width: 100%; }
+.mv-web .paych { border-radius: 14px; border-width: 1.5px; background: #fff; }
+.mv-web .paych.on { background: var(--chip-on); border-color: var(--ink); }
+.mv-web .notice { border-radius: 14px; font-weight: 600; }
+.mv-web .simtg { background: #fff; border: 1.5px solid var(--line-2); border-radius: 14px; padding: 14px; }
+.mv-web details.more summary { font-weight: 800; font-size: 14px; cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+.mv-web .drop { border: 1.5px dashed var(--line-2); border-radius: 14px; padding: 16px; background: #fff; }
+.mv-web .carry-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+
+/* Tarjetas */
+.mv-ctile { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; }
+.mv-cc { aspect-ratio: 1.586; border-radius: 12px; background: linear-gradient(135deg, #16493A, #0B2A20); color: #fff; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 6px 14px rgba(15,58,45,.25); }
+.mv-cc.big { aspect-ratio: auto; min-height: 176px; padding: 18px; border-radius: 18px; }
