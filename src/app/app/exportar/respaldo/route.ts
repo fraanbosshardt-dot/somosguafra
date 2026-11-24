@@ -5,7 +5,12 @@ import { exportBackup } from "@/server/io";
 // Respaldo completo del espacio en JSON.
 export async function GET() {
   const { user, workspace } = await requireWorkspace();
-  const json = await exportBackup(getDb(), workspace.id);
+  const [backup, preferences] = await Promise.all([
+    exportBackup(getDb(), workspace.id),
+    getDb().communicationPreference.findUnique({ where: { userId: user.id } }),
+  ]);
+  // Solo las preferencias de quien descarga: no exponer las de otros miembros.
+  const json = JSON.stringify({ ...JSON.parse(backup), communicationPreferences: preferences }, null, 2);
   await audit("data.backup_downloaded", { userId: user.id, workspaceId: workspace.id });
   const day = new Date().toISOString().slice(0, 10);
   return new Response(json, { headers: { "content-type": "application/json; charset=utf-8", "content-disposition": `attachment; filename="somosguafra-respaldo-${day}.json"`, "cache-control": "no-store" } });

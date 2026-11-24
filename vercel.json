@@ -18,7 +18,8 @@
       "feat/usabilidad-producto": false,
       "feat/guias-primer-uso": false,
       "fix/ux-flujos-20261124": false,
-      "fix/controles-rendimiento-20261124": false
+      "fix/controles-rendimiento-20261124": false,
+      "fix/usabilidad-seguimiento-20261124": false
     }
   },
   "regions": [
