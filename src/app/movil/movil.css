@@ -194,3 +194,27 @@
 
 /* La app es clara: los controles nativos (casillas, fechas, listas) también. */
 .mv { color-scheme: light; }
+
+/* Explorar */
+.mv-exgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mv-ex { background: var(--card); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-height: 128px; transition: transform .15s ease; }
+.mv-ex:active { transform: scale(.98); }
+.mv-ex.wide { grid-column: 1 / -1; min-height: 0; }
+.mv-ex .ex-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.mv-ex .ex-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.mv-ex .ex-ic.green { background: #EEF6F1; color: #16493A; }
+.mv-ex .ex-ic.amber { background: #FFF5E8; color: #A35200; }
+.mv-ex .ex-ic.blue { background: #EDF3FB; color: #1F4F8F; }
+.mv-ex .ex-ic.gray { background: #F1F3F2; color: #3F4A45; }
+.mv-ex .ex-badge { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: #FDECEA; color: #A3201D; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.mv-ex .ex-pro { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: var(--ink); color: #fff; }
+.mv-ex b { font-size: 15px; font-weight: 800; }
+.mv-ex .ex-sub { font-size: 13px; font-weight: 600; color: var(--muted); }
+.mv-ex .ex-bar { height: 6px; border-radius: 99px; background: #EDF0ED; overflow: hidden; margin-top: 6px; }
+.mv-ex .ex-bar i { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
+.mv-procard { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #16493A, #0F3A2D); color: #fff; }
+.mv-procard > span:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.mv-procard b { font-size: 16px; font-weight: 800; }
+.mv-procard > span:first-child span { font-size: 13px; color: #CFE3D6; }
+.mv-procard b { color: #fff; }
+.mv-procard .mv-btn { background: #fff; color: var(--brand); border: none; }
