@@ -49,6 +49,7 @@
   box-shadow: 0 5px 22px #07291e24;
   font-weight: 700 !important;
 }
+.lazyError{max-width:280px;padding:12px;border:1px solid var(--chat-line);border-radius:12px;background:var(--chat-bg);color:var(--chat-text);font-size:13px}
 .panel {
   position: absolute;
   right: 0;

@@ -6,6 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { dec, formatMoney, ZERO } from "@/lib/money";
 import { parseDate, validPeriod, addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { PageHead } from "@/components/page";
+import { MonthNavigation } from "@/components/month-navigation";
 import { categoryIcon, ICON_TONE } from "@/lib/category-icon";
 import { Icon, type IconName } from "@/components/icons";
 import { ActionForm, Submit } from "@/components/forms";
@@ -63,7 +64,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
   const cats = catRows.filter((c) => !c.parentId).flatMap((p) => [{ id: p.id, kind: p.kind, label: p.name }, ...catRows.filter((c) => c.parentId === p.id).map((c) => ({ id: c.id, kind: c.kind, label: `${p.name} › ${c.name}` }))]);
   const visible = list;
   const byDay = new Map<string, typeof rows>();
-  for (const t of visible) { const k = t.effectiveDate.toISOString().slice(0, 10); byDay.set(k, [...(byDay.get(k) ?? []), t]); }
+  for (const t of visible) { const k = t.effectiveDate.toISOString().slice(0, 10); const group = byDay.get(k); if (group) group.push(t); else byDay.set(k, [t]); }
 
   return (
     <>
@@ -75,13 +76,9 @@ export default async function Movements({ searchParams }: { searchParams: Promis
         {ranged ? (
           <div className="acts" style={{ alignItems: "center" }}><b style={{ fontSize: 18, fontWeight: 400 }}>{rangeLabel}</b><Link className="btn sm" href={`/app/movimientos?mes=${p}`}>Volver al mes</Link></div>
         ) : (
-          <div className="acts" style={{ alignItems: "center" }}>
-            <Link className="ibtn" href={link({ mes: addMonths(p, -1) })} aria-label="Mes anterior">‹</Link>
-            <b style={{ fontSize: 20, fontWeight: 400, minWidth: 150, textAlign: "center" }}>{fmtPeriod(p)}</b>
-            <Link className="ibtn" href={link({ mes: addMonths(p, 1) })} aria-label="Mes siguiente">›</Link>
-          </div>
+          <MonthNavigation month={p} previous={link({ mes: addMonths(p, -1) })} next={link({ mes: addMonths(p, 1) })} />
         )}
-        <form className="search" style={{ maxWidth: 320 }}>{categoryId && <input type="hidden" name="categoria" value={categoryId} />}{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<input name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
+        <form className="search" style={{ maxWidth: 320 }}>{categoryId && <input type="hidden" name="categoria" value={categoryId} />}{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<Icon name="search" /><input type="search" name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
       </div>
       <form className="acts" style={{ alignItems: "end" }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}<label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option><option value="sin-categoria">Sin categoría</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit">Filtrar</button>{categoryId && <Link className="btn" href={link({ categoria: "" })}>Quitar filtro</Link>}</form>
       <details className="more" open={ranged}>

@@ -11,7 +11,7 @@ import { getDb } from "@/lib/db";
 import { fmtDate } from "@/lib/dates";
 import { PageHead } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
-import { ChatOpen } from "@/components/guafra-chat";
+import { ChatOpen } from "@/components/chat-open";
 import { Pagination } from "@/components/pagination";
 import { pageNumber } from "@/lib/pagination";
 import { BRAND } from "@/lib/brand";

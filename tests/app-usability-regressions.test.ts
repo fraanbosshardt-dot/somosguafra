@@ -8,7 +8,7 @@ import { categoryReport, exportMovementsXlsx } from "@/server/io";
 import { readXlsx } from "@/lib/xlsx";
 import { chatCasePage } from "@/server/chat-case-page";
 import { validPeriod } from "@/lib/dates";
-import { requestChatOpen, takeChatOpen } from "@/lib/open-chat";
+import { hasChatOpen, requestChatOpen, takeChatOpen } from "@/lib/open-chat";
 import { simulationParams, sealSimulation, openSimulation } from "@/server/private-simulation";
 
 let t: Awaited<ReturnType<typeof startTestDb>>;
@@ -112,7 +112,9 @@ it("abrir chat antes de montar el widget conserva una sola intención y el caso 
   vi.stubGlobal("window", new EventTarget());
   try {
     takeChatOpen(); requestChatOpen("SG-DEMO");
+    expect(hasChatOpen()).toBe(true); expect(hasChatOpen()).toBe(true);
     expect(takeChatOpen()).toEqual({ code: "SG-DEMO" }); expect(takeChatOpen()).toBeNull();
+    expect(hasChatOpen()).toBe(false);
     requestChatOpen(); expect(takeChatOpen()).toEqual({ code: undefined });
   } finally { vi.unstubAllGlobals(); }
 });
