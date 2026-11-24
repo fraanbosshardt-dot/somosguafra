@@ -33,7 +33,7 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, fea
           </div>
           <div className="plan-price m"><b>{formatMoney(String(bill.monthly), bill.currency)}</b><span>ARS por mes</span></div>
           <div className="plan-price y"><b>{formatMoney(String(bill.yearly), bill.currency)}</b><span>ARS por año</span><small>Equivale a {formatMoney(String(Math.round(bill.yearly / 12)), bill.currency)} por mes</small></div>
-          <OnceButton className="btn pri plan-cta" pending="Continuando…">Elegir Pro</OnceButton>
+          <OnceButton className="btn pri plan-cta" pending="Continuando…">{view.canResumeCheckout ? "Revisar y continuar solicitud" : "Elegir Pro"}</OnceButton>
         </form>
         {view.canStartTrial && <form action={startTrialAction}><OnceButton className="btn plan-trial" pending="Activando…">Probar 14 días gratis</OnceButton></form>}
         <p className="plan-fine">{view.purchaseStartsAt ? `El primer cobro se programa para el ${planDate(view.purchaseStartsAt, timeZone)}.` : "El primer cobro se procesa al autorizar la suscripción."} Después se renueva según el ciclo elegido hasta que lo canceles.</p>

@@ -28,7 +28,8 @@ export function ConfirmSubmit({ children, question, yes = "Sí", className = "bt
   useEffect(() => {
     if (!ask) return;
     submitting.current = false;
-    const background = [...document.body.children].filter((el): el is HTMLElement => el instanceof HTMLElement && el !== overlay.current);
+    const scope = btn.current?.closest("dialog") ?? document.body;
+    const background = [...scope.children].filter((el): el is HTMLElement => el instanceof HTMLElement && el !== overlay.current);
     const previousInert = background.map(el => el.inert);
     background.forEach(el => { el.inert = true; });
     cancel.current?.focus();
@@ -67,7 +68,7 @@ export function ConfirmSubmit({ children, question, yes = "Sí", className = "bt
             </div>
           </div>
         </div>,
-        document.body,
+        btn.current?.closest("dialog") ?? document.body,
       )}
     </>
   );

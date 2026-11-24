@@ -12,12 +12,17 @@ export function planFeatures(freeAlso: readonly FeatureKey[] = []): PlanFeature[
   return PLAN_FEATURES.map((f) => f.feature && freeAlso.includes(f.feature) ? { ...f, plan: "free" } : f);
 }
 
+export async function freeTrialAvailable(db: Pick<Db, "workspace" | "subscription" | "billingAgreement">, workspaceId: string) {
+  const ws = await db.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingDisabledAt: true } });
+  const sub = await db.subscription.findUnique({ where: { workspaceId } });
+  return !ws.billingDisabledAt && !!sub && !sub.trialEndsAt && sub.provider !== "mercadopago" && sub.plan === "FREE"
+    && await db.billingAgreement.count({ where: { workspaceId, status: { not: "cancelled" } } }) === 0;
+}
+
 export async function startFreeTrial(db: Db, workspaceId: string) {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${workspaceId} FOR UPDATE`;
-    const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingDisabledAt: true } });
-    const sub = await tx.subscription.findUnique({ where: { workspaceId } });
-    if (ws.billingDisabledAt || !sub || sub.trialEndsAt || sub.provider === "mercadopago" || sub.plan !== "FREE" || await tx.billingAgreement.count({ where: { workspaceId, status: { not: "cancelled" } } })) return false;
+    if (!await freeTrialAvailable(tx, workspaceId)) return false;
     await tx.subscription.update({ where: { workspaceId }, data: { plan: "PRO", status: "TRIALING", trialEndsAt: new Date(Date.now() + 14 * 864e5) } });
     return true;
   });

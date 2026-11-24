@@ -139,6 +139,9 @@
 .lx-sec-head{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-end;margin-bottom:clamp(32px,4vw,48px)}
 .lx-sec-head .ws-head{margin:0}
 .lx-link{font-weight:600;text-decoration:none;color:var(--ink)}
+.lx-plan.pro .lx-link{color:#B8E3C8;text-decoration:underline;text-underline-offset:3px}
+.lx-plan.pro .lx-link:hover{color:#FFFFFF}
+.lx-plan.pro .lx-link:focus-visible{outline:2px solid #B8E3C8;outline-offset:4px;border-radius:3px}
 
 .lx-pricing{display:flex;flex-direction:column;align-items:center;gap:32px}
 .lx-pricing .ws-head{margin-bottom:0}

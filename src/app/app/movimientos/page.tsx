@@ -25,6 +25,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
   const tipo = ["INCOME", "EXPENSE", "TRANSFER"].includes(sp.tipo ?? "") ? sp.tipo! : "ALL";
   const q = (sp.q ?? "").trim().toLowerCase();
   const categoryId = (sp.categoria ?? "").slice(0, 100);
+  const uncategorized = categoryId === "sin-categoria";
   // Rango libre: desde y hasta (si están, reemplazan al mes).
   const iso = (v?: string) => parseDate(v);
   let from = iso(sp.desde), to = iso(sp.hasta);
@@ -38,8 +39,8 @@ export default async function Movements({ searchParams }: { searchParams: Promis
   const byType: Prisma.TransactionWhereInput = tipo === "ALL" ? { NOT: { type: "TRANSFER", direction: "IN" } } : tipo === "TRANSFER" ? { type: "TRANSFER", direction: "OUT" } : { type: tipo as "INCOME" | "EXPENSE" };
   const text = (v: string) => ({ contains: v, mode: "insensitive" as const });
   const where: Prisma.TransactionWhereInput = {
-    workspaceId: workspace.id, effectiveDate: when, ...byType,
-    ...(categoryId ? { AND: [{ OR: [{ categoryId }, { category: { parentId: categoryId } }] }] } : {}),
+    workspaceId: workspace.id, ...(!ranged && uncategorized ? { economicPeriod: p } : { effectiveDate: when }), ...byType,
+    ...(uncategorized ? { categoryId: null, AND: [{ type: { in: ["INCOME", "EXPENSE"] } }] } : categoryId ? { AND: [{ OR: [{ categoryId }, { category: { parentId: categoryId } }] }] } : {}),
     ...(q ? { OR: [{ description: text(q) }, { category: { name: text(q) } }, { account: { name: text(q) } }] } : {}),
   };
   const cur = workspace.baseCurrency;
@@ -67,6 +68,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHead crumb="Mi dinero" title="Movimientos" desc="Lo que ya entró y salió de tus cuentas. Lo que falta está en Próximos pagos." actions={<><Link className="btn" href="/app/resumen">Resumen del mes</Link><Link className="btn" href="/app/movimientos/preferencias">Favoritos y reglas</Link></>} />
+      {uncategorized && <p className="notice">Ingresos y gastos sin categoría{!ranged ? ` del mes económico ${fmtPeriod(p).toLowerCase()}` : " en estas fechas"}. <Link className="lnk" href={`/app/movimientos?mes=${p}`}>Ver todos</Link></p>}
       {sp.borrado && <p className="notice g" role="status">Listo, eliminamos el movimiento. El saldo de la cuenta volvió a como estaba.</p>}
       {sp.guardado && <div className="notice g" role="status"><span>{sp.unido ? "Listo. Ya figuraba como pendiente en Próximos pagos, así que lo marcamos como cobrado o pagado con este importe (no queda duplicado)." : "Listo, quedó guardado."}</span><span className="acts" style={{ marginLeft: "auto" }}><Link className="btn sm" href="/app/movimientos/nuevo">+ Cargar otro</Link>{/^[a-z0-9]{20,}$/.test(sp.guardado) && <Link className="btn sm" href={`/app/movimientos/${sp.guardado}`}>Ver o corregir</Link>}</span></div>}
       <div className="acts" style={{ justifyContent: "space-between", alignItems: "center" }}>
@@ -81,7 +83,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
         )}
         <form className="search" style={{ maxWidth: 320 }}>{categoryId && <input type="hidden" name="categoria" value={categoryId} />}{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<input name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
       </div>
-      <form className="acts" style={{ alignItems: "end" }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}<label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit">Filtrar</button>{categoryId && <Link className="btn" href={link({ categoria: "" })}>Quitar filtro</Link>}</form>
+      <form className="acts" style={{ alignItems: "end" }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}<label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option><option value="sin-categoria">Sin categoría</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit">Filtrar</button>{categoryId && <Link className="btn" href={link({ categoria: "" })}>Quitar filtro</Link>}</form>
       <details className="more" open={ranged}>
         <summary>Elegir fechas desde y hasta</summary>
         <form className="acts" style={{ alignItems: "flex-end", paddingTop: 10 }}>

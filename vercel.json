@@ -16,7 +16,8 @@
       "fix/presupuestos-claridad": false,
       "fix/inicio-movil": false,
       "feat/usabilidad-producto": false,
-      "feat/guias-primer-uso": false
+      "feat/guias-primer-uso": false,
+      "fix/ux-flujos-20261124": false
     }
   },
   "regions": [

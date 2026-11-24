@@ -2,17 +2,16 @@ import { ProductGuide } from "./product-guide";
 import Link from "next/link";
 import { SettingsNavigation } from "./settings-navigation";
 
-export function PageHead({ crumb, title, desc, actions }: { crumb?: string; title: string; desc?: React.ReactNode; actions?: React.ReactNode }) {
+export function PageHead({ crumb, title, desc, actions, toolbar, guide = true }: { crumb?: string; title: string; desc?: React.ReactNode; actions?: React.ReactNode; toolbar?: React.ReactNode; guide?: boolean }) {
   return (
-    <div className="ph">
+    <div className="page-intro"><div className="ph">
       <div>
         {crumb && <div className="crumb">{crumb}</div>}
         <h1>{title}</h1>
         {desc && <p>{desc}</p>}
-        <ProductGuide />
       </div>
       {actions && <div className="acts">{actions}</div>}
-    </div>
+    </div>{toolbar}{guide && <ProductGuide />}</div>
   );
 }
 
@@ -46,11 +45,11 @@ export function SettingsTabs({ current, rules = true }: { current: string; rules
     { key: "funciones", label: "Funciones", href: "/app/configuracion?tab=funciones" },
     { key: "compartir", label: "Compartir", href: "/app/configuracion?tab=compartir" },
     { key: "categorias", label: "Categorías", href: "/app/categorias" },
-    ...(rules ? [{ key: "recurrentes", label: "Pagos que se repiten", href: "/app/recurrentes" }] : []),
+    ...(rules ? [{ key: "recurrentes", label: "Pagos y cobros que se repiten", href: "/app/recurrentes" }] : []),
     { key: "importar", label: "Importar y exportar", href: "/app/importar" },
     { key: "seguridad", label: "Seguridad", href: "/app/configuracion?tab=seguridad" },
     { key: "plan", label: "Plan", href: "/app/configuracion?tab=plan" },
     { key: "datos", label: "Tus datos", href: "/app/configuracion?tab=datos" },
   ];
-  return <><SettingsNavigation current={current} items={items} /><div className="settings-desktop"><Tabs current={current} items={items} /></div></>;
+  return <SettingsNavigation current={current} items={items} />;
 }
