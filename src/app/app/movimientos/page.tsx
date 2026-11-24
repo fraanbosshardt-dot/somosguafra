@@ -68,29 +68,38 @@ export default async function Movements({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHead crumb="Mi dinero" title="Movimientos" desc="Lo que ya entró y salió de tus cuentas. Lo que falta está en Próximos pagos." actions={<><Link className="btn" href="/app/resumen">Resumen del mes</Link><Link className="btn" href="/app/movimientos/preferencias">Favoritos y reglas</Link></>} />
+      <PageHead crumb="Mi dinero" title="Movimientos" desc="Lo que ya entró y salió de tus cuentas. Lo que falta está en Próximos pagos y cobros." actions={<><Link className="btn" href="/app/resumen">Resumen del mes</Link><Link className="btn" href="/app/movimientos/preferencias">Favoritos y reglas</Link></>} />
       {uncategorized && <p className="notice">Ingresos y gastos sin categoría{!ranged ? ` del mes económico ${fmtPeriod(p).toLowerCase()}` : " en estas fechas"}. <Link className="lnk" href={`/app/movimientos?mes=${p}`}>Ver todos</Link></p>}
       {sp.borrado && <p className="notice g" role="status">Listo, eliminamos el movimiento. El saldo de la cuenta volvió a como estaba.</p>}
       {sp.guardado && <div className="notice g" role="status"><span>{sp.unido ? "Listo. Ya figuraba como pendiente en Próximos pagos, así que lo marcamos como cobrado o pagado con este importe (no queda duplicado)." : "Listo, quedó guardado."}</span><span className="acts" style={{ marginLeft: "auto" }}><Link className="btn sm" href="/app/movimientos/nuevo">+ Cargar otro</Link>{/^[a-z0-9]{20,}$/.test(sp.guardado) && <Link className="btn sm" href={`/app/movimientos/${sp.guardado}`}>Ver o corregir</Link>}</span></div>}
-      <div className="acts" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <section className="movements-toolbar" aria-label="Filtrar movimientos">
+        <div className="movements-filter-row">
         {ranged ? (
-          <div className="acts" style={{ alignItems: "center" }}><b style={{ fontSize: 18, fontWeight: 400 }}>{rangeLabel}</b><Link className="btn sm" href={`/app/movimientos?mes=${p}`}>Volver al mes</Link></div>
+          <div className="acts" style={{ alignItems: "center" }}><b style={{ fontSize: 18, fontWeight: 400 }}>{rangeLabel}</b><Link className="btn sm" href={`/app/movimientos?${new URLSearchParams({mes:p,...(categoryId ? {categoria:categoryId} : {}),...(tipo !== "ALL" ? {tipo} : {}),...(q ? {q} : {})})}`}>Volver al mes</Link></div>
         ) : (
           <MonthNavigation month={p} previous={link({ mes: addMonths(p, -1) })} next={link({ mes: addMonths(p, 1) })} />
         )}
-        <form className="search" style={{ maxWidth: 320 }}>{categoryId && <input type="hidden" name="categoria" value={categoryId} />}{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}<Icon name="search" /><input type="search" name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Buscar en estas fechas" : "Buscar en este mes"} aria-label="Buscar" /></form>
-      </div>
-      <form className="acts" style={{ alignItems: "end" }}>{Object.entries(rangeQ).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}{tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}<label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option><option value="sin-categoria">Sin categoría</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit">Filtrar</button>{categoryId && <Link className="btn" href={link({ categoria: "" })}>Quitar filtro</Link>}</form>
-      <details className="more" open={ranged}>
-        <summary>Elegir fechas desde y hasta</summary>
+          <form className="movements-filter-form" method="get">
+            {Object.entries(rangeQ).map(([k,v]) => <input key={k} type="hidden" name={k} value={v} />)}
+            {tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}
+            <label className="field movements-search-field">Buscar<span className="search"><Icon name="search" /><input type="search" name="q" defaultValue={sp.q ?? ""} placeholder={ranged ? "Concepto, cuenta o categoría" : "Buscar en este mes"} /></span></label>
+            <label className="field">Categoría<select name="categoria" defaultValue={categoryId}><option value="">Todas las categorías</option><option value="sin-categoria">Sin categoría</option>{filterCategories.map((c) => <option key={c.id} value={c.id}>{c.parentId ? `${filterCategories.find((p) => p.id === c.parentId)?.name ?? ""} › ` : ""}{c.name}{c.archived ? " (archivada)" : ""}</option>)}</select></label><button className="btn" type="submit" aria-label="Aplicar filtros">Aplicar</button>
+          </form>
+        </div>
+        <div className="movements-filter-options">
+      <details className="more movements-date-range" open={ranged}>
+        <summary>Usar otras fechas{ranged ? " · activo" : ""}</summary>
         <form className="acts" style={{ alignItems: "flex-end", paddingTop: 10 }}>
           <label className="field" style={{ flex: "1 1 150px" }}>Desde<input name="desde" type="date" defaultValue={sp.desde ?? ""} /></label>
           <label className="field" style={{ flex: "1 1 150px" }}>Hasta<input name="hasta" type="date" defaultValue={sp.hasta ?? ""} /></label>
-          {tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}
+          {tipo !== "ALL" && <input type="hidden" name="tipo" value={tipo} />}{q && <input type="hidden" name="q" value={q} />}
           {categoryId && <input type="hidden" name="categoria" value={categoryId} />}
           <button className="btn" type="submit">Ver</button>
         </form>
       </details>
+          {(q || categoryId || ranged) && <Link className="lnk" href={`/app/movimientos?${new URLSearchParams({mes:p,...(tipo !== "ALL" ? {tipo} : {})})}`}>Limpiar filtros</Link>}
+        </div>
+      </section>
       <p className="sub">Totales de los movimientos filtrados en {cur}. Transferencias y correcciones de saldo no cuentan como ingresos ni gastos.</p>
       <div className="fc" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
         <div className="fc-in"><small>Entró</small><b className="pos">{formatMoney(inc, cur)}</b></div>
@@ -145,7 +154,7 @@ export default async function Movements({ searchParams }: { searchParams: Promis
                 </div>
               );
             })}
-            {total > visible.length && <div className="acts" style={{ justifyContent: "center", paddingTop: 14 }}><Link className="btn" href={`/app/movimientos?${new URLSearchParams({ ...rangeQ, ...(tipo !== "ALL" ? { tipo } : {}), ...(q ? { q } : {}), n: String(showN + 200) })}`}>Ver más ({total - visible.length} más)</Link></div>}
+            {total > visible.length && <div className="acts" style={{ justifyContent: "center", paddingTop: 14 }}><Link className="btn" href={`/app/movimientos?${new URLSearchParams({ ...rangeQ, ...(tipo !== "ALL" ? { tipo } : {}), ...(q ? { q } : {}), ...(categoryId ? { categoria: categoryId } : {}), n: String(showN + 200) })}`}>Ver más ({total - visible.length} más)</Link></div>}
           </div>
         ) : (
           <div className="empty">

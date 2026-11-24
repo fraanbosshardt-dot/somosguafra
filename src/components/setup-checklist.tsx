@@ -15,12 +15,18 @@ export function SetupChecklist({ workspaceId, steps }: { workspaceId: string; st
   const complete = steps.filter(([done], index) => done || skipped.includes(index)).length;
   if (steps.every(([done]) => done)) return null;
   if (complete === steps.length) return <div><button className="lnk" type="button" onClick={() => skip()}>Revisar guía inicial</button></div>;
-  return <div className="card setup-guide">
-    <div className="chead"><div><h3>Terminá de configurar</h3><p className="sub">{complete} de {steps.length} pasos revisados. Cargá lo que corresponde a tu situación.</p></div></div>
-    <div className="setup-bar" aria-hidden="true"><i style={{ width: `${complete / steps.length * 100}%` }} /></div>
-    <ol className="steps">{steps.map(([done, label, href], index) => <li key={href} className={done || skipped.includes(index) ? "ok" : ""}>
-      <div>{done ? <span>{label}</span> : skipped.includes(index) ? <span>Omitido por ahora: {label}</span> : <><Link className="lnk" href={href}>{label}</Link>{(index === 1 || index === 2) && <button className="btn ghost sm" type="button" onClick={() => skip(index)}>{index === 1 ? "No tengo un ingreso fijo" : "No tengo gastos fijos"}</button>}</>}</div>
-    </li>)}</ol>
-    <p className="sub">Un ingreso habitual se programa como cobro que se repite. Si cobrás de forma variable, registrá cada ingreso en Movimientos. Omitir un paso no agrega importes a tu proyección.</p>
-  </div>;
+  const remaining = steps.map((step,index) => ({step,index})).filter(({step:[done],index}) => !done && !skipped.includes(index));
+  return <section className="card setup-guide" aria-label="Configuración inicial">
+    <div className="setup-guide-heading"><h3>Terminá de configurar</h3><span className="sub">{complete} de {steps.length} pasos revisados</span></div>
+    <div className="setup-bar" role="progressbar" aria-label="Pasos revisados" aria-valuenow={complete} aria-valuemin={0} aria-valuemax={steps.length}><i style={{ width: `${complete / steps.length * 100}%` }} /></div>
+    <ul className="setup-pending">{remaining.map(({step:[,label,href],index}) => <li key={href}>
+      <span className="setup-step-number" aria-hidden="true">{index + 1}</span>
+      <Link className="lnk" href={href}>{label}</Link>
+      {(index === 1 || index === 2) && <button className="btn ghost sm" type="button" onClick={() => skip(index)} aria-label={`Omitir por ahora: ${label}`}>Omitir por ahora</button>}
+    </li>)}</ul>
+    <div className="setup-guide-footer">
+      {complete > 0 && <details><summary>Ver pasos revisados ({complete})</summary><ul className="setup-completed">{steps.map(([done,label],index) => (done || skipped.includes(index)) && <li key={index}><span aria-hidden="true">{done ? "✓" : "−"}</span><span>{label}{!done && " · omitido por ahora"}</span></li>)}</ul></details>}
+      <p className="sub">Omitir un paso no agrega importes a tu proyección.</p>
+    </div>
+  </section>;
 }
