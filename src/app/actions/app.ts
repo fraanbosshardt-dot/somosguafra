@@ -252,6 +252,8 @@ export async function createMovementAction(_: FormState, fd: FormData): Promise<
   }
   revalidatePath("/app", "layout");
   const back = String(fd.get("back") ?? "");
+  // La app de Android (/movil) vuelve a su pantalla de confirmación.
+  if (/^\/movil(\/|\?|$)/.test(back)) { revalidatePath("/movil", "layout"); redirect(back); }
   redirect(/^\/app(\/|\?|$)/.test(back) ? back : savedId ? `/app/movimientos?guardado=${savedId}${joined ? "&unido=1" : ""}` : "/app/movimientos");
 }
 
@@ -281,13 +283,16 @@ export async function payObligationAction(_: FormState, fd: FormData): Promise<F
 export async function quickConfirmAction(fd: FormData) {
   const { user, workspace, modules, plan } = await requireWorkspace();
   const db = getDb();
+  // La app de Android (/movil) vuelve a sus propias pantallas; la web, a /app.
+  const mobile = String(fd.get("back") ?? "") === "/movil";
+  const home = mobile ? "/movil" : "/app";
   const ob = await db.obligation.findFirst({ where: { id: String(fd.get("obligationId")), workspaceId: workspace.id, status: { in: ["PENDING", "PARTIAL"] } }, include: { payments: true, recurringRule: { select: { accountId: true } }, category: { select: { name: true } } } });
-  if (!ob) redirect("/app");
+  if (!ob) redirect(home);
   const { isEstimatedGrain, loadSaleHref } = await import("@/server/grain");
   if (modules.cereal && isEstimatedGrain({ ...ob, category: ob.category?.name }) && (await canUse(plan, "cereal"))) redirect(loadSaleHref(ob.dueDate));
   const acc = (ob.recurringRule?.accountId && (await db.account.findFirst({ where: { id: ob.recurringRule.accountId, workspaceId: workspace.id, active: true, currency: ob.currency, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } } })))
     || (await db.account.findFirst({ where: { workspaceId: workspace.id, active: true, currency: ob.currency, type: { notIn: ["CREDIT_CARD", "INVESTMENT"] } }, orderBy: { createdAt: "asc" } }));
-  if (!acc) redirect(`/app/proximos/${ob.id}`);
+  if (!acc) redirect(`${home}/proximos/${ob.id}`);
   const { remaining, matchingPaid } = await import("@/server/ledger");
   try {
     // Si ya lo cargaste a mano en Movimientos, se une con ese en vez de registrarlo otra vez.
@@ -299,7 +304,8 @@ export async function quickConfirmAction(fd: FormData) {
     if (!(e instanceof UserError)) throw e;
   }
   revalidatePath("/app", "layout");
-  redirect(`/app?listo=${ob.direction === "RECEIVABLE" ? "cobro" : "pago"}`);
+  if (mobile) revalidatePath("/movil", "layout");
+  redirect(`${home}?listo=${ob.direction === "RECEIVABLE" ? "cobro" : "pago"}`);
 }
 
 export async function cancelObligationAction(fd: FormData) {

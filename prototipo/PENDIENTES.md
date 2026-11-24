@@ -5,6 +5,16 @@ Cuando algo se termina, pasa a "Completado" con la fecha.
 
 ## Pendientes
 
+### App de Android (rama app-android, plan en docs/app-android/PLAN.md)
+- [x] A1. Base de /movil: diseño, barra de abajo, Inicio con datos reales y animaciones (24/11/2026).
+- [x] A2. Cargar un movimiento en 2 pasos + pantalla "Listo" con lo que te queda (24/11/2026).
+- [ ] A3. Movimientos (corregir y eliminar) y Próximos (calendario, registrar pago y cobro, deslizar).
+- [ ] A4. Explorar y sus funciones con el diseño nuevo.
+- [ ] A5. Configuración, Ayuda, bienvenida, ingresar y registro con el diseño nuevo.
+- [ ] A6. Empaquetado Android (Bubblewrap, assetlinks.json, ícono, firma) y página web para borrar la cuenta.
+- [ ] A7. Google Play Billing para Pro (necesita productos en Play Console y credenciales tuyas).
+- [ ] A8. Ficha de Play Store, prueba cerrada con 12 testers por 14 días y envío.
+
 ### Funciones para pulir (de a una)
 - [ ] F2. Préstamos: impuesto sobre los intereses (ej. IVA) y seguro sobre el saldo, para que el francés dé igual que el banco.
 - [ ] F3. Flujo de caja cuando los ingresos no se repiten (ver Z8: "Estimar con mi promedio", "Simular un ingreso" o las dos).

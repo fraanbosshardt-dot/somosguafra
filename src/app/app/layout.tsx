@@ -5,10 +5,7 @@ import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { todayIn } from "@/lib/dates";
 import { logoutAction } from "@/app/actions/auth";
-import { materialize } from "@/server/recurring";
-import { closeStatements } from "@/server/cards";
-import { coverOlderSales } from "@/server/grain";
-import { MATERIALIZE_DAYS } from "@/server/forecast";
+import { keepHouse } from "@/server/housekeeping";
 import { roleFor } from "@/server/admin-team";
 import { announcement, announcementFor, systemSettings } from "@/server/settings";
 import { Icon } from "@/components/icons";
@@ -44,17 +41,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
   const today = todayIn(workspace.timezone);
-  // Pendientes de reglas recurrentes y resúmenes de tarjeta ya cerrados: se generan solos y sin duplicar.
-  // Pendientes de reglas y resúmenes cerrados: se recalculan al cambiar el día o cada 15 minutos, no en cada página.
-  // Las acciones que crean reglas o cargan resúmenes ya los generan en el momento.
-  const kept = workspace.housekeptAt;
-  if (!kept || kept < today || Date.now() - kept.getTime() > 15 * 60_000) {
-    await materialize(db, workspace.id, new Date(today.getTime() + MATERIALIZE_DAYS * 864e5));
-    await closeStatements(db, workspace.id, today);
-    // Ventas de cereal cargadas antes de la venta mensual: su mes no se cuenta dos veces (no hace nada si ya está).
-    if (modules.cereal) await coverOlderSales(db, workspace.id, today);
-    await db.workspace.update({ where: { id: workspace.id }, data: { housekeptAt: new Date() } });
-  }
+  // Las acciones que crean reglas o cargan resúmenes ya los generan en el momento; esto cubre el resto.
+  await keepHouse(db, workspace, !!modules.cereal, today);
   const [overdue, ann] = await Promise.all([
     db.obligation.count({ where: { workspaceId: workspace.id, status: { in: ["PENDING", "PARTIAL"] }, dueDate: { lt: today } } }),
     announcement(db),
