@@ -10,6 +10,7 @@ import { copyBudgetAction } from "@/app/actions/modules";
 import { ActionForm, Submit } from "@/components/forms";
 import { BudgetEditor } from "./budget-editor";
 import { symbolOf } from "@/lib/countries";
+import { MonthNavigation } from "@/components/month-navigation";
 
 export const metadata: Metadata = { title: "Presupuestos" };
 
@@ -47,7 +48,7 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
   );
   return (
     <>
-      <PageHead crumb="Planificar" title="Presupuestos" desc="Controlá tus gastos por categoría, sin confundir el límite con lo gastado." toolbar={<nav className="budget-period" aria-label="Mes del presupuesto"><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><strong>{fmtPeriod(p)}</strong><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></nav>} />
+      <PageHead crumb="Planificar" title="Presupuestos" desc="Controlá tus gastos por categoría, sin confundir el límite con lo gastado." toolbar={<MonthNavigation label="Mes del presupuesto" month={p} previous={`/app/presupuestos?mes=${addMonths(p, -1)}`} next={`/app/presupuestos?mes=${addMonths(p, 1)}`} />} />
       {sp.copiado === "1" && <p className="notice g" role="status">Presupuesto copiado. Se conservaron los límites y las opciones, sin copiar gastos.</p>}
       {hasBudget ? (
         <>

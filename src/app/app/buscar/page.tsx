@@ -4,6 +4,7 @@ import { requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/dates";
+import { Icon } from "@/components/icons";
 import { PageHead } from "@/components/page";
 import { searchIds } from "@/server/search";
 
@@ -18,19 +19,19 @@ export default async function Search({ searchParams }: { searchParams: Promise<{
   const found = q.length >= 2 ? await searchIds(db, ws, q) : null;
   const inIds = (ids?: string[]) => ({ workspaceId: ws, id: { in: ids ?? [] } });
   const [tx, obl, accounts, cats, rules, debts, grain] = found ? await Promise.all([
-    db.transaction.findMany({ where: inIds(found.tx), include: { account: true, category: true }, orderBy: { effectiveDate: "desc" } }),
-    db.obligation.findMany({ where: inIds(found.obl), orderBy: { dueDate: "asc" } }),
-    db.account.findMany({ where: inIds(found.accounts) }),
-    db.category.findMany({ where: inIds(found.cats) }),
-    db.recurringRule.findMany({ where: inIds(found.rules) }),
-    db.debt.findMany({ where: inIds(found.debts) }),
-    db.grainSale.findMany({ where: inIds(found.grain), orderBy: { saleDate: "desc" } }),
+    found.tx.length ? db.transaction.findMany({ where: inIds(found.tx), include: { account: true, category: true }, orderBy: { effectiveDate: "desc" } }) : [],
+    found.obl.length ? db.obligation.findMany({ where: inIds(found.obl), orderBy: { dueDate: "asc" } }) : [],
+    found.accounts.length ? db.account.findMany({ where: inIds(found.accounts) }) : [],
+    found.cats.length ? db.category.findMany({ where: inIds(found.cats) }) : [],
+    found.rules.length ? db.recurringRule.findMany({ where: inIds(found.rules) }) : [],
+    found.debts.length ? db.debt.findMany({ where: inIds(found.debts) }) : [],
+    found.grain.length ? db.grainSale.findMany({ where: inIds(found.grain), orderBy: { saleDate: "desc" } }) : [],
   ]) : [[], [], [], [], [], [], []];
   const total = tx.length + obl.length + accounts.length + cats.length + rules.length + debts.length + grain.length;
   return (
     <div className="narrow wide">
       <PageHead title="Buscar" />
-      <form className="search" style={{ maxWidth: "none" }} role="search"><input name="q" defaultValue={q} placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" autoFocus /></form>
+      <form className="search" style={{ maxWidth: "none" }} role="search"><Icon name="search" /><input type="search" name="q" defaultValue={q} placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" autoFocus /></form>
       {q.length < 2 ? <p className="sub">Escribí al menos 2 letras.</p> : total === 0 ? <div className="empty">No encontramos nada con “{q}”.</div> : (
         <>
           {obl.length > 0 && <div className="card"><div className="chead"><h3>A pagar y a cobrar</h3></div><div className="list">{obl.map((o) => (

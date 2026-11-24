@@ -94,7 +94,7 @@ export function Shell({ children, modules, overdue, userName, plan, isAdmin, log
         <button className="ibtn menu-btn desktop-menu" aria-label={sideOff ? "Mostrar menú" : "Ocultar menú"} aria-expanded={!sideOff} onClick={toggleMenu}><Icon name="menu" /></button>
         <button className="ibtn menu-btn mobile-menu" aria-label={open ? "Ocultar menú" : "Mostrar menú"} aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="menu" /></button>
         <Link href="/app" className="brand" aria-label="Somos Guafra, ir al inicio"><Mark /><b className="wordmark">somosguafra</b></Link>
-        <form action="/app/buscar" className="search top-search" role="search"><input name="q" placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" /></form>
+        <form action="/app/buscar" className="search top-search" role="search"><Icon name="search" /><input type="search" name="q" placeholder="Buscar movimientos, cuentas, categorías…" aria-label="Buscar" /></form>
         <span style={{ flex: 1 }} />
         <Link className="ibtn top-search-btn" href="/app/buscar" aria-label="Buscar"><Icon name="search" /></Link>
         {!readOnly && <Link href="/app/movimientos/nuevo" className="btn pri top-new"><Icon name="plus" />Nuevo movimiento</Link>}

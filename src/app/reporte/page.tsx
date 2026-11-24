@@ -8,6 +8,7 @@ import { dec, formatMoney, ZERO } from "@/lib/money";
 import { validPeriod, addMonths, fmtDateNum, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { BRAND } from "@/lib/brand";
 import { PrintButton } from "./print-button";
+import { MonthNavigation } from "@/components/month-navigation";
 
 export const metadata: Metadata = { title: "Reporte del mes", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -33,11 +34,7 @@ export default async function Report({ searchParams }: { searchParams: Promise<{
     <main className="report">
       <div className="report-bar no-print">
         <Link className="btn" href={`/app/informes?${new URLSearchParams({ mes: p, ...(account ? { cuenta: account.id } : {}) })}`}>← Volver</Link>
-        <div className="acts">
-          <Link className="btn sm" href={monthLink(addMonths(p, -1))} aria-label="Mes anterior">‹</Link>
-          <b>{fmtPeriod(p)}</b>
-          {p < p0 && <Link className="btn sm" href={monthLink(addMonths(p, 1))} aria-label="Mes siguiente">›</Link>}
-        </div>
+        <MonthNavigation month={p} previous={monthLink(addMonths(p, -1))} next={p < p0 ? monthLink(addMonths(p, 1)) : undefined} />
         <PrintButton />
       </div>
       <header className="report-h">

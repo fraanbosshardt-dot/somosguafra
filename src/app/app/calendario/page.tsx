@@ -6,6 +6,7 @@ import { remaining } from "@/server/ledger";
 import { ZERO, formatMoney } from "@/lib/money";
 import { parseDate, validPeriod, addMonths, fmtPeriod, period, periodEnd, periodStart, todayIn } from "@/lib/dates";
 import { PageHead, Tabs } from "@/components/page";
+import { MonthNavigation } from "@/components/month-navigation";
 import { projectedItems } from "@/server/recurring";
 import { projectedAction } from "@/app/actions/modules";
 
@@ -21,12 +22,12 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   // Proyectados: lo que tus pagos que se repiten van a generar este mes (desde hoy en adelante).
   const proj = to < today ? [] : await projectedItems(getDb(), workspace.id, from > today ? from : today, to);
   const projByDay = new Map<string, typeof proj>();
-  for (const p of proj) { const k = p.dueDate.toISOString().slice(0, 10); projByDay.set(k, [...(projByDay.get(k) ?? []), p]); }
+  for (const p of proj) { const k = p.dueDate.toISOString().slice(0, 10); const group = projByDay.get(k); if (group) group.push(p); else projByDay.set(k, [p]); }
   // Grilla de lunes a domingo.
   const lead = (from.getUTCDay() + 6) % 7;
   const days = Array.from({ length: 42 }, (_, i) => new Date(from.getTime() + (i - lead) * 864e5));
   const byDay = new Map<string, typeof obs>();
-  for (const o of obs) { const k = o.dueDate.toISOString().slice(0, 10); byDay.set(k, [...(byDay.get(k) ?? []), o]); }
+  for (const o of obs) { const k = o.dueDate.toISOString().slice(0, 10); const group = byDay.get(k); if (group) group.push(o); else byDay.set(k, [o]); }
   const weeks = Math.ceil((lead + to.getUTCDate()) / 7);
   // Día elegido (al tocar un número): su lista va debajo. Por defecto, hoy si está en este mes.
   const todayKey = today.toISOString().slice(0, 10);
@@ -43,7 +44,7 @@ export default async function Calendar({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHead crumb="Pagos y deudas" title="Calendario" desc="Tocá un día para ver qué vence y registrar el pago o el cobro."
-        actions={<><Link className="btn" href={`/app/calendario?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><span className="btn" style={{ minWidth: 150, justifyContent: "center" }}>{fmtPeriod(p)}</span><Link className="btn" href={`/app/calendario?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></>} />
+        toolbar={<MonthNavigation month={p} previous={`/app/calendario?mes=${addMonths(p, -1)}`} next={`/app/calendario?mes=${addMonths(p, 1)}`} />} />
       <Tabs current="cal" items={[{ key: "lista", label: "Lista", href: "/app/proximos" }, { key: "cal", label: "Calendario", href: "/app/calendario" }]} />
       <div className="calendar-layout">
       <div className="legend"><span><i style={{ background: "var(--green)" }} />Cobros</span><span><i style={{ background: "var(--ink)" }} />Pagos</span><span><i style={{ background: "var(--red)" }} />Atrasados</span><span><i style={{ background: "var(--line-2)" }} />Ya pagados</span><span><i style={{ background: "transparent", border: "1px dashed var(--line-2)" }} />Proyectados (se repiten)</span></div>

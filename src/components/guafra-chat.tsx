@@ -4,7 +4,7 @@ import { CHAT_TOPICS, CASE_STATUS } from "@/lib/chat-help";
 import type { ChatSelection, ChatView } from "@/server/guafra-chat";
 import styles from "./guafra-chat.module.css";
 import { LogoMark } from "./logo-mark";
-import { requestChatOpen, takeChatOpen } from "@/lib/open-chat";
+import { takeChatOpen } from "@/lib/open-chat";
 import { mergeChatHistory } from "@/lib/chat-history";
 
 const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> = {
@@ -22,25 +22,6 @@ type Payload = {
   identity?: { name: string; email: string } | null;
   error?: string;
 };
-export function ChatOpen({
-  children = "Hablar con Guafra",
-  code,
-}: {
-  children?: React.ReactNode;
-  code?: string;
-}) {
-  return (
-    <button
-      className="btn pri"
-      type="button"
-      onClick={() =>
-        requestChatOpen(code)
-      }
-    >
-      {children}
-    </button>
-  );
-}
 export function GuafraChat({
   source = "site",
   inline = false,
