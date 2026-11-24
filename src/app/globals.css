@@ -1359,7 +1359,7 @@ input[list]{appearance:none;-webkit-appearance:none}
 .settings-layout .settings-sections a[aria-current="page"]{background:var(--ink-soft);color:var(--ink);font-weight:600}
 .settings-content .frow{gap:16px}
 .settings-content .card{min-width:0}
-@media(max-width:900px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:0}.settings-layout .settings-desktop{display:none}.settings-content{gap:16px}}
+@media(max-width:900px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:16px}.settings-layout .settings-desktop{display:none}.settings-content{gap:16px}}
 .help-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:14px}
 .recovery-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px;padding:0;list-style:none;margin:18px 0}
 .recovery-list code{display:block;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:15px;overflow-wrap:anywhere}
