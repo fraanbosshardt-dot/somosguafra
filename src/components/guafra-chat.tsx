@@ -11,7 +11,7 @@ const QUICK_LABELS: Partial<Record<(typeof CHAT_TOPICS)[number]["id"], string>> 
   start: "Primeros pasos",
   plans: "Planes y precios",
   trial: "Prueba gratuita",
-  pending: "Pagos pendientes",
+  pending: "Pago de Pro pendiente",
   cancel: "Cancelar renovación",
   moves: "Movimientos",
 };
@@ -478,14 +478,7 @@ export function GuafraChat({
                   </p>
                   <div className={styles.topics}>
                     {CHAT_TOPICS.filter((t) =>
-                      [
-                        "start",
-                        "plans",
-                        "trial",
-                        "pending",
-                        "cancel",
-                        "moves",
-                      ].includes(t.id),
+                      (source === "app" ? ["start", "moves", "budgets", "flow-explanation", "pending", "verify"] : ["start", "plans", "trial", "pending", "cancel", "moves"]).includes(t.id),
                     ).map((t) => (
                       <button
                         type="button"

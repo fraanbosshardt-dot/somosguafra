@@ -1,3 +1,4 @@
+import { CommunicationPreferences } from "@/components/communication-preferences";
 import Link from "next/link";
 import { RecoveryCodes } from "@/components/recovery-codes";
 import type { Metadata } from "next";
@@ -12,7 +13,7 @@ import { planSettings, planFeatures } from "@/server/plans";
 import { billingConfig } from "@/server/billing";
 import { fmtDate } from "@/lib/dates";
 import { COUNTRIES, CURRENCIES } from "@/lib/countries";
-import { PageHead, SettingsTabs } from "@/components/page";
+import { PageHead, SettingsFrame } from "@/components/page";
 import { InstallApp } from "@/components/pwa";
 import { BigTextToggle } from "@/components/big-text";
 import { ThemeChoice } from "@/components/theme";
@@ -36,7 +37,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
   const asked = sp.tab;
   const t = TABS.some(([k]) => k === asked) ? asked! : "general";
   const features = planFeatures((await planSettings(getDb())).freeAlso);
-  const tabs = <SettingsTabs current={t} rules={modules.reglas} />;
+
   const now = new Intl.DateTimeFormat("es-AR", { timeZone: workspace.timezone, dateStyle: "full", timeStyle: "short" }).format(new Date());
 
   const push = pushConfig();
@@ -51,11 +52,11 @@ export default async function Settings({ searchParams }: { searchParams: Promise
             <label className="field">País<select name="country" defaultValue={workspace.country}>{COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</select></label>
             <label className="field">Moneda principal<select name="currency" defaultValue={workspace.baseCurrency}>{CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></label>
           </div>
-          <div className="field">Otras monedas que usás
+          <details className="more"><summary>Otras monedas que usás (opcional)</summary><div className="field" style={{paddingTop:12}}>
             <div className="chips">{CURRENCIES.filter((c) => c.code !== workspace.baseCurrency).map((c) => (
               <label key={c.code} className="chipck"><input type="checkbox" name="extraCurrencies" value={c.code} defaultChecked={workspace.extraCurrencies.includes(c.code)} /><span>{c.code}</span></label>
             ))}</div>
-          </div>
+          </div></details>
           <p className="sub">La zona horaria se ajusta sola según el país. Hora actual: {now}.</p>
           <div><Submit>Guardar</Submit></div>
         </ActionForm>
@@ -199,7 +200,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         {sp.yatenes && <div className="notice">Revisá tu suscripción actual antes de iniciar otro pago.</div>}
         {sp.cancelado && view.billing === "canceled" && <div className="notice">La cancelación fue confirmada. Conservás el acceso que ya tengas cubierto; tus datos quedan guardados.</div>}
         {sp.solicituddescartada && view.billing !== "pending" && <div className="notice">La solicitud pendiente ya no está activa. Descartarla no elimina tu trial ni da de baja otra suscripción.</div>}
-        <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual"} features={features} />
+        <PlanSubscriptionCard view={view} bill={bill} timeZone={workspace.timezone} annual={sp.ciclo === "anual" ? true : sp.ciclo === "mensual" ? false : undefined} features={features} />
         <div className="card">
           <div className="chead"><div><h3>Invitá y ganá Pro</h3><p className="sub">Cuando alguien se registra con tu link, confirma su correo, termina la bienvenida y registra su primer movimiento, ustedes dos reciben {REFERRAL_DAYS} días de Pro.</p></div>{refStats.rewarded > 0 && <span className="pill g">{refStats.rewarded} {refStats.rewarded === 1 ? "invitación" : "invitaciones"}</span>}</div>
           {refStats.creditDays > 0 && <p className="notice g">Tenés {refStats.creditDays} días de Pro ganados y guardados. Se aplican cuando no haya una renovación programada ni un período pago pendiente de terminar. No modifican tus cobros actuales.</p>}
@@ -207,7 +208,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           {refStats.invited > refStats.rewarded && <p className="sub" style={{ margin: "10px 0 0" }}>{refStats.invited - refStats.rewarded} {refStats.invited - refStats.rewarded === 1 ? "persona todavía no completó" : "personas todavía no completaron"} su activación: confirmar correo, terminar la bienvenida y registrar un movimiento.</p>}
           {refStats.left === 0 && <p className="sub" style={{ margin: "10px 0 0" }}>Llegaste al máximo de premios por invitar. ¡Gracias por recomendarnos!</p>}
         </div>
-        <div className="card"><div className="chead"><h3>Qué suma Pro</h3></div><div className="list">{features.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></div>
+        <div className="card"><details className="more"><summary>{plan === "PRO" ? "Funciones incluidas en tu acceso Pro" : "Qué suma Pro"}</summary><div className="list">{features.filter((f) => f.plan === "pro").map((f) => <div className="li" key={f.name}><span className="pill b">Pro</span><div className="grow">{f.name}</div>{f.beta && <span className="pill beta">Beta</span>}</div>)}</div></details></div>
         {invoiceTotal > 0 && (
           <div className="card"><div className="chead"><h3>Historial de pagos</h3></div><div className="tw"><table>
             <thead><tr><th>Fecha</th><th>Detalle</th><th>Estado</th><th className="n">Importe</th></tr></thead>
@@ -227,5 +228,5 @@ export default async function Settings({ searchParams }: { searchParams: Promise
       </div></div>
     );
   }
-  return (<div className="narrow wide"><PageHead crumb="Ajustes" title="Configuración" />{tabs}{sp.verificar && <p className="notice a">{sp.verificar === "avisos" ? "Para recibir avisos por correo" : "Para pagar Pro"}, primero <Link className="lnk" href="/confirmar-correo">confirmá tu correo</Link>. En esa pantalla podés ingresar el código o pedir uno nuevo.</p>}{sp.soloduenio && <p className="notice a">Eso lo puede hacer solo el dueño del espacio.</p>}{t === "general" && <><ThemeChoice /><BigTextToggle />{push.enabled && <PushToggle publicKey={push.publicKey} />}<InstallApp /></>}{body}</div>);
+  return (<><PageHead crumb="Ajustes" title="Configuración" /><SettingsFrame current={t} rules={modules.reglas}>{sp.verificar && <p className="notice a">{sp.verificar === "avisos" ? "Para recibir avisos por correo" : "Para pagar Pro"}, primero <Link className="lnk" href="/confirmar-correo">confirmá tu correo</Link>. En esa pantalla podés ingresar el código o pedir uno nuevo.</p>}{sp.soloduenio && <p className="notice a">Eso lo puede hacer solo el dueño del espacio.</p>}{body}{t === "general" && <><ThemeChoice /><BigTextToggle /><CommunicationPreferences userId={user.id} />{push.enabled && <PushToggle publicKey={push.publicKey} />}<InstallApp /></>}</SettingsFrame></>);
 }

@@ -32,7 +32,7 @@ export default async function Goals() {
               <div className="bar" style={{ margin: "6px 0 12px", height: 10 }}><i style={{ width: `${g.pct}%`, background: "var(--ink)" }} /></div>
               {!g.done && <dl className="kv"><dt>Te falta</dt><dd>{fm(g.left)}</dd>{g.monthsLeft && <><dt>Necesitás por mes</dt><dd><b>{fm(g.needed)}</b> durante {g.monthsLeft} meses</dd></>}{g.eta && <><dt>Con tu aporte llegás en</dt><dd>{fmtPeriod(g.eta)}</dd></>}</dl>}
               {!g.done && <GoalSim key={`${g.goal.id}:${g.goal.monthlyContribution ?? ""}:${g.goal.targetAmount}`} goalId={g.goal.id} left={g.left.toNumber()} planned={g.planned?.toNumber() ?? Math.max(1, g.needed.toNumber())} currency={g.goal.currency} today={today.toISOString().slice(0, 7)} />}
-              <details className="more goal-edit">
+              <details name={`goal-editor-${g.goal.id}`} className="more goal-edit">
                 <summary className="btn sm">Editar objetivo</summary>
                 <ActionForm action={editGoalAction} className="goal-edit-form">
                   <input type="hidden" name="goalId" value={g.goal.id} />
@@ -44,7 +44,7 @@ export default async function Goals() {
                 </ActionForm>
               </details>
               <div className="goal-foot">
-                <details className="goal-add"><summary className="btn sm">+ Registrar ahorro</summary>
+                <details name={`goal-editor-${g.goal.id}`} className="goal-add"><summary className="btn sm">+ Registrar ahorro</summary>
                   <ActionForm action={contributeAction} resetOnOk className="goal-add-form">
                     <input type="hidden" name="goalId" value={g.goal.id} />
                     <label className="field">¿Cuánto ya separaste?<input name="amount" inputMode="decimal" placeholder="0,00" /></label>

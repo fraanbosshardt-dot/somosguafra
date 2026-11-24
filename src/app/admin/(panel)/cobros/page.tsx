@@ -1,4 +1,5 @@
 import { AdminSections } from "@/components/admin-sections";
+import { checkoutFollowup } from "@/lib/checkout-followup";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/admin";
@@ -19,12 +20,18 @@ import { adminCancelSubAction, adminCreateCouponAction, adminToggleCouponAction 
 
 export const metadata: Metadata = { title: "Cobros y cupones" };
 
-export default async function Billing({ searchParams }: { searchParams: Promise<{ pagoerror?: string; suscripciones?: string; pagos?: string }> }) {
-  const { pagoerror, suscripciones, pagos } = await searchParams;
+export default async function Billing({ searchParams }: { searchParams: Promise<{ pagoerror?: string; suscripciones?: string; pagos?: string; intentos?: string; estado?: string }> }) {
+  const { pagoerror, suscripciones, pagos, intentos, estado } = await searchParams;
   const subPage = pageNumber(suscripciones), paymentPage = pageNumber(pagos);
   const admin = await requireAdmin("operations");
   const owner = can(admin.role, "owner");
   const db = getDb();
+  const attemptPage = pageNumber(intentos), cutoff = new Date(Date.now() - 24 * 3600_000);
+  const attemptWhere = estado === "incomplete" ? { status: "pending", createdAt: { lte: cutoff } } : estado === "pending" ? { status: "pending", createdAt: { gt: cutoff } } : estado === "review" ? { status: { in: ["creating", "uncertain", "paused"] } } : estado === "converted" ? { status: "authorized" } : estado === "closed" ? { status: { in: ["cancelled", "superseded"] } } : {};
+  const [attempts, attemptTotal] = await Promise.all([
+    db.billingAgreement.findMany({ where: attemptWhere, include: { workspace: { include: { members: { where: { role: "OWNER" }, take: 1, include: { user: { select: { id: true, email: true } } } } } } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: BILLING_PAGE_SIZE, skip: (attemptPage - 1) * BILLING_PAGE_SIZE }),
+    db.billingAgreement.count({ where: attemptWhere }),
+  ]);
   const [report, coupons] = await Promise.all([adminBillingReport(db, subPage, paymentPage), db.coupon.findMany({ orderBy: { createdAt: "desc" } })]);
   const { subs, invoices, subTotal, invoiceTotal, active, pastDue, renewing, rejected } = report;
   const bill = await billingConfig(db);
@@ -52,6 +59,12 @@ export default async function Billing({ searchParams }: { searchParams: Promise<
         </table></div> : <div className="empty">Todavía no hay suscripciones pagas.</div>}
         <Pagination page={subPage} size={BILLING_PAGE_SIZE} total={subTotal} href={p => href(p, paymentPage)} label="Páginas de suscripciones" />
       </div></>},
+{id:"intentos",label:"Intentos de contratación",content:<div className="card">
+  <div className="chead"><div><h3>Intentos de contratación</h3><p className="sub">Una solicitud sin completar no es una baja ni un ingreso. La antigüedad no cancela contratos en Mercado Pago.</p></div></div>
+  <form method="get" action="/admin/cobros#panel-intentos" className="frow" style={{alignItems:"end",marginBottom:20}}><label className="field">Seguimiento<select name="estado" defaultValue={estado ?? ""}><option value="">Todos</option><option value="pending">Pendientes: menos de 24 h</option><option value="incomplete">Sin completar: desde 24 h</option><option value="review">Requieren verificación / pausados</option><option value="converted">Autorizados</option><option value="closed">Cerrados</option></select></label><button className="btn" type="submit">Filtrar intentos</button></form>
+  {attempts.length ? <div className="tw" tabIndex={0} role="region" aria-label="Intentos de contratación"><table><thead><tr><th>Cliente</th><th>Solicitud</th><th>Seguimiento</th><th>Creada</th><th>Última conciliación</th></tr></thead><tbody>{attempts.map(a => { const u = who(a.workspace); return <tr key={a.id}><td>{u ? <Link className="lnk" href={`/admin/usuarios/${u.id}`}>{u.email}</Link> : "Sin titular"}</td><td>{a.cycle === "yearly" ? "Anual" : "Mensual"}<br />{formatMoney(a.amount,a.currency)}</td><td>{checkoutFollowup(a).label}{a.cancelReason && <div className="sub">{a.cancelReason}</div>}</td><td>{fmtDate(a.createdAt)}</td><td>{a.lastReconciledAt ? fmtDate(a.lastReconciledAt) : "Todavía sin conciliar"}</td></tr>; })}</tbody></table></div> : <div className="empty">No hay intentos con este filtro.</div>}
+  <Pagination page={attemptPage} size={BILLING_PAGE_SIZE} total={attemptTotal} href={p => `/admin/cobros?intentos=${p}&estado=${encodeURIComponent(estado ?? "")}#panel-intentos`} label="Páginas de intentos" />
+</div>},
 {id:"pagos",label:"Pagos",content:<><div className="card">
         <div className="chead"><h3>Últimos pagos</h3><span className="sub">Las devoluciones se hacen desde Mercado Pago y se reflejan acá solas</span></div>
         {invoices.length ? <div className="tw" tabIndex={0} role="region" aria-label="Tabla con desplazamiento horizontal"><table>

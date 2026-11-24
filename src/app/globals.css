@@ -1350,6 +1350,16 @@ input[list]{appearance:none;-webkit-appearance:none}
 
 /* Configuración y ayuda: navegación completa sin pestañas ocultas en móvil. */
 .settings-mobile{display:none}
+.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;align-items:start;width:100%}
+.settings-content{display:flex;flex-direction:column;gap:20px;min-width:0}
+.settings-layout .settings-sections{display:flex;flex-direction:column;gap:24px;border:0;padding:0;margin:0}
+.settings-nav-group{display:flex;flex-direction:column;gap:4px;min-width:0}
+.settings-nav-group>.crumb{padding:0 12px;margin-bottom:6px}
+.settings-layout .settings-sections a{display:block;white-space:normal;line-height:1.5;padding:10px 12px;border:0;border-radius:12px;color:var(--muted)}
+.settings-layout .settings-sections a[aria-current="page"]{background:var(--ink-soft);color:var(--ink);font-weight:600}
+.settings-content .frow{gap:16px}
+.settings-content .card{min-width:0}
+@media(max-width:900px){.settings-layout{grid-template-columns:minmax(0,1fr);gap:16px}.settings-layout .settings-desktop{display:none}.settings-content{gap:16px}}
 .help-filters{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;margin-bottom:14px}
 .recovery-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px;padding:0;list-style:none;margin:18px 0}
 .recovery-list code{display:block;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:15px;overflow-wrap:anywhere}
@@ -1420,3 +1430,9 @@ input[list]{appearance:none;-webkit-appearance:none}
 .search input:focus,.lsearch input:focus{background:transparent;border:0;box-shadow:none!important;outline:none!important}
 @media(max-width:640px){.month-navigation{width:100%;grid-template-columns:44px minmax(0,1fr) 44px}.month-value strong{font-size:15px}.search input{font-size:16px}}
 .field input[type=search],.adm-q[name=q]{border-radius:12px;background:var(--surface)}
+
+.setup-guide .steps li>div{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.setup-guide .steps li{padding-block:8px}
+.setup-guide>.sub{margin-top:16px}
+.communication-form{display:flex;flex-direction:column;gap:16px}
+.settings-content .grid.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}

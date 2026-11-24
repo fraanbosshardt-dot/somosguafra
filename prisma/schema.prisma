@@ -52,6 +52,17 @@ model User {
   auditLogs      AuditLog[]
   tickets        SupportTicket[]
   chats          ChatSession[]
+  communicationPreference CommunicationPreference?
+}
+
+model CommunicationPreference {
+  userId String @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tips Boolean @default(false)
+  news Boolean @default(false)
+  offers Boolean @default(false)
+  consentVersion String
+  updatedAt DateTime @updatedAt
 }
 
 model RecoveryCode {

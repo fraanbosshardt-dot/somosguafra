@@ -5,7 +5,7 @@ import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { pageNumber } from "@/lib/pagination";
 import { fmtDate } from "@/lib/dates";
-import { PageHead, SettingsTabs } from "@/components/page";
+import { PageHead, SettingsFrame } from "@/components/page";
 import { revertImportAction } from "@/app/actions/modules";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 
@@ -26,7 +26,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHead crumb="Configuración" title="Importar y exportar" desc="Traé movimientos desde la planilla o el extracto de tu banco. Cada importación se puede deshacer entera." />
-      <SettingsTabs current="importar" />
+      <SettingsFrame current="importar">
       {sp.ok && <div className="notice g">Listo, importamos los movimientos.</div>}
       <div className="card">
         <div className="chead"><h3>Importar un archivo</h3></div>
@@ -58,6 +58,7 @@ export default async function ImportExport({ searchParams }: { searchParams: Pro
           <a className="btn" href="/app/exportar/respaldo" download>Respaldo completo (JSON)</a>
         </div>
       </div>
+    </SettingsFrame>
     </>
   );
 }

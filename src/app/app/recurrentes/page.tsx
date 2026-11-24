@@ -5,7 +5,7 @@ import { getDb } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { fmtDate, isoDate, todayIn } from "@/lib/dates";
 import { applyWeekend, occurrences } from "@/server/recurring";
-import { Empty, PageHead, SettingsTabs } from "@/components/page";
+import { Empty, PageHead, SettingsFrame } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
 import { EditPanel } from "@/components/edit-panel";
 import { createRuleAction, deleteRuleAction, endRuleAction, pauseRuleAction, saveRuleAction } from "@/app/actions/modules";
@@ -18,16 +18,16 @@ export const metadata: Metadata = { title: "Pagos que se repiten" };
 const FREQ: Record<string, string> = { DAILY: "Todos los días", WEEKLY: "Cada semana", BIWEEKLY: "Cada 2 semanas", MONTHLY: "Todos los meses", BIMONTHLY: "Cada 2 meses", QUARTERLY: "Cada 3 meses", SEMIANNUAL: "Cada 6 meses", ANNUAL: "Una vez por año", CUSTOM: "Personalizada" };
 const MONTHLY_LIKE = ["MONTHLY", "BIMONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"];
 
-export default async function Rules({ searchParams }: { searchParams: Promise<{ nueva?: string; borrada?: string; terminada?: string }> }) {
+export default async function Rules({ searchParams }: { searchParams: Promise<{ nueva?: string; borrada?: string; terminada?: string; tipo?: string }> }) {
   const { workspace, plan } = await requireWorkspace();
   const hasCosts = await canUse(plan, "informes");
-  const sp = await searchParams as { nueva?: string; borrada?: string; terminada?: string; guardada?: string };
+  const sp = await searchParams as { nueva?: string; borrada?: string; terminada?: string; guardada?: string; tipo?: string };
   const db = getDb();
   const today = todayIn(workspace.timezone);
   const [all, accounts, cats] = await Promise.all([
     db.recurringRule.findMany({ where: { workspaceId: workspace.id }, orderBy: { createdAt: "desc" } }),
     db.account.findMany({ where: { workspaceId: workspace.id, active: true, type: { not: "CREDIT_CARD" } }, select: { id: true, name: true, currency: true } }),
-    db.category.findMany({ where: { workspaceId: workspace.id, parentId: null }, orderBy: { name: "asc" } }),
+    db.category.findMany({ where: { workspaceId: workspace.id }, orderBy: { name: "asc" } }),
   ]);
   // Activas: sin fin o con fin en el futuro. Terminadas: fin hoy o antes (salvo las que se reemplazaron por una versión nueva).
   const replaced = new Set(all.map((r) => r.previousVersionId).filter(Boolean));
@@ -62,8 +62,10 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
                 <ActionForm action={saveRuleAction} id={`rule-${r.id}`} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                   <input type="hidden" name="id" value={r.id} />
                   <section>
-                    <h4>Importe y día</h4>
-                    <p className="sub">Si cambiás el importe o el día, vale desde la fecha que elijas. Lo anterior queda como estaba.</p>
+                    <h4>Datos de esta regla</h4>
+                    <p className="sub">Los cambios se aplican desde la fecha que elijas. Reemplazan únicamente los pendientes sin confirmar desde esa fecha; lo ya pagado o cobrado se conserva. Revisá tipo, cuenta e importe antes de guardar.</p>
+                    <div className="frow"><label className="field">Tipo<select name="direction" defaultValue={r.direction}><option value="PAYABLE">Gasto (pago)</option><option value="RECEIVABLE">Ingreso (cobro)</option></select></label><label className="field">Concepto<input name="description" required maxLength={160} defaultValue={r.description} /></label></div>
+                    <div className="frow"><label className="field">Cuenta ({r.currency})<select name="accountId" defaultValue={r.accountId ?? ""}><option value="">Sin cuenta asignada</option>{r.accountId && !accounts.some(a => a.id === r.accountId) && <option value={r.accountId}>Cuenta actual (inactiva)</option>}{accounts.filter(a => a.currency === r.currency).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label><label className="field">Categoría<select name="categoryId" defaultValue={r.categoryId ?? ""}><option value="">Sin categoría</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name} · {c.kind === "INCOME" ? "ingreso" : "gasto"}</option>)}</select></label></div>
                     <div className="frow" style={{ flexWrap: "wrap", alignItems: "flex-end" }}>
                       <label className="field" style={{ flex: "1 1 140px" }}>Importe<input name="amount" inputMode="decimal" defaultValue={r.amount.toFixed(2).replace(".", ",")} /></label>
                       {MONTHLY_LIKE.includes(r.frequency) && <label className="field" style={{ flex: "0 1 120px" }}>Día del mes<input name="dayOfMonth" inputMode="numeric" defaultValue={r.dayOfMonth ?? r.startDate.getUTCDate()} /></label>}
@@ -99,7 +101,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
   return (
     <>
       <PageHead crumb="Configuración" title="Pagos y cobros que se repiten" desc="Programá tus compromisos habituales. Se proyectan a futuro y los confirmás cuando ocurren." />
-      <SettingsTabs current="recurrentes" />
+      <SettingsFrame current="recurrentes">
       <div className="acts"><Link className="btn" href="/app/recurrentes/costos">Costo de mis servicios {!hasCosts && <span className="pill">Pro</span>}</Link></div>
       {sp.borrada && <p className="notice g" role="status">Listo, se borró. Lo ya pagado o cobrado quedó en tus movimientos.</p>}
       {sp.guardada && <p className="notice g" role="status">Listo, se guardaron los cambios. Lo anterior quedó como estaba.</p>}
@@ -111,9 +113,9 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
       </div>
       <div className="card">
         <details className="more" open={open}>
-          <summary>+ Nuevo pago o cobro que se repite</summary>
+          <summary>+ Nuevo pago o cobro que se repite</summary><p className="sub">Ingreso: dinero que recibís. Gasto: dinero que pagás. Son importes esperados; los confirmás cuando ocurren.</p>
           <ActionForm action={createRuleAction} style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 10, maxWidth: 640 }}>
-            <div className="frow"><label className="field">Tipo<select name="direction" defaultValue="PAYABLE"><option value="PAYABLE">Gasto (pago)</option><option value="RECEIVABLE">Ingreso (cobro)</option></select></label><label className="field">Concepto<input name="description" placeholder="Ej.: Expensas, Venta de soja" /></label></div>
+            <div className="frow"><label className="field">Tipo<select name="direction" defaultValue={sp.tipo === "ingreso" ? "RECEIVABLE" : "PAYABLE"}><option value="PAYABLE">Gasto (pago)</option><option value="RECEIVABLE">Ingreso (cobro)</option></select></label><label className="field">Concepto<input name="description" placeholder="Ej.: Expensas, Venta de soja" /></label></div>
             <div className="frow"><label className="field">Importe<input name="amount" inputMode="decimal" placeholder="0,00" /></label><label className="field">Cuenta<select name="accountId">{accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}</select></label></div>
             <div className="frow"><label className="field">Frecuencia<select name="frequency" defaultValue="MONTHLY">{Object.entries(FREQ).filter(([k]) => k !== "CUSTOM").map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label><label className="field">Primera vez<input name="startDate" type="date" defaultValue={isoDate(today)} /></label></div>
             <div className="frow"><label className="field">Hasta (opcional)<input name="endDate" type="date" /></label><label className="field">Categoría<select name="categoryId" defaultValue=""><option value="">Sin categoría</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.kind === "INCOME" ? "ingreso" : "gasto"}</option>)}</select></label></div>
@@ -136,6 +138,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
         </div>
       )}
       </div>
+    </SettingsFrame>
     </>
   );
 }

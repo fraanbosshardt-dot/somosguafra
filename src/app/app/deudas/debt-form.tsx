@@ -85,7 +85,7 @@ export function DebtFormFields({ accounts, today, baseCurrency, d: initial = {},
         <label className="drop" style={{ cursor: "pointer", display: "block" }}>
           <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={(e) => { readPdf(e.target.files?.[0]); e.target.value = ""; }} disabled={reading} />
           <b style={{ color: "var(--fg)", fontWeight: 500 }}>{reading ? "Leyendo el contrato…" : "📄 Subí el contrato del préstamo (PDF)"}</b>
-          <span style={{ display: "block", fontSize: 13, marginTop: 4 }}>Lo ideal: completamos todo por vos y lo revisás antes de guardar. No guardamos el archivo.</span>
+          <span style={{ display: "block", fontSize: 13, marginTop: 4 }}>Intentamos leer los datos del contrato. Revisalos y completá lo que falte antes de guardar. No guardamos el archivo.</span>
         </label>
       )}
       {msg && <div className={`notice ${msg.kind === "ok" ? "g" : "r"}`} role="status">{msg.text}</div>}

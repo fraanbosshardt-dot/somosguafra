@@ -11,7 +11,8 @@ import { Icon } from "./icons";
 import { BillingRefresh } from "./billing-refresh";
 
 type Bill = { enabled: boolean; monthly: number; yearly: number; currency: string };
-export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, features = PLAN_FEATURES }: { view: SubscriptionView; bill: Bill; timeZone: string; annual?: boolean; features?: PlanFeature[] }) {
+export function PlanSubscriptionCard({ view, bill, timeZone, annual, features = PLAN_FEATURES }: { view: SubscriptionView; bill: Bill; timeZone: string; annual?: boolean; features?: PlanFeature[] }) {
+  const selectedAnnual = annual ?? view.pendingCycle === "yearly";
   const save = bill.monthly > 0 ? Math.max(0, Math.round((1 - bill.yearly / (12 * bill.monthly)) * 100)) : 0;
   const summary = <SubscriptionSummary view={view} timeZone={timeZone} />;
   const purchase = bill.enabled && view.canChoosePlan;
@@ -28,8 +29,8 @@ export function PlanSubscriptionCard({ view, bill, timeZone, annual = false, fea
       <div className="plan-box" id="pagar-pro">
         <form action="/app/contratar" method="get" className="plan-buy">
           <div className="plan-cycle" role="radiogroup" aria-label="Cómo querés pagar">
-            <label><input type="radio" name="ciclo" value="mensual" defaultChecked={!annual} /><span>Por mes</span></label>
-            <label><input type="radio" name="ciclo" value="anual" defaultChecked={annual} /><span>Por año{save > 0 && <em>−{save} %</em>}</span></label>
+            <label><input type="radio" name="ciclo" value="mensual" defaultChecked={!selectedAnnual} /><span>Por mes</span></label>
+            <label><input type="radio" name="ciclo" value="anual" defaultChecked={selectedAnnual} /><span>Por año{save > 0 && <em>−{save} %</em>}</span></label>
           </div>
           <div className="plan-price m"><b>{formatMoney(String(bill.monthly), bill.currency)}</b><span>ARS por mes</span></div>
           <div className="plan-price y"><b>{formatMoney(String(bill.yearly), bill.currency)}</b><span>ARS por año</span><small>Equivale a {formatMoney(String(Math.round(bill.yearly / 12)), bill.currency)} por mes</small></div>

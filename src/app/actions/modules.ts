@@ -104,18 +104,26 @@ export async function saveRuleAction(_: FormState, fd: FormData): Promise<FormSt
     const amountChanged = !amount.eq(r.amount.toString());
     const dayChanged = day !== null && day !== oldDay;
     const endChanged = (endDate?.getTime() ?? null) !== (r.endDate?.getTime() ?? null);
-    if (!amountChanged && !dayChanged && !endChanged) return { ok: "No había nada para cambiar." };
+    const direction = fd.has("direction") ? z.enum(["RECEIVABLE", "PAYABLE"]).parse(fd.get("direction")) : r.direction;
+    const description = fd.has("description") ? str(fd, "description") : r.description;
+    if (!description || description.length > 160) throw new UserError("Escribí un concepto de hasta 160 caracteres.");
+    const accountId = fd.has("accountId") ? str(fd, "accountId") || null : r.accountId;
+    const categoryId = fd.has("categoryId") ? str(fd, "categoryId") || null : r.categoryId;
+    const detailsChanged = direction !== r.direction || description !== r.description || accountId !== r.accountId || categoryId !== r.categoryId;
+    if (!amountChanged && !dayChanged && !endChanged && !detailsChanged) return { ok: "No había nada para cambiar." };
     let ruleId = r.id;
-    if (amountChanged || dayChanged) {
-      const next = await changeRuleFrom(db, workspace.id, r.id, date(fd, "from", "desde cuándo"), { amount, ...(dayChanged ? { dayOfMonth: day } : {}) });
+    if (amountChanged || dayChanged || detailsChanged) {
+      const from = date(fd, "from", "desde cuándo");
+      if (from < todayIn(workspace.timezone)) throw new UserError("Para conservar el historial, elegí hoy o una fecha futura.");
+      const next = await changeRuleFrom(db, workspace.id, r.id, from, { amount, direction, description, accountId, categoryId, endDate, ...(dayChanged ? { dayOfMonth: day } : {}) });
       ruleId = next.id;
     }
-    if (endChanged) {
+    if (endChanged && !amountChanged && !dayChanged && !detailsChanged) {
       const { setRuleEnd } = await import("@/server/recurring");
       await setRuleEnd(db, workspace.id, ruleId, endDate);
     }
     await refreshRules(workspace.id, workspace.timezone);
-    await audit("rule.saved", { userId: user.id, workspaceId: workspace.id, entityId: ruleId, meta: { amountChanged, dayChanged, endChanged } });
+    await audit("rule.saved", { userId: user.id, workspaceId: workspace.id, entityId: ruleId, meta: { amountChanged, dayChanged, endChanged, detailsChanged } });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
   redirect("/app/recurrentes?guardada=1");
