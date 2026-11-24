@@ -31,6 +31,14 @@ El acceso general desde la landing se llama «Mi espacio», para no sugerir una 
 
 ## Límites y reversión
 
+## Incidente comunicado durante la entrega
+
+El usuario aportó un aviso de UptimeRobot del 24/11/2026: 503 confirmado por varias regiones entre 06:27:46 y 06:32:52 (Argentina). La comprobación posterior respondió 200 con `ok: true`. Este endpoint ejecuta `SELECT 1`; el 503 de su implementación indica que falló el acceso a la base, pero no distingue red, pool, credenciales o disponibilidad. No se ha demostrado una causa raíz. El aviso precede a la publicación de esta entrega.
+
+Railway CLI permitió consultar el servicio Postgres: último deployment exitoso del 07/11/2026; sin mensajes de reinicio, caída o recuperación en el intervalo 09:23–09:35 UTC consultado. Ausencia de registros no descarta un problema. El conector Railway requiere reconexión; no se cambió configuración ni se reinició producción.
+
+Se incorpora `reportError("health.database", error)` en el catch del healthcheck: registra solo tipo y código técnico permitidos. Conserva el 503, la respuesta pública mínima y la política no-store. Dos pruebas validan respuesta sana y falla sin filtrar credenciales ni metadatos.
+
 La emulación no verifica Safari ni teclado virtual en un celular físico. No se hicieron cobros, cancelaciones, reembolsos ni cambios financieros reales. La comprobación visual no certifica todas las variantes Pro ni ausencia total de errores. No cambian finalidades de datos personales ni condiciones comerciales; no se modifica documentación legal sin una razón material.
 
 Reversión: revertir el commit de esta entrega y volver a desplegar. Sin migraciones ni transformaciones de datos que revertir. Se conservan los endpoints y las validaciones de las acciones existentes.
