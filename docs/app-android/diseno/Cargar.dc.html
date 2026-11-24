@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cargar un movimiento</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+input::placeholder{color:#8A958F}
+.cg-num{font-variant-numeric:tabular-nums}
+.cg-key:active{background:#E7EAE6}
+.cg-step{animation:cgIn .3s cubic-bezier(.2,.9,.3,1) both}
+@keyframes cgIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.cg-ok{animation:cgOk .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes cgOk{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.cg-tick{stroke-dasharray:30;stroke-dashoffset:30;animation:cgTick .4s .25s ease-out forwards}
+@keyframes cgTick{to{stroke-dashoffset:0}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+.cgA{animation:cgA .22s cubic-bezier(.2,.9,.3,1)}.cgB{animation:cgB .22s cubic-bezier(.2,.9,.3,1)}
+@keyframes cgA{from{transform:translateY(6px);opacity:.6}}@keyframes cgB{from{transform:translateY(6px);opacity:.6}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15">
+
+  <sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ true }}">
+    <div class="cg-step" style="position: absolute; inset: 0; padding: 14px 20px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <a href="Inicio.dc.html" aria-label="Cerrar" style="width: 44px; height: 44px; border-radius: 14px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </a>
+        <div style="flex: 1; font-size: 17px; font-weight: 800">Nuevo movimiento</div>
+        <div style="font-size: 13px; font-weight: 700; color: #4E5B55">Paso 1 de 2</div>
+      </div>
+
+      <div role="group" aria-label="Tipo de movimiento" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #E9ECE8; padding: 4px; border-radius: 14px">
+        <sc-for list="{{ types }}" as="t" hint-placeholder-count="3">
+          <button type="button" onClick="{{ t.pick }}" aria-pressed="{{ t.on }}" style="height: 40px; border-radius: 11px; border: none; background: {{ t.bg }}; color: {{ t.fg }}; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: {{ t.shadow }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center">
+        <div style="font-size: 15px; font-weight: 700; color: #4E5B55">{{ question }}</div>
+        <div class="{{ amtCls }}" style="font-size: {{ amountSize }}; font-weight: 800; letter-spacing: -.035em; line-height: 1.1; color: {{ amountColor }}; white-space: nowrap">{{ amount }}</div>
+        <div style="height: 30px; padding: 0 12px; border-radius: 999px; background: #FFFFFF; font-size: 13px; font-weight: 700; color: #33403A; display: flex; align-items: center">Hoy · lunes 23 de noviembre</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+          <button type="button" class="cg-key" onClick="{{ k.press }}" aria-label="{{ k.aria }}" style="height: 56px; border-radius: 16px; border: none; background: #FFFFFF; color: #0E1A15; font: inherit; font-size: 24px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center">
+            <sc-if value="{{ k.isDel }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11v14H9l-6-7zM12 9l6 6M18 9l-6 6"></path></svg></sc-if>
+            <sc-if value="{{ k.isNum }}" hint-placeholder-val="{{ true }}">{{ k.label }}</sc-if>
+          </button>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{ toStep2 }}" disabled="{{ noAmount }}" style="height: 56px; border-radius: 16px; border: none; background: {{ nextBg }}; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Siguiente</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ false }}">
+    <div class="cg-step" style="position: absolute; inset: 0; padding: 14px 20px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button type="button" onClick="{{ toStep1 }}" aria-label="Volver al monto" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </button>
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 13px; font-weight: 700; color: #4E5B55">{{ typeLabel }}</div>
+          <div class="cg-num" style="font-size: 20px; font-weight: 800; color: {{ amountColor }}">{{ amount }}</div>
+        </div>
+        <div style="font-size: 13px; font-weight: 700; color: #4E5B55">Paso 2 de 2</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 15px; font-weight: 800">{{ catQuestion }}</div>
+        <div class="cas" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+            <button type="button" onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="height: 52px; border-radius: 14px; border: 1.5px solid {{ c.border }}; background: {{ c.bg }}; color: #0E1A15; font: inherit; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 0 14px; text-align: left">
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.iconColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="{{ c.icon }}"></path></svg>
+              <span style="font-size: 14px; font-weight: 700; line-height: 1.15">{{ c.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 15px; font-weight: 800">{{ accQuestion }}</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="3">
+            <button type="button" onClick="{{ a.pick }}" aria-pressed="{{ a.on }}" style="height: 42px; padding: 0 14px; border-radius: 12px; border: 1.5px solid {{ a.border }}; background: {{ a.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ a.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ isTransfer }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div style="font-size: 15px; font-weight: 800">¿Hacia qué cuenta?</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <sc-for list="{{ accounts2 }}" as="a" hint-placeholder-count="3">
+              <button type="button" onClick="{{ a.pick }}" aria-pressed="{{ a.on }}" style="height: 42px; padding: 0 14px; border-radius: 12px; border: 1.5px solid {{ a.border }}; background: {{ a.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ a.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <label style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 15px; font-weight: 800">Nota <span style="font-weight: 600; color: #4E5B55">(opcional)</span></span>
+        <input type="text" placeholder="Ej.: compra de la semana" style="height: 50px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15; outline-color: #16493A">
+      </label>
+
+      <div style="flex: 1"></div>
+      <button type="button" onClick="{{ save }}" style="height: 56px; border-radius: 16px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">{{ saveLabel }}</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isStep3 }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; padding: 24px 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center">
+      <div style="flex: 1"></div>
+      <div class="cg-ok" style="width: 96px; height: 96px; border-radius: 50%; background: #DDEEE3; display: flex; align-items: center; justify-content: center">
+        <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="cg-tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      </div>
+      <div style="font-size: 24px; font-weight: 800">{{ doneTitle }}</div>
+      <div class="cg-num" style="font-size: 15px; font-weight: 600; color: #4E5B55; line-height: 1.5">{{ doneDetail }}</div>
+      <div style="width: 100%; background: #FFFFFF; border-radius: 20px; padding: 16px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px">
+        <span style="font-size: 14px; font-weight: 700; color: #33403A; text-align: left">Ahora te queda hasta el cobro</span>
+        <span class="cg-num" style="font-size: 18px; font-weight: 800; flex: none">{{ newLeft }}</span>
+      </div>
+      <div style="flex: 1"></div>
+      <a href="Inicio.dc.html" style="width: 100%; height: 56px; border-radius: 16px; background: #16493A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800">Volver al inicio</a>
+      <button type="button" onClick="{{ again }}" style="width: 100%; height: 52px; border-radius: 16px; border: 1.5px solid #E1E5E1; background: #FFFFFF; color: #0E1A15; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Cargar otro</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { step: 1, type: 'gasto', digits: '12500', cat: 0, acc: 0, acc2: 2 }; }
+  renderVals() {
+    const s = this.state;
+    const P = {
+      cart: 'M3 4h2l2.5 11h11L21 7H6.5M9 20h.01M18 20h.01',
+      cup: 'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2',
+      bus: 'M5 4h14v12H5zM5 11h14M8 19v-3M16 19v-3',
+      bolt: 'M13 3L5 14h6l-1 7 8-11h-6z',
+      home: 'M3 11l9-8 9 8M5 10v10h14V10',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      dots: 'M6 12h.01M12 12h.01M18 12h.01',
+      cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+      brief: 'M4 8h16v11H4zM9 8V5h6v3',
+      tag: 'M3 12V4h8l10 10-8 8zM7.5 8h.01',
+      back: 'M9 14l-5-5 5-5M4 9h11a5 5 0 0 1 0 10h-3',
+      swap: 'M4 8h14l-3-3M20 16H6l3 3',
+      piggy: 'M5 11a7 6 0 0 1 13-2h2v4h-2a7 6 0 0 1-3 3v3h-3v-2H9v2H6v-4a6 6 0 0 1-1-4zM15 10h.01',
+      chart: 'M3 17l6-6 4 4 8-8M15 7h6v6'
+    };
+    const CATS = {
+      gasto: [['Supermercado', P.cart], ['Comida afuera', P.cup], ['Transporte', P.bus], ['Servicios', P.bolt], ['Casa', P.home], ['Salud', P.heart]],
+      ingreso: [['Sueldo', P.cash], ['Trabajo extra', P.brief], ['Venta', P.tag], ['Reintegro', P.back], ['Otro', P.dots]],
+      transferencia: [['Entre mis cuentas', P.swap], ['Ahorro', P.piggy], ['Inversión', P.chart]]
+    };
+    const ACCS = { gasto: ['Banco', 'Efectivo', 'Billetera virtual', 'Tarjeta Visa'], ingreso: ['Banco', 'Efectivo', 'Billetera virtual'], transferencia: ['Banco', 'Efectivo', 'Billetera virtual'] };
+    const T = [['gasto', 'Gasto'], ['ingreso', 'Ingreso'], ['transferencia', 'Transferir']];
+    const n = parseInt(s.digits || '0', 10);
+    const fmtN = (v) => '$ ' + v.toLocaleString('es-AR');
+    const press = (k) => () => {
+      let d = s.digits;
+      if (k === 'del') d = d.slice(0, -1);
+      else if (k === '000') d = d ? d + '000' : '';
+      else d = (d + k).replace(/^0+/, '');
+      this.setState({ digits: d.slice(0, 9) });
+    };
+    const color = s.type === 'ingreso' ? '#1E7A3B' : '#0E1A15';
+    const sign = s.type === 'ingreso' ? '+ ' : '';
+    const accs = ACCS[s.type];
+    const cats = CATS[s.type];
+    const left = 184500 + (s.type === 'gasto' ? -n : (s.type === 'ingreso' ? n : 0));
+    const word = { gasto: 'Gasto', ingreso: 'Ingreso', transferencia: 'Transferencia' }[s.type];
+    const chip = (on) => ({ border: on ? '#16493A' : '#E1E5E1', bg: on ? '#EEF6F1' : '#FFFFFF' });
+    return {
+      isStep1: s.step === 1, isStep2: s.step === 2, isStep3: s.step === 3,
+      types: T.map(([id, label]) => ({ label, on: s.type === id ? 'true' : 'false', bg: s.type === id ? '#FFFFFF' : 'transparent', fg: s.type === id ? '#0E1A15' : '#4E5B55', shadow: s.type === id ? '0 1px 3px rgba(14,26,21,.12)' : 'none', pick: () => this.setState({ type: id, cat: 0, acc: 0, acc2: 2 }) })),
+      question: s.type === 'gasto' ? '¿Cuánto gastaste?' : (s.type === 'ingreso' ? '¿Cuánto entró?' : '¿Cuánto vas a pasar?'),
+      amount: sign + fmtN(n),
+      amountColor: color,
+      amountSize: s.digits.length > 7 ? '44px' : '56px',
+      amtCls: 'cg-num ' + (s.digits.length % 2 ? 'cgA' : 'cgB'),
+      keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'del'].map((k) => ({ label: k, isDel: k === 'del', isNum: k !== 'del', aria: k === 'del' ? 'Borrar' : k, press: press(k) })),
+      noAmount: n === 0,
+      nextBg: n === 0 ? '#A9B4AE' : '#16493A',
+      toStep2: () => { if (n > 0) this.setState({ step: 2 }); },
+      toStep1: () => this.setState({ step: 1 }),
+      typeLabel: word,
+      catQuestion: s.type === 'gasto' ? '¿En qué fue?' : (s.type === 'ingreso' ? '¿De dónde vino?' : '¿Para qué es?'),
+      cats: cats.map(([label, icon], i) => ({ label, icon, on: s.cat === i ? 'true' : 'false', ...chip(s.cat === i), iconColor: s.cat === i ? '#16493A' : '#4E5B55', pick: () => this.setState({ cat: i }) })),
+      accQuestion: s.type === 'transferencia' ? '¿Desde qué cuenta?' : (s.type === 'gasto' ? '¿Con qué pagaste?' : '¿A qué cuenta entró?'),
+      accounts: accs.map((label, i) => ({ label, on: s.acc === i ? 'true' : 'false', ...chip(s.acc === i), pick: () => this.setState({ acc: i }) })),
+      isTransfer: s.type === 'transferencia',
+      accounts2: accs.map((label, i) => ({ label, on: s.acc2 === i ? 'true' : 'false', ...chip(s.acc2 === i), pick: () => this.setState({ acc2: i }) })),
+      saveLabel: 'Guardar ' + word.toLowerCase(),
+      save: () => this.setState({ step: 3 }),
+      doneTitle: word + ' guardado' + (s.type === 'transferencia' ? 'a' : ''),
+      doneDetail: s.type === 'transferencia'
+        ? sign + fmtN(n) + ' de ' + accs[s.acc] + ' a ' + accs[s.acc2]
+        : sign + fmtN(n) + ' · ' + cats[Math.min(s.cat, cats.length - 1)][0] + ' · ' + accs[Math.min(s.acc, accs.length - 1)],
+      newLeft: fmtN(left),
+      again: () => this.setState({ step: 1, digits: '' })
+    };
+  }
+}
+</script>
+</body>
+</html>

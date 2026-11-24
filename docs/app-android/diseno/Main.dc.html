@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Apertura de Somos Guafra</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+.ap-g{transform-box:fill-box;transform-origin:50% 60%;animation:apG 5s cubic-bezier(.2,.9,.3,1) infinite}
+.ap-leaf{animation:apLeaf 5s cubic-bezier(.6,0,.2,1) infinite}
+.ap-bar{transform-box:fill-box;transform-origin:50% 100%}
+.ap-b1{animation:apB1 5s cubic-bezier(.3,1.4,.5,1) infinite}
+.ap-b2{animation:apB2 5s cubic-bezier(.3,1.4,.5,1) infinite}
+.ap-b3{animation:apB3 5s cubic-bezier(.3,1.4,.5,1) infinite}
+.ap-word{animation:apWord 5s ease-out infinite}
+.ap-tag{animation:apTag 5s ease-out infinite}
+.ap-all{animation:apAll 5s ease-in-out infinite}
+@keyframes apG{0%,8%{opacity:0;transform:scale(.86)}26%,100%{opacity:1;transform:scale(1)}}
+@keyframes apLeaf{0%,22%{clip-path:inset(0 100% 0 0)}42%,100%{clip-path:inset(0 0 0 0)}}
+@keyframes apB1{0%,38%{transform:scaleY(0)}50%,100%{transform:scaleY(1)}}
+@keyframes apB2{0%,43%{transform:scaleY(0)}55%,100%{transform:scaleY(1)}}
+@keyframes apB3{0%,48%{transform:scaleY(0)}60%,100%{transform:scaleY(1)}}
+@keyframes apWord{0%,58%{opacity:0;transform:translateY(10px)}70%,100%{opacity:1;transform:none}}
+@keyframes apTag{0%,66%{opacity:0}78%,100%{opacity:1}}
+@keyframes apAll{0%,92%{opacity:1}100%{opacity:0}}
+</style>
+</helmet>
+<a href="Ingresar.dc.html" aria-label="Entrar a Somos Guafra" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 390px; height: 844px; position: relative; overflow: hidden; background: #FBF6E8; text-decoration: none; font-family: Manrope, system-ui, sans-serif; color: #16493A">
+  <div class="ap-all" style="display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: -40px">
+    <svg role="img" aria-label="Logo de Somos Guafra" width="168" height="168" viewBox="400 230 500 500">
+      <path class="ap-g" d="M530 542Q690 490 800 420L800 285Q800 252 768 252L745 252Q714 252 712 282C690 262 660 252 625 252C520 252 452 330 452 420C452 478 485 520 530 542ZM628 318A80 80 0 1 0 628.01 318Z" fill="#16493A" fill-rule="evenodd"></path>
+      <path class="ap-leaf" d="M420 708L540 708Q526 662 545 625C575 580 640 555 720 515Q820 462 885 370Q822 452 720 492C620 532 482 562 440 615Q410 655 420 708Z" fill="#16493A"></path>
+      <path class="ap-bar ap-b1" d="M572 708Q562 708 562 698L562 650Q562 630 588 619L628 604Q652 596 652 620L652 698Q652 708 642 708Z" fill="#4A8669"></path>
+      <path class="ap-bar ap-b2" d="M686 708Q676 708 676 698L676 600Q676 582 700 572L735 560Q757 553 757 576L757 698Q757 708 747 708Z" fill="#5D9C7C"></path>
+      <path class="ap-bar ap-b3" d="M790 708Q780 708 780 698L780 528Q780 508 805 497L840 484Q865 476 865 500L865 698Q865 708 855 708Z" fill="#8EC4A0"></path>
+    </svg>
+    <div class="ap-word" style="font-family: Fredoka, Manrope, sans-serif; font-weight: 600; font-size: 38px; line-height: 1; color: #16493A">somosguafra</div>
+    <div class="ap-tag" style="font-size: 15px; font-weight: 700; color: #4A8669">Tu dinero, claro y al día.</div>
+  </div>
+</a>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

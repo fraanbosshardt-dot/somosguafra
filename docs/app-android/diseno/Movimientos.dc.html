@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Movimientos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+input::placeholder{color:#8A958F}
+.mv-scroll::-webkit-scrollbar{display:none}
+.mv-scroll>*{flex-shrink:0}
+.mv-num{font-variant-numeric:tabular-nums}
+.mv-bar{transition:height .3s cubic-bezier(.2,.9,.3,1), background .2s}
+.mv-tap:active{background:#F6F7F5}
+@keyframes mvSheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes mvBack{from{opacity:0}to{opacity:1}}
+.mv-toast{animation:mvT .3s ease-out both}
+@keyframes mvT{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15">
+  <div class="mv-scroll" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em">Movimientos</h1>
+      <span style="height: 32px; padding: 0 12px; border-radius: 999px; background: #FFFFFF; font-size: 13px; font-weight: 700; color: #33403A; display: flex; align-items: center">Noviembre</span>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+        <div style="min-width: 0">
+          <div style="font-size: 13px; font-weight: 700; color: #4E5B55">{{ chartLabel }}</div>
+          <div class="mv-num" style="font-size: 26px; font-weight: 800; letter-spacing: -.02em">{{ chartAmount }}</div>
+        </div>
+        <sc-if value="{{ hasDay }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ clearDay }}" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1.5px solid #E1E5E1; background: #FFFFFF; color: #16493A; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; flex: none">Ver semana</button>
+        </sc-if>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 116px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+          <button type="button" onClick="{{ b.pick }}" aria-label="{{ b.aria }}" aria-pressed="{{ b.on }}" style="height: 116px; border: none; background: transparent; padding: 0; cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px">
+            <span class="mv-bar gbY" style="width: 100%; height: {{ b.h }}; border-radius: 8px; background: {{ b.color }}"></span>
+            <span style="font-size: 12px; font-weight: 800; color: {{ b.labelColor }}">{{ b.d }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <label style="height: 48px; border-radius: 14px; background: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E5B55" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+      <input type="search" aria-label="Buscar" placeholder="Buscar un movimiento" value="{{ q }}" onInput="{{ onQ }}" style="flex: 1; min-width: 0; border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15; outline: none">
+    </label>
+
+    <div role="group" aria-label="Filtrar por tipo" style="display: flex; gap: 6px">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+        <button type="button" onClick="{{ f.pick }}" aria-pressed="{{ f.on }}" style="height: 38px; padding: 0 14px; border-radius: 999px; border: 1.5px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.fg }}; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer">{{ f.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-for list="{{ days }}" as="d" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #4E5B55">
+          <span>{{ d.title }}</span><span class="mv-num">{{ d.total }}</span>
+        </div>
+        <div class="cas" style="background: #FFFFFF; border-radius: 20px; padding: 4px 0">
+          <sc-for list="{{ d.items }}" as="it" hint-placeholder-count="2">
+            <button type="button" onClick="{{ it.open }}" class="mv-tap" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: none; background: transparent; color: #0E1A15; font: inherit; text-align: left; cursor: pointer">
+              <span style="width: 42px; height: 42px; border-radius: 12px; background: {{ it.bg }}; display: flex; align-items: center; justify-content: center; flex: none">
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ it.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                <span style="font-size: 15px; font-weight: 800">{{ it.name }}</span>
+                <span style="font-size: 13px; font-weight: 600; color: #4E5B55">{{ it.sub }}</span>
+              </span>
+              <span class="mv-num" style="font-size: 15px; font-weight: 800; color: {{ it.amountColor }}; flex: none">{{ it.amount }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border-radius: 20px; padding: 20px 16px; text-align: center; font-size: 14px; font-weight: 600; color: #4E5B55">No encontramos movimientos con ese filtro.</div>
+    </sc-if>
+  </div>
+
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E7EAE6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px 6px 0; box-sizing: border-box; align-items: start">
+    <a href="Inicio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg></span>Inicio</a>
+    <a href="Movimientos.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #16493A; font-size: 11px; font-weight: 800">
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: #DDEEE3; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg></span>Movimientos</a>
+    <a href="Cargar.dc.html" aria-label="Cargar un movimiento" style="display: flex; justify-content: center; text-decoration: none">
+      <span style="width: 52px; height: 48px; border-radius: 16px; background: #16493A; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+    <a href="Proximos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; position: relative"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"></path></svg><span style="position: absolute; top: 2px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #C5221F; border: 2px solid #FFFFFF"></span></span>Próximos</a>
+    <a href="Mas.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"></path></svg></span>Explorar</a>
+  </nav>
+
+  <sc-if value="{{ showSheet }}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="Cerrar" onClick="{{ close }}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(14,26,21,.45); cursor: pointer; animation: mvBack .2s ease-out both"></button>
+    <div role="dialog" aria-modal="true" aria-label="Corregir movimiento" style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 800px; overflow-y: auto; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; animation: mvSheet .3s cubic-bezier(.2,.9,.3,1) both">
+      <div style="width: 40px; height: 5px; border-radius: 5px; background: #D9DED9; align-self: center; flex: none"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 800">Corregir</h2>
+        <button type="button" aria-label="Cerrar" onClick="{{ close }}" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #F2F4F2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <sc-if value="{{ notConfirming }}" hint-placeholder-val="{{ true }}">
+        <label style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">Concepto</span>
+          <input type="text" value="{{ ed.name }}" onInput="{{ onName }}" style="height: 50px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15; outline-color: #16493A">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">Importe</span>
+          <span style="height: 52px; border-radius: 14px; border: 1.5px solid #E1E5E1; display: flex; align-items: center; gap: 6px; padding: 0 14px">
+            <span style="font-size: 18px; font-weight: 800; color: #4E5B55">$</span>
+            <input type="text" inputmode="numeric" value="{{ ed.amount }}" onInput="{{ onAmount }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 19px; font-weight: 800; color: #0E1A15">
+          </span>
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">Categoría</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{ cats }}" as="c" hint-placeholder-count="5">
+              <button type="button" onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1.5px solid {{ c.border }}; background: {{ c.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; padding: 4px 2px"><span style="color: #4E5B55">Fecha</span><span>{{ ed.date }}</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 700; padding: 0 2px"><span style="color: #4E5B55">Cuenta</span><span>{{ ed.acc }}</span></div>
+        <button type="button" onClick="{{ saveEdit }}" style="height: 54px; border-radius: 14px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; flex: none">Guardar cambios</button>
+        <div style="font-size: 13px; font-weight: 600; color: #4E5B55; line-height: 1.45">¿Lo cargaste por error? Elimínalo: se borra del todo y el saldo vuelve a como estaba.</div>
+        <button type="button" onClick="{{ askDelete }}" style="height: 48px; border-radius: 14px; border: 1.5px solid #F3C4BF; background: #FFFFFF; color: #C5221F; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; flex: none">Eliminar movimiento</button>
+      </sc-if>
+      <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FDECEA; color: #7A1A16; border-radius: 16px; padding: 14px; font-size: 14px; font-weight: 700; line-height: 1.5">{{ confirmText }}</div>
+        <button type="button" onClick="{{ doDelete }}" style="height: 54px; border-radius: 14px; border: none; background: #C5221F; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Sí, eliminar</button>
+        <button type="button" onClick="{{ cancelDelete }}" style="height: 50px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; color: #0E1A15; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Cancelar</button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" class="mv-toast" style="position: absolute; left: 20px; right: 20px; bottom: 98px; background: #0E1A15; color: #FFFFFF; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700">
+      <svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8EC4A0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      <span>{{ toast }}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { day: null, f: 'todos', q: '', edits: {}, open: null, ed: null, confirm: false, toast: '', tick: 0 }; }
+  renderVals() {
+    const s = this.state;
+    const tw = (k, target, from0) => { const me = this; me._tw = me._tw || {}; const now = Date.now(); let t = me._tw[k]; const ease = (x) => 1 - Math.pow(1 - x, 3);
+      if (!t) t = me._tw[k] = { from: from0 ? 0 : target, to: target, start: now };
+      else if (t.to !== target) { const p0 = Math.min(1, (now - t.start) / 550); t = me._tw[k] = { from: t.from + (t.to - t.from) * ease(p0), to: target, start: now }; }
+      const p = Math.min(1, (now - t.start) / 550);
+      if (p < 1 && !me._raf) me._raf = requestAnimationFrame(() => { me._raf = null; me.forceUpdate(); });
+      return Math.round(t.from + (t.to - t.from) * ease(p)); };
+
+    const I = {
+      cart: 'M3 4h2l2.5 11h11L21 7H6.5M9 20h.01M18 20h.01',
+      cup: 'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2',
+      bus: 'M5 4h14v12H5zM5 11h14M8 19v-3M16 19v-3',
+      cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+      swap: 'M4 8h14l-3-3M20 16H6l3 3',
+      play: 'M5 4h14v16H5zM10 9l5 3-5 3z',
+      heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+      bolt: 'M13 3L5 14h6l-1 7 8-11h-6z'
+    };
+    const g = (name, sub, amount, icon, cat) => ({ kind: 'gasto', name, sub, amount, icon, cat: cat || name });
+    const DATA = [
+      { n: 17, d: 'M', title: 'Martes 17', items: [g('Supermercado', 'Banco', 21300, I.cart)] },
+      { n: 18, d: 'M', title: 'Miércoles 18', items: [g('Farmacia', 'Efectivo', 9800, I.heart, 'Salud'), g('Café', 'Billetera virtual', 2900, I.cup, 'Comida afuera')] },
+      { n: 19, d: 'J', title: 'Jueves 19', items: [g('Gas', 'Banco · se repite', 15600, I.bolt, 'Servicios')] },
+      { n: 20, d: 'V', title: 'Viernes 20', items: [{ kind: 'ingreso', name: 'Trabajo extra', sub: 'Billetera virtual', amount: 85000, icon: I.cash, cat: 'Trabajo extra' }, g('Transporte', 'Tarjeta de transporte', 4600, I.bus)] },
+      { n: 21, d: 'S', title: 'Sábado 21', items: [g('Cena afuera', 'Tarjeta Visa', 34500, I.cup, 'Comida afuera')] },
+      { n: 22, d: 'D', title: 'Domingo 22', items: [{ kind: 'transferencia', name: 'A mi cuenta de ahorro', sub: 'Banco → Billetera virtual', amount: 50000, icon: I.swap, cat: 'Entre mis cuentas' }, g('Series', 'Tarjeta Visa · se repite', 7900, I.play, 'Suscripciones')] },
+      { n: 23, d: 'L', title: 'Hoy, lunes 23', items: [g('Supermercado', 'Banco', 12500, I.cart), g('Café', 'Efectivo', 3200, I.cup, 'Comida afuera')] }
+    ];
+    DATA.forEach((d) => { d.items = d.items.map((it, k) => Object.assign({}, it, { key: d.n + '-' + k }, s.edits[d.n + '-' + k] || {})).filter((it) => !it.deleted); });
+    const fmt = (n) => '$ ' + n.toLocaleString('es-AR');
+    const spent = (day) => day.items.filter((i) => i.kind === 'gasto').reduce((a, i) => a + i.amount, 0);
+    const max = Math.max(...DATA.map(spent));
+    const week = DATA.reduce((a, d) => a + spent(d), 0);
+    const sel = DATA.find((d) => d.n === s.day);
+    const map = { gastos: 'gasto', ingresos: 'ingreso', transferencias: 'transferencia' };
+    const style = {
+      gasto: { bg: '#F2F4F2', fg: '#16493A', color: '#0E1A15', sign: '' },
+      ingreso: { bg: '#EEF6F1', fg: '#1E7A3B', color: '#1E7A3B', sign: '+ ' },
+      transferencia: { bg: '#EEF1F4', fg: '#3C4A44', color: '#4E5B55', sign: '' }
+    };
+    const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const q = norm(s.q.trim());
+    const source = sel ? [sel] : DATA.slice().reverse();
+    const days = source.map((d) => {
+      const items = d.items.filter((i) => (s.f === 'todos' || i.kind === map[s.f]) && (!q || norm(i.name + ' ' + i.sub + ' ' + i.cat).includes(q))).map((i) => ({ name: i.name, sub: i.cat + ' · ' + i.sub, icon: i.icon, bg: style[i.kind].bg, fg: style[i.kind].fg, amountColor: style[i.kind].color, amount: style[i.kind].sign + fmt(i.amount),
+        open: () => this.setState({ open: i.key, confirm: false, ed: { name: i.name, amount: i.amount.toLocaleString('es-AR'), cat: i.cat, date: d.title + ' de noviembre', acc: i.sub } }) }));
+      return { title: d.title, total: spent(d) ? '− ' + fmt(spent(d)) : '', items };
+    }).filter((d) => d.items.length);
+    const toast = (msg, patch) => { const t = s.tick + 1; this.setState(Object.assign({ toast: msg, tick: t }, patch || {})); setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); };
+    const CATS = { gasto: ['Supermercado', 'Comida afuera', 'Transporte', 'Salud', 'Servicios', 'Suscripciones', 'Sin categoría'], ingreso: ['Trabajo extra', 'Sueldo', 'Ventas', 'Sin categoría'], transferencia: ['Entre mis cuentas'] };
+    const openItem = s.open ? DATA.reduce((a, d) => a || d.items.find((i) => i.key === s.open), null) : null;
+    const ed = s.ed || { name: '', amount: '', cat: '', date: '', acc: '' };
+    const setEd = (patch) => this.setState({ ed: Object.assign({}, ed, patch) });
+
+    const F = [['todos', 'Todos'], ['gastos', 'Gastos'], ['ingresos', 'Ingresos'], ['transferencias', 'Transf.']];
+    return {
+      chartLabel: sel ? 'Gastaste el ' + sel.title.replace('Hoy, ', '').toLowerCase() : 'Gastaste en los últimos 7 días',
+      chartAmount: fmt(tw('chart', sel ? spent(sel) : week, true)),
+      hasDay: !!sel,
+      clearDay: () => this.setState({ day: null }),
+      bars: DATA.map((d) => {
+        const on = s.day === d.n;
+        return {
+          d: d.d, on: on ? 'true' : 'false', aria: d.title + ': ' + fmt(spent(d)),
+          h: Math.max(8, Math.round((spent(d) / max) * 88)) + 'px',
+          color: on ? '#16493A' : (s.day ? '#DDE3DF' : '#A9C9B6'),
+          labelColor: on ? '#16493A' : '#6B7771',
+          pick: () => this.setState({ day: on ? null : d.n })
+        };
+      }),
+      filters: F.map(([id, label]) => ({ label, on: s.f === id ? 'true' : 'false', bg: s.f === id ? '#0E1A15' : '#FFFFFF', fg: s.f === id ? '#FFFFFF' : '#0E1A15', border: s.f === id ? '#0E1A15' : '#E1E5E1', pick: () => this.setState({ f: id }) })),
+      days,
+      empty: days.length === 0,
+      q: s.q, onQ: (e) => this.setState({ q: e.target.value || '' }),
+      showSheet: !!openItem, notConfirming: !s.confirm, confirming: s.confirm, ed,
+      cats: (openItem ? CATS[openItem.kind] : []).map((c) => ({ label: c, on: ed.cat === c ? 'true' : 'false', bg: ed.cat === c ? '#EEF6F1' : '#FFFFFF', border: ed.cat === c ? '#16493A' : '#E1E5E1', pick: () => setEd({ cat: c }) })),
+      onName: (e) => setEd({ name: e.target.value }),
+      onAmount: (e) => { const v = String(e.target.value || '').replace(/\D/g, ''); setEd({ amount: v ? parseInt(v, 10).toLocaleString('es-AR') : '' }); },
+      close: () => this.setState({ open: null, confirm: false }),
+      saveEdit: () => { const amt = parseInt(String(ed.amount).replace(/\D/g, ''), 10) || 0; if (!ed.name.trim() || !amt) { toast('Completa el concepto y el importe.'); return; } toast('Listo, guardamos los cambios.', { open: null, edits: Object.assign({}, s.edits, { [s.open]: { name: ed.name.trim(), amount: amt, cat: ed.cat } }) }); },
+      askDelete: () => this.setState({ confirm: true }),
+      cancelDelete: () => this.setState({ confirm: false }),
+      confirmText: openItem ? 'Vas a eliminar «' + openItem.name + '» por ' + fmt(openItem.amount) + '. Se borra del todo y el saldo de ' + openItem.sub.split(' ·')[0] + ' vuelve a como estaba.' : '',
+      doDelete: () => toast('Listo, eliminamos el movimiento.', { open: null, confirm: false, edits: Object.assign({}, s.edits, { [s.open]: Object.assign({}, s.edits[s.open] || {}, { deleted: true }) }) }),
+      toast: s.toast
+    };
+
+  }
+}
+</script>
+</body>
+</html>

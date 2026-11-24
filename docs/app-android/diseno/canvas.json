@@ -1,0 +1,196 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Ajustes.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "9 · Configuración",
+      "w": 390,
+      "x": 1410,
+      "y": 2208
+    },
+    "Ayuda.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "10 · Ayuda",
+      "w": 390,
+      "x": 1880,
+      "y": 2208
+    },
+    "Bienvenida.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "3d · Bienvenida (5 pasos)",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "Cargar.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "5 · Cargar un gasto",
+      "w": 390,
+      "x": 470,
+      "y": 1244
+    },
+    "CargarIngreso.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "5b · Cargar un ingreso",
+      "w": 390,
+      "x": 470,
+      "y": 2208
+    },
+    "CargarTransferir.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "5c · Cargar una transferencia",
+      "w": 390,
+      "x": 940,
+      "y": 2208
+    },
+    "Ingresar.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "2 · Iniciar sesión",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Inicio.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "4 · Inicio",
+      "w": 390,
+      "x": 0,
+      "y": 1244
+    },
+    "InicioNuevo.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "3e · Inicio de una cuenta nueva",
+      "w": 390,
+      "x": 2820,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "1 · Apertura (animación del logo)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Mas.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "8 · Explorar (todas las funciones)",
+      "w": 390,
+      "x": 1880,
+      "y": 1244
+    },
+    "Movimientos.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "7 · Movimientos",
+      "w": 390,
+      "x": 1410,
+      "y": 1244
+    },
+    "Proximos.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "6 · Próximos pagos",
+      "w": 390,
+      "x": 940,
+      "y": 1244
+    },
+    "Recuperar.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "3b · Recuperar contraseña",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "Registro.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "3 · Crear cuenta",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Verificar.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "3c · Código (solo si activó la verificación)",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-23T15:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Entrada: apertura e inicio de sesión",
+      "w": 240,
+      "x": 0,
+      "y": -274
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 2270,
+      "text": "Dentro de la app",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Ingresar.dc.html",
+    "Registro.dc.html",
+    "Inicio.dc.html",
+    "Cargar.dc.html",
+    "Proximos.dc.html",
+    "Movimientos.dc.html",
+    "Mas.dc.html",
+    "CargarIngreso.dc.html",
+    "CargarTransferir.dc.html",
+    "Ajustes.dc.html",
+    "Ayuda.dc.html",
+    "Recuperar.dc.html",
+    "Verificar.dc.html",
+    "Bienvenida.dc.html",
+    "InicioNuevo.dc.html"
+  ],
+  "pages": [],
+  "title": "App Somos Guafra"
+}

@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Explorar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+.ex-root{--bg:#F6F7F5;--card:#FFFFFF;--ink:#0E1A15;--muted:#4E5B55;--line:#EEF0EE;--field:#FFFFFF;--fieldLine:#E1E5E1;--chev:#8A958F;--brand:#16493A;--brandInk:#FFFFFF;--track:#EDF0ED;--nav:#FFFFFF;--navLine:#E7EAE6;--navActive:#DDEEE3;--navActiveInk:#16493A;--chipOn:#EEF6F1;--soft:#F2F4F2;--info:#EEF6F1;--infoInk:#0F3A2D;--warnBg:#FFF5E8;--warnInk:#7A3E00}
+.ex-root.dark{--bg:#111613;--card:#1A211D;--ink:#EEF2EF;--muted:#A9B5AE;--line:#26302A;--field:#1A211D;--fieldLine:#34403A;--chev:#7C8A82;--brand:#8EC4A0;--brandInk:#0E2E24;--track:#2A342E;--nav:#161C19;--navLine:#26302A;--navActive:#24392E;--navActiveInk:#A9D3B7;--chipOn:#24392E;--soft:#222A25;--info:#1F3A2E;--infoInk:#CFE3D6;--warnBg:#3A2C1A;--warnInk:#F2C48A}
+.ex-root input::placeholder,.ex-root textarea::placeholder{color:var(--chev)}
+.ex-scroll::-webkit-scrollbar{display:none}
+.ex-scroll>*{flex-shrink:0}
+.ex-num{font-variant-numeric:tabular-nums}
+.ex-r:last-child{border-bottom:none !important}
+.ex-tap:active{background:var(--soft) !important}
+.ex-card{transition:transform .15s ease}
+.ex-card:active{transform:scale(.98)}
+.ex-in{animation:exIn .26s cubic-bezier(.2,.9,.3,1) both}
+@keyframes exIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.ex-toast{animation:exToast .3s cubic-bezier(.2,.9,.3,1) both}
+@keyframes exToast{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="ex-root mo-press {{ themeClass }}" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); font-family: Manrope, system-ui, sans-serif; color: var(--ink); transition: background .25s">
+
+  <sc-if value="{{ isHub }}" hint-placeholder-val="{{ true }}">
+  <div class="ex-scroll" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em">Explorar</h1>
+      <a href="Ajustes.dc.html" aria-label="Configuración de tu cuenta" style="width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: var(--brandInk); text-decoration: none; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center">LM</a>
+    </div>
+
+    <label style="height: 48px; border-radius: 14px; background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 14px">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color: var(--muted)"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+      <input type="search" aria-label="Buscar una función" placeholder="Buscar una función" value="{{ q }}" onInput="{{ onSearch }}" style="flex: 1; min-width: 0; border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline: none">
+    </label>
+
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 800">{{ g.title }}</h2>
+        <div class="cas" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+            <button type="button" onClick="{{ it.open }}" class="ex-card" style="grid-column: {{ it.span }}; background: var(--card); border: none; border-radius: 20px; padding: 14px; min-height: {{ it.minH }}; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; color: var(--ink); font: inherit; text-align: left; cursor: pointer; min-width: 0">
+              <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%">
+                <span style="width: 36px; height: 36px; border-radius: 11px; background: {{ it.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none">
+                  <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ it.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg>
+                </span>
+                <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}">
+                  <span class="ex-num" style="height: 24px; padding: 0 8px; border-radius: 8px; background: {{ it.badgeBg }}; color: {{ it.badgeFg }}; font-size: 11px; font-weight: 800; display: flex; align-items: center">{{ it.badge }}</span>
+                </sc-if>
+              </span>
+              <span style="display: flex; flex-direction: column; gap: 2px">
+                <span style="font-size: 15px; font-weight: 800; line-height: 1.2">{{ it.label }}</span>
+                <span class="ex-num" style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.35">{{ it.sub }}</span>
+              </span>
+              <span style="flex: 1"></span>
+              <sc-if value="{{ it.hasBar }}" hint-placeholder-val="{{ false }}">
+                <span style="display: block; width: 100%; height: 6px; border-radius: 6px; background: var(--track); overflow: hidden"><span class="gb" style="display: block; height: 6px; border-radius: 6px; width: {{ it.barW }}; background: {{ it.barColor }}"></span></span>
+              </sc-if>
+              <sc-if value="{{ it.hasSpark }}" hint-placeholder-val="{{ false }}">
+                <svg aria-hidden="true" width="100%" height="28" viewBox="0 0 140 28" preserveAspectRatio="none"><path d="{{ it.spark }}" fill="none" stroke="{{ sparkColor }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path></svg>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ none }}" hint-placeholder-val="{{ false }}">
+      <div style="background: var(--card); border-radius: 20px; padding: 20px 16px; text-align: center; font-size: 14px; font-weight: 600; color: var(--muted)">No encontramos esa función.</div>
+    </sc-if>
+
+    <sc-if value="{{ showRest }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ openPlans }}" style="background: #16493A; color: #FFFFFF; border: none; border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 14px; font: inherit; text-align: left; cursor: pointer; width: 100%">
+        <span style="flex: 1; min-width: 0">
+          <span style="display: block; font-size: 16px; font-weight: 800">Pasa a Pro</span>
+          <span style="display: block; font-size: 13px; font-weight: 600; color: #CFE3D6; line-height: 1.4">Escenarios, informes, flujo a 5 años y espacio compartido</span>
+        </span>
+        <span style="height: 36px; padding: 0 14px; border-radius: 10px; background: #FFFFFF; color: #16493A; font-size: 13px; font-weight: 800; display: flex; align-items: center; flex: none">Ver planes</span>
+      </button>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 800">Tu cuenta</h2>
+        <div style="background: var(--card); border-radius: 20px; padding: 4px 0">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line)">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--brand); color: var(--brandInk); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex: none">LM</div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 800">Lucía Martínez</div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--muted)">{{ planLine }}</div>
+            </div>
+          </div>
+          <a href="Ajustes.dc.html" class="ex-tap" style="display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 54px; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--line)">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg>
+            <span style="flex: 1; font-size: 15px; font-weight: 700">Configuración</span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--chev)"><path d="M9 5l7 7-7 7"></path></svg>
+          </a>
+          <a href="Ayuda.dc.html" class="ex-tap" style="display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 54px; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--line)">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"></path></svg>
+            <span style="flex: 1; font-size: 15px; font-weight: 700">Ayuda</span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--chev)"><path d="M9 5l7 7-7 7"></path></svg>
+          </a>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 54px">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"></path></svg>
+            <span id="ex-dark" style="flex: 1; font-size: 15px; font-weight: 700">Modo oscuro</span>
+            <button type="button" role="switch" aria-checked="{{ darkOn }}" aria-labelledby="ex-dark" onClick="{{ toggleDark }}" style="width: 52px; height: 32px; border-radius: 999px; border: none; background: {{ switchBg }}; position: relative; cursor: pointer; padding: 0; flex: none; transition: background .2s">
+              <span style="position: absolute; top: 4px; left: {{ knobLeft }}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <a href="Ingresar.dc.html" style="height: 52px; border-radius: 14px; color: #D93025; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; background: var(--card)">Cerrar sesión</a>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isPage }}" hint-placeholder-val="{{ false }}">
+  <div class="ex-scroll ex-in" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 110px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 44px">
+      <sc-if value="{{ P.backHref }}" hint-placeholder-val="{{ false }}">
+        <a href="{{ P.backHref }}" aria-label="Volver" style="width: 44px; height: 44px; border-radius: 14px; background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </a>
+      </sc-if>
+      <sc-if value="{{ P.backBtn }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ back }}" aria-label="Volver" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </button>
+      </sc-if>
+      <h1 style="flex: 1; min-width: 0; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2">{{ P.title }}</h1>
+      <sc-if value="{{ P.pro }}" hint-placeholder-val="{{ false }}">
+        <span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #FFF0DB; color: #7A3E00; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">PRO</span>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ P.hasTabs }}" hint-placeholder-val="{{ false }}">
+      <div role="group" aria-label="Vista" style="display: grid; grid-template-columns: repeat({{ P.tabCount }}, minmax(0, 1fr)); gap: 4px; background: var(--soft); padding: 4px; border-radius: 14px">
+        <sc-for list="{{ P.tabs }}" as="t" hint-placeholder-count="2">
+          <button type="button" onClick="{{ t.pick }}" aria-pressed="{{ t.on }}" style="height: 40px; border-radius: 11px; border: none; background: {{ t.bg }}; color: var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; opacity: {{ t.op }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ P.hasHero }}" hint-placeholder-val="{{ true }}">
+      <div style="background: {{ heroBg }}; color: #FFFFFF; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 13px; font-weight: 700; color: #CFE3D6">{{ P.hero.label }}</div>
+        <div class="ex-num" style="font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1">{{ P.hero.value }}</div>
+        <sc-if value="{{ P.hero.sub }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size: 13px; font-weight: 600; color: #CFE3D6; line-height: 1.45">{{ P.hero.sub }}</div>
+        </sc-if>
+        <sc-if value="{{ P.hero.bar }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 8px; border-radius: 8px; background: rgba(255,255,255,.18); overflow: hidden; margin-top: 6px"><div class="gb" style="height: 8px; border-radius: 8px; width: {{ P.hero.bar }}; background: #8EC4A0; transition: width .4s"></div></div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-for list="{{ P.blocks }}" as="b" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <sc-if value="{{ b.title }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 2px">
+            <h2 style="margin: 0; font-size: 16px; font-weight: 800">{{ b.title }}</h2>
+            <sc-if value="{{ b.aside }}" hint-placeholder-val="{{ false }}"><span class="ex-num" style="font-size: 13px; font-weight: 700; color: var(--muted)">{{ b.aside }}</span></sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isInfo }}" hint-placeholder-val="{{ false }}">
+          <div style="background: {{ b.bg }}; color: {{ b.fg }}; border-radius: 16px; padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.5">{{ b.text }}</div>
+        </sc-if>
+
+        <sc-if value="{{ b.isRows }}" hint-placeholder-val="{{ true }}">
+          <div class="cas" style="background: var(--card); border-radius: 20px; padding: 4px 0; overflow: hidden">
+            <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="3">
+              <sc-if value="{{ r.tap }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ r.tap }}" class="ex-r ex-tap" style="width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: none; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer">
+                  <span style="display: flex; align-items: center; gap: 12px; width: 100%">
+                    <sc-if value="{{ r.icon }}" hint-placeholder-val="{{ true }}"><span style="width: 38px; height: 38px; border-radius: 11px; background: {{ r.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ r.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span></sc-if>
+                    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                      <span style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ r.name }}</span>
+                      <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ true }}"><span class="ex-num" style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ r.sub }}</span></sc-if>
+                    </span>
+                    <sc-if value="{{ r.value }}" hint-placeholder-val="{{ true }}"><span class="ex-num" style="font-size: 15px; font-weight: 800; color: {{ r.valueColor }}; flex: none; text-align: right">{{ r.value }}</span></sc-if>
+                    <sc-if value="{{ r.pill }}" hint-placeholder-val="{{ false }}"><span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {{ r.pillBg }}; color: {{ r.pillFg }}; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">{{ r.pill }}</span></sc-if>
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color: var(--chev); flex: none"><path d="M9 5l7 7-7 7"></path></svg>
+                  </span>
+                  <sc-if value="{{ r.bar }}" hint-placeholder-val="{{ false }}"><span style="display: block; width: 100%; height: 7px; border-radius: 7px; background: var(--track); overflow: hidden"><span class="gb" style="display: block; height: 7px; border-radius: 7px; width: {{ r.bar }}; background: {{ r.barColor }}"></span></span></sc-if>
+                </button>
+              </sc-if>
+              <sc-if value="{{ r.still }}" hint-placeholder-val="{{ true }}">
+                <div class="ex-r" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line)">
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <sc-if value="{{ r.icon }}" hint-placeholder-val="{{ true }}"><div style="width: 38px; height: 38px; border-radius: 11px; background: {{ r.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ r.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></div></sc-if>
+                    <div style="flex: 1; min-width: 0">
+                      <div style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ r.name }}</div>
+                      <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ true }}"><div class="ex-num" style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ r.sub }}</div></sc-if>
+                    </div>
+                    <sc-if value="{{ r.value }}" hint-placeholder-val="{{ true }}"><div class="ex-num" style="font-size: 15px; font-weight: 800; color: {{ r.valueColor }}; flex: none; text-align: right">{{ r.value }}</div></sc-if>
+                    <sc-if value="{{ r.pill }}" hint-placeholder-val="{{ false }}"><span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {{ r.pillBg }}; color: {{ r.pillFg }}; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">{{ r.pill }}</span></sc-if>
+                  </div>
+                  <sc-if value="{{ r.bar }}" hint-placeholder-val="{{ false }}"><div style="height: 7px; border-radius: 7px; background: var(--track); overflow: hidden"><div class="gb" style="height: 7px; border-radius: 7px; width: {{ r.bar }}; background: {{ r.barColor }}"></div></div></sc-if>
+                </div>
+              </sc-if>
+            </sc-for>
+            <sc-if value="{{ b.hasMore }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ b.toggleMore }}" aria-expanded="{{ b.expanded }}" style="width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border: none; border-top: 1px solid var(--line); background: transparent; color: var(--brand); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">{{ b.moreLabel }}
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate({{ b.chevRot }}); transition: transform .2s"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isSteps }}" hint-placeholder-val="{{ false }}">
+          <div class="cas" style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ b.steps }}" as="st" hint-placeholder-count="4">
+              <div style="background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; border: 1.5px solid {{ st.border }}">
+                <div style="display: flex; gap: 12px; align-items: flex-start">
+                  <button type="button" role="checkbox" aria-checked="{{ st.checked }}" aria-label="{{ st.aria }}" onClick="{{ st.toggle }}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid {{ st.ring }}; background: {{ st.fill }}; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; padding: 0; margin-top: 2px">
+                    <sc-if value="{{ st.done }}" hint-placeholder-val="{{ false }}"><svg class="tk" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                    <sc-if value="{{ st.todo }}" hint-placeholder-val="{{ true }}"><span style="font-size: 13px; font-weight: 800; color: var(--muted)">{{ st.n }}</span></sc-if>
+                  </button>
+                  <div style="flex: 1; min-width: 0">
+                    <div style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ st.title }}</div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.45">{{ st.text }}</div>
+                  </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-left: 44px">
+                  <sc-for list="{{ st.actions }}" as="ac" hint-placeholder-count="1">
+                    <sc-if value="{{ ac.href }}" hint-placeholder-val="{{ false }}"><a href="{{ ac.href }}" style="height: 38px; padding: 0 12px; border-radius: 10px; background: var(--soft); color: var(--ink); text-decoration: none; font-size: 13px; font-weight: 800; display: flex; align-items: center">{{ ac.label }}</a></sc-if>
+                    <sc-if value="{{ ac.go }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ ac.go }}" style="height: 38px; padding: 0 12px; border-radius: 10px; border: none; background: var(--soft); color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer">{{ ac.label }}</button></sc-if>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isLock }}" hint-placeholder-val="{{ false }}">
+          <div style="background: var(--card); border-radius: 22px; padding: 20px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+            <div style="width: 52px; height: 52px; border-radius: 16px; background: #FFF0DB; display: flex; align-items: center; justify-content: center">
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A35200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>
+            </div>
+            <div style="font-size: 16px; font-weight: 800">{{ b.lockTitle }}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.5">{{ b.text }}</div>
+            <button type="button" onClick="{{ openPlans }}" style="height: 46px; padding: 0 20px; border-radius: 14px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Ver planes</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isForm }}" hint-placeholder-val="{{ false }}">
+          <div style="background: var(--card); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+            <sc-for list="{{ b.fields }}" as="f" hint-placeholder-count="3">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <sc-if value="{{ f.isToggle }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <div style="flex: 1; min-width: 0">
+                      <div id="{{ f.id }}" style="font-size: 14px; font-weight: 800">{{ f.label }}</div>
+                      <sc-if value="{{ f.help }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ f.help }}</div></sc-if>
+                    </div>
+                    <button type="button" role="switch" aria-checked="{{ f.checked }}" aria-labelledby="{{ f.id }}" onClick="{{ f.toggle }}" style="width: 52px; height: 32px; border-radius: 999px; border: none; background: {{ f.swBg }}; position: relative; cursor: pointer; padding: 0; flex: none; transition: background .2s">
+                      <span style="position: absolute; top: 4px; left: {{ f.knob }}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s"></span>
+                    </button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.hasLabel }}" hint-placeholder-val="{{ true }}">
+                  <label for="{{ f.id }}" style="font-size: 14px; font-weight: 800">{{ f.label }}</label>
+                </sc-if>
+                <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}">
+                  <input id="{{ f.id }}" type="text" value="{{ f.value }}" placeholder="{{ f.placeholder }}" onInput="{{ f.onInput }}" style="height: 50px; border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline-color: #16493A">
+                </sc-if>
+                <sc-if value="{{ f.isArea }}" hint-placeholder-val="{{ false }}">
+                  <textarea id="{{ f.id }}" rows="4" placeholder="{{ f.placeholder }}" onInput="{{ f.onInput }}" style="border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); padding: 12px 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline-color: #16493A; resize: none">{{ f.value }}</textarea>
+                </sc-if>
+                <sc-if value="{{ f.isMoney }}" hint-placeholder-val="{{ false }}">
+                  <div style="height: 52px; border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); display: flex; align-items: center; gap: 6px; padding: 0 14px">
+                    <span style="font-size: 18px; font-weight: 800; color: var(--muted)">{{ f.prefix }}</span>
+                    <input id="{{ f.id }}" type="text" inputmode="numeric" value="{{ f.value }}" placeholder="0" onInput="{{ f.onInput }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 19px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums">
+                    <span style="font-size: 14px; font-weight: 700; color: var(--muted)">{{ f.suffix }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isDate }}" hint-placeholder-val="{{ false }}">
+                  <input id="{{ f.id }}" type="date" value="{{ f.value }}" min="2026-01-01" max="2026-12-31" onInput="{{ f.onInput }}" style="height: 50px; border-radius: 14px; border: 1.5px solid var(--brand); background: var(--field); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); outline-color: #16493A; box-sizing: border-box; width: 100%">
+                </sc-if>
+                <sc-if value="{{ f.isChips }}" hint-placeholder-val="{{ false }}">
+                  <div role="group" aria-label="{{ f.label }}" style="display: flex; flex-wrap: wrap; gap: 8px">
+                    <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 40px; padding: 6px 12px; border-radius: 12px; border: 1.5px solid {{ o.border }}; background: {{ o.bg }}; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; text-align: left">{{ o.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isNote }}" hint-placeholder-val="{{ false }}">
+                  <div class="ex-num" style="background: var(--info); color: var(--infoInk); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 700; line-height: 1.45">{{ f.value }}</div>
+                </sc-if>
+                <sc-if value="{{ f.showHelp }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ f.help }}</div></sc-if>
+                <sc-if value="{{ f.error }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 700; color: #D93025">{{ f.error }}</div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isButtons }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ b.buttons }}" as="bt" hint-placeholder-count="2">
+              <sc-if value="{{ bt.href }}" hint-placeholder-val="{{ false }}">
+                <a href="{{ bt.href }}" style="height: 52px; border-radius: 14px; border: {{ bt.border }}; background: {{ bt.bg }}; color: {{ bt.fg }}; text-decoration: none; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box">{{ bt.label }}</a>
+              </sc-if>
+              <sc-if value="{{ bt.go }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ bt.go }}" style="height: 52px; border-radius: 14px; border: {{ bt.border }}; background: {{ bt.bg }}; color: {{ bt.fg }}; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">{{ bt.label }}</button>
+              </sc-if>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isChips }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{ b.chips }}" as="c" hint-placeholder-count="3">
+              <button type="button" onClick="{{ c.go }}" style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--fieldLine); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" class="ex-toast" style="position: absolute; left: 20px; right: 20px; bottom: 98px; background: #0E1A15; color: #FFFFFF; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; line-height: 1.4; box-shadow: 0 12px 30px rgba(0,0,0,.25)">
+      <svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8EC4A0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      <span>{{ toast }}</span>
+    </div>
+  </sc-if>
+
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: var(--nav); border-top: 1px solid var(--navLine); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px 6px 0; box-sizing: border-box; align-items: start">
+    <a href="Inicio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg></span>Inicio</a>
+    <a href="Movimientos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg></span>Movimientos</a>
+    <a href="Cargar.dc.html" aria-label="Cargar un movimiento" style="display: flex; justify-content: center; text-decoration: none">
+      <span style="width: 52px; height: 48px; border-radius: 16px; background: #16493A; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+    <a href="Proximos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; position: relative"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"></path></svg><span style="position: absolute; top: 2px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #D93025; border: 2px solid var(--nav)"></span></span>Próximos</a>
+    <button type="button" onClick="{{ home }}" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; background: transparent; padding: 0; cursor: pointer; color: var(--navActiveInk); font: inherit; font-size: 11px; font-weight: 800">
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: var(--navActive); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"></path></svg></span>Explorar</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      q: '', dark: false, stack: [], f: {}, toast: '', tick: 0,
+      d: {
+        plan: 'Gratis',
+        accounts: [
+          { name: 'Banco', inst: 'Banco', type: 'Caja de ahorro', cur: 'Pesos', bal: 268400, inM: 950000, outM: 681600, notes: '' },
+          { name: 'Billetera virtual', inst: 'Billetera', type: 'Billetera virtual', cur: 'Pesos', bal: 98200, inM: 85000, outM: 42300, notes: '' },
+          { name: 'Efectivo', inst: '', type: 'Efectivo', cur: 'Pesos', bal: 45700, inM: 20000, outM: 31200, notes: '' }
+        ],
+        review: [true, false, false, false],
+        cards: [{ name: 'Visa', bank: 'Banco', close: 19, due: 25, limit: 800000, mode: 'Cada compra', last4: '4821', stmt: 152400, min: 22900, paid: 0,
+          purchases: [{ name: 'Heladera', price: 456000, n: 12, paidN: 4, cat: 'Casa' }, { name: 'Zapatillas', price: 64500, n: 3, paidN: 2, cat: 'Ropa' }],
+          subs: [{ name: 'Series', amount: 7900, day: 22 }] }],
+        debts: [{ name: 'Préstamo personal', who: 'Banco', lent: 600000, n: 12, paidN: 7, cuota: 56500, firstMonth: 5, closed: false, extra: 0 }],
+        recs: [
+          { kind: 'Cobro', name: 'Sueldo', amount: 950000, day: 1, acc: 'Banco', status: 'Activa' },
+          { kind: 'Pago', name: 'Alquiler', amount: 280000, day: 1, acc: 'Banco', status: 'Activa' },
+          { kind: 'Pago', name: 'Luz', amount: 24300, day: 4, acc: 'Banco', status: 'Activa' },
+          { kind: 'Pago', name: 'Internet', amount: 18900, day: 23, acc: 'Banco', status: 'Activa' },
+          { kind: 'Pago', name: 'Cuota del préstamo', amount: 56500, day: 27, acc: 'Banco', status: 'Activa' }
+        ],
+        budgetMonth: 0,
+        budgets: [
+          [{ name: 'Supermercado', limit: 180000, spent: 148200, proj: false }, { name: 'Comida afuera', limit: 60000, spent: 61900, proj: false }, { name: 'Transporte', limit: 50000, spent: 38400, proj: false }, { name: 'Suscripciones', limit: 25000, spent: 21700, proj: false }],
+          []
+        ],
+        goals: [
+          { name: 'Fondo de emergencia', target: 1000000, saved: 450000, monthly: 55000 },
+          { name: 'Viaje de vacaciones', target: 600000, saved: 180000, monthly: 70000 }
+        ],
+        invs: [
+          { name: 'Plazo fijo 30 días', kind: 'Plazo fijo u otra', invested: 580000, value: 600000 },
+          { name: 'Fondo común de inversión', kind: 'Bonos, acciones, cripto, FCI', invested: 480000, value: 520000 },
+          { name: 'Acciones', kind: 'Bonos, acciones, cripto, FCI', invested: 300000, value: 330000 }
+        ],
+        assets: [],
+        flowMode: 0
+      }
+    };
+  }
+  renderVals() {
+    const s = this.state, d = s.d, dk = s.dark;
+    const tw = (k, target, from0) => { const me = this; me._tw = me._tw || {}; const now = Date.now(); let t = me._tw[k]; const ease = (x) => 1 - Math.pow(1 - x, 3);
+      if (!t) t = me._tw[k] = { from: from0 ? 0 : target, to: target, start: now };
+      else if (t.to !== target) { const p0 = Math.min(1, (now - t.start) / 550); t = me._tw[k] = { from: t.from + (t.to - t.from) * ease(p0), to: target, start: now }; }
+      const p = Math.min(1, (now - t.start) / 550);
+      if (p < 1 && !me._raf) me._raf = requestAnimationFrame(() => { me._raf = null; me.forceUpdate(); });
+      return Math.round(t.from + (t.to - t.from) * ease(p)); };
+
+    const fmt = (n) => (n < 0 ? '− ' : '') + '$ ' + Math.abs(Math.round(n)).toLocaleString('es-AR');
+    const num = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+    const I = {
+      wallet: 'M3 7h18v12H3zM3 7l3-3h12M16 13h2', check: 'M5 12.5l4.5 4.5L19 7.5', card: 'M3 6h18v12H3zM3 10h18M7 15h4',
+      bank: 'M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z', repeat: 'M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5',
+      flow: 'M3 17l6-6 4 4 8-8M15 7h6v6', pie: 'M12 3v9h9M21 12a9 9 0 1 1-9-9', target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
+      sliders: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4', scale: 'M12 3v18M5 7h14M5 7l-3 7h6zM19 7l-3 7h6zM8 21h8',
+      bell: 'M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 21h4', file: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6', cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+      home: 'M3 11l9-8 9 8M5 10v10h14V10', bolt: 'M13 3L5 14h6l-1 7 8-11h-6z', wifi: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
+      play: 'M5 4h14v16H5zM10 9l5 3-5 3z', cart: 'M3 4h2l2.5 11h11L21 7H6.5M9 20h.01M18 20h.01', cup: 'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2',
+      bus: 'M5 4h14v12H5zM5 11h14M8 19v-3M16 19v-3', tag: 'M3 12V4h8l10 10-8 8zM7.5 8h.01', shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      plane: 'M3 13l18-8-6 16-3-7z', chart: 'M3 17l6-6 4 4 8-8M15 7h6v6', piggy: 'M5 11a7 6 0 0 1 13-2h2v4h-2a7 6 0 0 1-3 3v3h-3v-2H9v2H6v-4a6 6 0 0 1-1-4zM15 10h.01',
+      box: 'M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', swap: 'M4 8h14l-3-3M20 16H6l3 3'
+    };
+    const T = {
+      green: dk ? ['rgba(142,196,160,.16)', '#A9D3B7'] : ['#EEF6F1', '#16493A'],
+      amber: dk ? ['rgba(242,179,107,.16)', '#F2B36B'] : ['#FFF5E8', '#A35200'],
+      blue: dk ? ['rgba(140,165,230,.16)', '#AFC2F2'] : ['#EEF1F8', '#2F4A8A'],
+      red: dk ? ['rgba(242,139,130,.16)', '#F28B82'] : ['#FDECEA', '#C5221F'],
+      gray: dk ? ['rgba(255,255,255,.07)', '#DDE3DF'] : ['#F2F4F2', '#0E1A15']
+    };
+    const C = { pos: dk ? '#7FD69A' : '#1E7A3B', neg: dk ? '#F28B82' : '#C5221F', warn: dk ? '#F2B36B' : '#A35200', ink: dk ? '#EEF2EF' : '#0E1A15', brand: dk ? '#8EC4A0' : '#16493A', blue: dk ? '#AFC2F2' : '#2F4A8A' };
+    const PILL = { ok: dk ? ['rgba(127,214,154,.16)', '#7FD69A'] : ['#E6F4EA', '#1E7A3B'], warn: dk ? ['rgba(242,179,107,.16)', '#F2B36B'] : ['#FFF0DB', '#7A3E00'], bad: dk ? ['rgba(242,139,130,.16)', '#F28B82'] : ['#FDECEA', '#A3201D'], info: dk ? ['rgba(255,255,255,.08)', '#DDE3DF'] : ['#F2F4F2', '#33403A'] };
+
+    const set = (patch) => this.setState(patch);
+    const upd = (fn, patch) => { const nd = JSON.parse(JSON.stringify(d)); fn(nd); const p = Object.assign({ d: nd }, patch || {}); if (p.toast) { const t = (s.tick || 0) + 1; p.tick = t; setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); } this.setState(p); };
+    const toast = (msg) => { const t = (s.tick || 0) + 1; this.setState({ toast: msg, tick: t }); setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); };
+    const go = (route, f) => () => set({ stack: s.stack.concat([route]), f: f || {} });
+    const back = () => set({ stack: s.stack.slice(0, -1), f: {} });
+    const done = (fn, msg, pops) => () => { const nd = JSON.parse(JSON.stringify(d)); const res = fn ? fn(nd) : null; if (res === false) return; const t = (s.tick || 0) + 1; this.setState({ d: nd, stack: s.stack.slice(0, -(pops || 1)), f: {}, toast: msg, tick: t }); setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); };
+    const F = s.f;
+    const setF = (k, v) => this.setState({ f: Object.assign({}, s.f, { [k]: v }) });
+
+    // --- form field builders
+    let fid = 0;
+    const base = (label, extra) => Object.assign({ id: 'ex-f' + (fid++), label, hasLabel: true, isText: false, isArea: false, isMoney: false, isDate: false, isChips: false, isToggle: false, isNote: false, value: '', placeholder: '', options: [], help: '', showHelp: false, error: '', prefix: '$', suffix: '', checked: 'false', swBg: '', knob: '', onInput: null, toggle: null }, extra);
+    const fText = (k, label, ph, help) => base(label, { isText: true, value: F[k] || '', placeholder: ph || '', help: help || '', showHelp: !!help, onInput: (e) => setF(k, e.target.value) });
+    const fArea = (k, label, ph) => base(label, { isArea: true, value: F[k] || '', placeholder: ph || '', onInput: (e) => setF(k, e.target.value) });
+    const fMoney = (k, label, help, prefix, suffix) => base(label, { isMoney: true, value: F[k] || '', help: help || '', showHelp: !!help, prefix: prefix === undefined ? '$' : prefix, suffix: suffix || '', onInput: (e) => { const v = String(e.target.value || '').replace(/\D/g, ''); setF(k, v ? parseInt(v, 10).toLocaleString('es-AR') : ''); } });
+    const fChips = (k, label, opts, help) => base(label, { isChips: true, help: help || '', showHelp: !!help, options: opts.map((o) => ({ label: o, on: F[k] === o ? 'true' : 'false', bg: F[k] === o ? 'var(--chipOn)' : 'var(--field)', border: F[k] === o ? C.brand : 'var(--fieldLine)', pick: () => setF(k, o) })) });
+    const fToggle = (k, label, help) => base(label, { hasLabel: false, isToggle: true, help: help || '', checked: F[k] ? 'true' : 'false', swBg: F[k] ? '#16493A' : '#C9D0CB', knob: F[k] ? '24px' : '4px', toggle: () => setF(k, !F[k]) });
+    const fDate = (k, label) => base(label, { isDate: true, value: F[k] || '2026-11-20', onInput: (e) => setF(k, e.target.value) });
+    const fNote = (text) => base('', { hasLabel: false, isNote: true, value: text });
+
+    // --- block builders
+    const B = (o) => Object.assign({ hasMore: false, moreLabel: '', expanded: 'false', chevRot: '0deg', toggleMore: null, title: '', aside: '', isInfo: false, isRows: false, isSteps: false, isLock: false, isForm: false, isButtons: false, isChips: false, rows: [], steps: [], fields: [], buttons: [], chips: [], text: '', lockTitle: '', bg: '', fg: '' }, o);
+    const row = (name, sub, value, icon, tone, extra) => Object.assign({ name, sub: sub || '', value: value || '', valueColor: C.ink, icon: icon || '', iconBg: icon ? T[tone || 'gray'][0] : '', iconFg: icon ? T[tone || 'gray'][1] : '', pill: '', pillBg: '', pillFg: '', bar: '', barColor: C.brand, tap: null, still: true }, extra || {});
+    const tapRow = (name, sub, value, icon, tone, onTap, extra) => Object.assign(row(name, sub, value, icon, tone, extra), { tap: onTap, still: false });
+    const pill = (text, kind) => ({ pill: text, pillBg: PILL[kind][0], pillFg: PILL[kind][1] });
+    const rows = (title, list, aside, fold, moreText) => {
+      const key = 'fold:' + title;
+      if (fold === undefined || list.length <= fold) return B({ title, aside: aside || '', isRows: true, rows: list });
+      const open = !!(s.open || {})[key];
+      return B({ title, aside: aside || '', isRows: true, rows: open ? list : list.slice(0, fold), hasMore: true, expanded: open ? 'true' : 'false', chevRot: open ? '180deg' : '0deg',
+        moreLabel: open ? 'Ver menos' : (moreText || 'Ver todo') + ' (' + list.length + ')', toggleMore: () => this.setState({ open: Object.assign({}, s.open || {}, { [key]: !open }) }) });
+    };
+    const info = (text, kind) => B({ isInfo: true, text, bg: kind === 'warn' ? 'var(--warnBg)' : 'var(--info)', fg: kind === 'warn' ? 'var(--warnInk)' : 'var(--infoInk)' });
+    const form = (fields, title) => B({ isForm: true, fields, title: title || '' });
+    const btn = (label, onGo, kind) => ({ label, go: onGo, href: '', bg: kind === 'primary' ? '#16493A' : (kind === 'danger' ? 'var(--card)' : 'var(--card)'), fg: kind === 'primary' ? '#FFFFFF' : (kind === 'danger' ? '#D93025' : 'var(--ink)'), border: kind === 'primary' ? 'none' : '1.5px solid var(--fieldLine)' });
+    const link = (label, href, kind) => ({ label, href, go: null, bg: kind === 'primary' ? '#16493A' : 'var(--card)', fg: kind === 'primary' ? '#FFFFFF' : 'var(--ink)', border: kind === 'primary' ? 'none' : '1.5px solid var(--fieldLine)' });
+    const buttons = (list) => B({ isButtons: true, buttons: list });
+    const lock = (title, text) => B({ isLock: true, lockTitle: title, text });
+    const page = (o) => Object.assign({ title: '', pro: false, hasTabs: false, tabs: [], tabCount: 2, hasHero: false, hero: { label: '', value: '', sub: '', bar: '' }, blocks: [] }, o, o.hero ? { hasHero: true, hero: Object.assign({ label: '', value: '', sub: '', bar: '' }, o.hero) } : {});
+    const tabs = (list, cur, onPick) => ({ hasTabs: true, tabCount: list.length, tabs: list.map((l, i) => ({ label: l, on: cur === i ? 'true' : 'false', bg: cur === i ? 'var(--card)' : 'transparent', op: 1, pick: () => onPick(i) })) });
+    const ACCS = d.accounts.map((a) => a.name);
+    const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const totalAcc = d.accounts.reduce((a, x) => a + x.bal, 0);
+    const card0 = d.cards[0];
+    const stmtLeft = (c) => Math.max(0, c.stmt - c.paid);
+    const debtLeft = (x) => x.closed ? 0 : Math.max(0, (x.n - x.paidN) * x.cuota - x.extra);
+    const invTotal = d.invs.reduce((a, x) => a + x.value, 0);
+    const assetsTotal = d.assets.reduce((a, x) => a + x.value, 0);
+    const owe = d.debts.reduce((a, x) => a + debtLeft(x), 0) + d.cards.reduce((a, c) => a + stmtLeft(c), 0);
+    const net = totalAcc + invTotal + assetsTotal - owe;
+    const bud = d.budgets[d.budgetMonth];
+
+    // ---------- pages
+    const R = {};
+    R.cuentas = () => page({ title: 'Cuentas', hero: { label: 'Total en tus cuentas', value: fmt(totalAcc), sub: d.accounts.length + (d.accounts.length === 1 ? ' cuenta activa' : ' cuentas activas') },
+      blocks: [rows('', d.accounts.map((a, i) => tapRow(a.name, a.type + (a.inst && a.inst !== a.name ? ' · ' + a.inst : ''), fmt(a.bal), a.type === 'Efectivo' ? I.cash : (a.type === 'Billetera virtual' ? I.wallet : I.bank), 'green', go({ v: 'cuenta', i })))),
+        d.plan === 'Gratis' ? info('En el plan Gratis puedes tener hasta 5 cuentas. Te quedan ' + Math.max(0, 5 - d.accounts.length) + '.') : null,
+        buttons([btn('+ Nueva cuenta', d.accounts.length >= 5 && d.plan === 'Gratis' ? () => toast('Llegaste a 5 cuentas. Pasa a Pro para sumar más.') : go({ v: 'nuevaCuenta' }, { type: 'Caja de ahorro', cur: 'Pesos' }), 'primary')])].filter(Boolean) });
+    R.nuevaCuenta = () => page({ title: 'Nueva cuenta', blocks: [form([
+      fText('name', 'Nombre', 'Ej.: Caja de ahorro sueldo'), fText('inst', 'Banco o institución', 'Ej.: el nombre de tu banco o billetera'),
+      fChips('type', 'Tipo', ['Efectivo', 'Caja de ahorro', 'Cuenta corriente', 'Billetera virtual', 'Cuenta en otra moneda', 'Cuenta de inversión', 'Otra']),
+      fChips('cur', 'Moneda', ['Pesos', 'Dólares']), fMoney('bal', 'Saldo inicial', 'Lo que tiene hoy la cuenta.', F.cur === 'Dólares' ? 'US$' : '$')
+    ]), buttons([btn('Crear cuenta', () => { if (!(F.name || '').trim()) { toast('Escribe un nombre para la cuenta.'); return; } done((nd) => { nd.accounts.push({ name: F.name.trim(), inst: F.inst || '', type: F.type, cur: F.cur, bal: num(F.bal), inM: 0, outM: 0, notes: '' }); }, 'Listo, creamos la cuenta.')(); }, 'primary')])] });
+    R.cuenta = (r) => { const a = d.accounts[r.i]; if (!a) return R.cuentas(); return page({ title: a.name, hero: { label: 'Saldo actual', value: (a.cur === 'Dólares' ? 'US$ ' + a.bal.toLocaleString('es-AR') : fmt(a.bal)), sub: a.type + (a.inst ? ' · ' + a.inst : '') },
+      blocks: [rows('Este mes', [row('Entró', '', '+ ' + fmt(a.inM), I.cash, 'green', { valueColor: C.pos }), row('Salió', '', fmt(a.outM), I.cart, 'gray')]),
+        buttons([link('+ Movimiento', 'Cargar.dc.html', 'primary'), link('Transferir', 'CargarTransferir.dc.html')]),
+        rows('¿No coincide con tu banco?', [tapRow('Corregir el saldo', 'Escribe lo que ves en el banco y agregamos una corrección por la diferencia', '', I.check, 'amber', go({ v: 'corregir', i: r.i }, { bal: a.bal.toLocaleString('es-AR') }))]),
+        rows('Ajustes de la cuenta', [tapRow('Editar cuenta', 'Nombre, institución y notas', '', I.file, 'gray', go({ v: 'editCuenta', i: r.i }, { name: a.name, inst: a.inst, notes: a.notes })), tapRow('Desactivar cuenta', 'Deja de aparecer; sus movimientos se conservan', '', I.shield, 'red', go({ v: 'desactivar', i: r.i }))])] }); };
+    R.corregir = (r) => { const a = d.accounts[r.i]; const diff = num(F.bal) - a.bal; return page({ title: 'Corregir el saldo', blocks: [form([fMoney('bal', 'Saldo según el banco'), fNote(diff === 0 ? 'Coincide con lo que tienes cargado.' : 'Agregamos una corrección de ' + (diff > 0 ? '+ ' : '') + fmt(diff) + ' sin tocar tus movimientos.')]), buttons([btn('Corregir el saldo', done((nd) => { nd.accounts[r.i].bal = num(F.bal); }, 'Listo, corregimos el saldo.'), 'primary')])] }); };
+    R.editCuenta = (r) => page({ title: 'Editar cuenta', blocks: [form([fText('name', 'Nombre'), fText('inst', 'Banco o institución'), fArea('notes', 'Notas', 'Algo que quieras recordar de esta cuenta')]), buttons([btn('Guardar cambios', done((nd) => { const a = nd.accounts[r.i]; a.name = (F.name || a.name).trim(); a.inst = F.inst || ''; a.notes = F.notes || ''; }, 'Listo, guardamos los cambios.'), 'primary')])] });
+    R.desactivar = (r) => page({ title: 'Desactivar cuenta', blocks: [info('La cuenta deja de aparecer en tus listas y en el total. Sus movimientos se conservan y puedes reactivarla cuando quieras.', 'warn'), buttons([btn('Desactivar ' + d.accounts[r.i].name, done((nd) => { nd.accounts.splice(r.i, 1); }, 'Listo, desactivamos la cuenta.', 2), 'danger'), btn('Cancelar', back)])] });
+
+    R.revision = () => { const n = d.review.filter(Boolean).length; const tg = (i) => () => upd((nd) => { nd.review[i] = !nd.review[i]; });
+      const steps = [
+        { title: 'Compara tus saldos', text: 'Mira que cada cuenta tenga lo mismo que tu banco o billetera.', actions: [{ label: 'Ver cuentas', go: go({ v: 'cuentas' }) }] },
+        { title: 'Revisa los pendientes', text: 'Marca lo que ya pagaste o cobraste para que no quede como pendiente.', actions: [{ label: 'Revisar próximos pagos', href: 'Proximos.dc.html' }] },
+        { title: 'Completa las categorías', text: 'Clasificarlos ayuda a entender los informes y el presupuesto.', actions: [{ label: 'Revisar movimientos', href: 'Movimientos.dc.html' }] },
+        { title: 'Prepara lo que viene', text: 'Revisa tus pagos que se repiten y cómo terminas los próximos meses.', actions: [{ label: 'Revisar recurrentes', go: go({ v: 'recurrentes' }) }, { label: 'Ver la proyección', go: go({ v: 'flujo' }) }] }
+      ].map((x, i) => ({ n: String(i + 1), title: x.title, text: x.text, done: d.review[i], todo: !d.review[i], checked: d.review[i] ? 'true' : 'false', aria: 'Paso ' + (i + 1) + ' listo', toggle: tg(i), ring: d.review[i] ? '#16493A' : 'var(--fieldLine)', fill: d.review[i] ? '#16493A' : 'transparent', border: d.review[i] ? 'transparent' : 'var(--fieldLine)',
+        actions: x.actions.map((a) => ({ label: a.label, href: a.href || '', go: a.go || null })) }));
+      return page({ title: 'Revisión del mes', hero: { label: 'Noviembre', value: n === 4 ? 'Todo listo' : n + ' de 4 pasos', sub: n === 4 ? 'Ya puedes decidir cuánto gastar con tranquilidad.' : 'Comprueba lo que cargaste antes de decidir cuánto puedes gastar.', bar: (n * 25) + '%' },
+        blocks: [B({ isSteps: true, steps }), n === 4 ? buttons([link('Volver al inicio', 'Inicio.dc.html', 'primary')]) : info('Toca el círculo de cada paso cuando lo termines.')] }); };
+
+    R.tarjetas = () => page({ title: 'Tarjetas de crédito', hero: { label: 'Debes en tarjetas', value: fmt(d.cards.reduce((a, c) => a + stmtLeft(c), 0)), sub: d.cards.length + (d.cards.length === 1 ? ' tarjeta' : ' tarjetas') },
+      blocks: [rows('', d.cards.map((c, i) => tapRow(c.name + (c.last4 ? ' ···· ' + c.last4 : ''), stmtLeft(c) ? 'Vence el ' + c.due + ' de noviembre' : 'Al día', stmtLeft(c) ? fmt(stmtLeft(c)) : '', I.card, 'amber', go({ v: 'tarjeta', i }), stmtLeft(c) ? {} : pill('Al día', 'ok')))),
+        buttons([btn('+ Nueva tarjeta', go({ v: 'nuevaTarjeta' }, { mode: 'Solo el resumen' }), 'primary')])] });
+    R.nuevaTarjeta = () => page({ title: 'Nueva tarjeta', blocks: [form([
+      fChips('mode', '¿Cómo quieres usar la tarjeta?', ['Solo el resumen', 'Cada compra'], F.mode === 'Cada compra' ? 'Anotas cada compra con sus cuotas.' : 'Lo más fácil: una vez por mes cargas el total.'),
+      fText('name', 'Nombre', 'Ej.: Visa'), fText('bank', 'Banco o emisor', 'Ej.: el nombre de tu banco'),
+      fMoney('close', 'Día de cierre', '', '', ''), fMoney('due', 'Día de vencimiento', '', '', ''), fMoney('limit', 'Límite'), fMoney('last4', 'Últimos 4 números', 'Opcional, para reconocerla.', '', '')
+    ]), buttons([btn('Crear tarjeta', () => { if (!(F.name || '').trim()) { toast('Escribe un nombre para la tarjeta.'); return; } done((nd) => { nd.cards.push({ name: F.name.trim(), bank: F.bank || '', close: num(F.close) || 1, due: num(F.due) || 10, limit: num(F.limit), mode: F.mode, last4: String(F.last4 || '').replace(/\D/g, '').slice(-4), stmt: 0, min: 0, paid: 0, purchases: [], subs: [] }); }, 'Listo, creamos la tarjeta.')(); }, 'primary')])] });
+    R.tarjeta = (r) => { const c = d.cards[r.i]; if (!c) return R.tarjetas(); const left = stmtLeft(c); const used = c.purchases.reduce((a, p) => a + Math.round(p.price / p.n) * (p.n - p.paidN), 0) + left;
+      return page({ title: c.name + (c.last4 ? ' ···· ' + c.last4 : ''), hero: left ? { label: 'Último resumen · noviembre', value: fmt(left), sub: (c.paid ? 'Pagaste ' + fmt(c.paid) + ' · ' : '') + 'Vence el miércoles ' + c.due + ' · mínimo ' + fmt(c.min) } : { label: 'Último resumen · noviembre', value: 'Al día', sub: 'No tienes resúmenes sin pagar.' },
+        blocks: [
+          buttons([left ? btn('Registrar pago del resumen', go({ v: 'pagoResumen', i: r.i }, { how: 'El total', acc: ACCS[0], when: 'Hoy' }), 'primary') : null, btn('Cargar resumen', go({ v: 'cargarResumen', i: r.i }, { total: '', min: '' }))].filter(Boolean)),
+          rows('Datos de la tarjeta', [row('Cierre', '', 'Día ' + c.close, I.cal, 'amber'), row('Vencimiento', '', 'Día ' + c.due, I.cal, 'amber'), row('Disponible', 'De un límite de ' + fmt(c.limit), fmt(Math.max(0, c.limit - used)), I.wallet, 'green'), row('Cómo la usas', '', c.mode, I.card, 'gray')], '', 0, 'Ver datos'),
+          rows('Compras en cuotas', c.purchases.length ? c.purchases.map((p, k) => tapRow(p.name, 'Cuota ' + p.paidN + ' de ' + p.n + ' · ' + p.cat, fmt(Math.round(p.price / p.n)), I.tag, 'gray', go({ v: 'compra', i: r.i, k }), { bar: Math.round(p.paidN / p.n * 100) + '%' })) : [row('No tienes compras en cuotas', 'Cuando cargues una, aparece aquí.', '', I.tag, 'gray')], '', 2),
+          buttons([btn('+ Registrar compra', go({ v: 'compraNueva', i: r.i }, { n: '1', cat: 'Supermercado', interest: false }))]),
+          rows('Suscripciones', c.subs.length ? c.subs.map((x) => row(x.name, 'Se cobra el día ' + x.day + ' de cada mes', fmt(x.amount) + ' por mes', I.play, 'gray')) : [row('Sin suscripciones', 'Se cargan solas cada mes en el resumen.', '', I.play, 'gray')], '', 1),
+          buttons([btn('+ Agregar suscripción', go({ v: 'suscripcion', i: r.i }))])
+        ] }); };
+    R.pagoResumen = (r) => { const c = d.cards[r.i]; const left = stmtLeft(c); const amt = F.how === 'El total' ? left : (F.how === 'El mínimo' ? c.min : num(F.other));
+      const fields = [fChips('how', '¿Cuánto pagas?', ['El total', 'El mínimo', 'Otro monto'])];
+      if (F.how === 'Otro monto') fields.push(fMoney('other', 'Importe'));
+      fields.push(fNote(amt < left ? 'Pagas ' + fmt(amt) + '. Lo que falta, ' + fmt(left - amt) + ', pasa al próximo resumen con interés.' : 'Pagas el total: ' + fmt(left) + '. Pagar el resumen no es un gasto nuevo.'));
+      fields.push(fChips('acc', 'Se paga desde', ACCS), fChips('when', 'Fecha', ['Hoy', 'Ayer', 'Otra fecha']));
+      if (F.when === 'Otra fecha') fields.push(fDate('date', 'Elige la fecha'));
+      return page({ title: 'Pagar el resumen', hero: { label: c.name + ' · noviembre', value: fmt(left), sub: 'Mínimo ' + fmt(c.min) + ' · vence el miércoles ' + c.due }, blocks: [form(fields), buttons([btn('Registrar pago', () => { if (!amt) { toast('Escribe cuánto pagas.'); return; } done((nd) => { nd.cards[r.i].paid += Math.min(amt, left); const a = nd.accounts.find((x) => x.name === F.acc); if (a) { a.bal -= Math.min(amt, left); a.outM += Math.min(amt, left); } }, amt >= left ? 'Listo, pagaste el total del resumen.' : 'Pagaste una parte: lo que falta pasa al próximo resumen.')(); }, 'primary')])] }); };
+    R.cargarResumen = (r) => page({ title: 'Cargar resumen', blocks: [info('Cárgalo a mano o, desde la web, subiendo el PDF del resumen. Aparece en Próximos pagos con su vencimiento.'), form([fMoney('total', 'Total del resumen'), fMoney('min', 'Pago mínimo')]), buttons([btn('Guardar resumen', () => { if (!num(F.total)) { toast('Escribe el total del resumen.'); return; } done((nd) => { const c = nd.cards[r.i]; c.stmt = num(F.total); c.min = num(F.min); c.paid = 0; }, 'Listo, cargamos el resumen.')(); }, 'primary')])] });
+    R.compraNueva = (r) => { const price = num(F.price), n = num(F.n) || 1; return page({ title: 'Registrar compra', blocks: [form([fText('name', '¿Qué compraste?', 'Ej.: Heladera'), fMoney('price', 'Precio'), fChips('n', 'Cuotas', ['1', '3', '6', '12', '18']), fChips('cat', 'Categoría', ['Supermercado', 'Casa', 'Ropa', 'Salud', 'Tecnología', 'Sin categoría']), fToggle('interest', 'Con interés', 'Actívalo si las cuotas tienen recargo.'), fNote(price ? (n > 1 ? n + ' cuotas de ' + fmt(Math.round(price / n)) + '. El gasto se cuenta una vez por el total.' : 'Un pago de ' + fmt(price) + '.') : 'Escribe el precio para ver las cuotas.')]),
+      buttons([btn('Guardar compra', () => { if (!(F.name || '').trim() || !price) { toast('Completa qué compraste y el precio.'); return; } done((nd) => { nd.cards[r.i].purchases.unshift({ name: F.name.trim(), price, n, paidN: 0, cat: F.cat }); }, 'Listo, guardamos la compra.')(); }, 'primary')])] }); };
+    R.compra = (r) => { const p = d.cards[r.i].purchases[r.k]; return page({ title: p.name, hero: { label: 'Cuota ' + p.paidN + ' de ' + p.n, value: fmt(Math.round(p.price / p.n)) + ' por mes', sub: 'Total ' + fmt(p.price) + ' · ' + p.cat, bar: Math.round(p.paidN / p.n * 100) + '%' }, blocks: [rows('', [row('Cuotas que faltan', '', String(p.n - p.paidN), I.cal, 'gray'), row('Te falta pagar', '', fmt(Math.round(p.price / p.n) * (p.n - p.paidN)), I.cash, 'amber')]), buttons([btn('Adelantar cuotas', p.paidN < p.n ? done((nd) => { nd.cards[r.i].purchases[r.k].paidN = nd.cards[r.i].purchases[r.k].n; }, 'Listo, adelantaste las cuotas que faltaban.') : () => toast('Ya pagaste todas las cuotas.')), btn('Borrar compra', done((nd) => { nd.cards[r.i].purchases.splice(r.k, 1); }, 'Listo, borramos la compra.'), 'danger')])] }); };
+    R.suscripcion = (r) => page({ title: 'Agregar suscripción', blocks: [form([fText('name', '¿Qué es?', 'Ej.: Música'), fMoney('amount', 'Importe por mes'), fMoney('day', 'Día que se cobra', 'Se carga sola en la tarjeta cada mes y ya la ves en el próximo resumen.', '', '')]), buttons([btn('Agregar suscripción', () => { if (!(F.name || '').trim() || !num(F.amount)) { toast('Completa qué es y el importe.'); return; } done((nd) => { nd.cards[r.i].subs.push({ name: F.name.trim(), amount: num(F.amount), day: Math.min(28, num(F.day) || 1) }); }, 'Listo, agregamos la suscripción.')(); }, 'primary')])] });
+
+    R.deudas = () => page({ title: 'Deudas y préstamos', hero: { label: 'Te falta devolver', value: fmt(d.debts.reduce((a, x) => a + debtLeft(x), 0)), sub: d.debts.filter((x) => !x.closed).length + ' activa' + (d.debts.filter((x) => !x.closed).length === 1 ? '' : 's') },
+      blocks: [rows('', d.debts.map((x, i) => tapRow(x.name, x.closed ? 'Cerrada' : (x.who ? x.who + ' · ' : '') + 'cuota ' + Math.min(x.n, x.paidN + 1) + ' de ' + x.n, x.closed ? '' : fmt(debtLeft(x)), I.bank, x.closed ? 'gray' : 'amber', go({ v: 'deuda', i }), x.closed ? pill('Cerrada', 'ok') : { bar: Math.round(x.paidN / x.n * 100) + '%', barColor: '#E08A1E' }))),
+        buttons([btn('+ Nueva deuda o préstamo', go({ v: 'nuevaDeuda' }, {}), 'primary')])] });
+    R.nuevaDeuda = () => { const n = num(F.n), lent = num(F.lent); return page({ title: 'Nueva deuda o préstamo', blocks: [form([fText('who', '¿A quién le debes?', 'Ej.: banco, billetera, familiar'), fMoney('lent', '¿Cuánto te prestaron?'), fMoney('n', '¿En cuántas cuotas?', 'Si no hay cuotas, déjalo vacío.', '', 'cuotas'), fMoney('cuota', '¿Cuánto pagas por mes?'), fChips('first', '¿Cuándo vence la primera cuota?', ['Este mes', 'El mes que viene', 'En 2 meses'])]), info('¿Tus cuotas no son todas iguales? Desde la web puedes pegar el cronograma del banco o subir el contrato en PDF.'),
+      buttons([btn('Guardar deuda', () => { if (!lent) { toast('Escribe cuánto te prestaron.'); return; } done((nd) => { nd.debts.push({ name: 'Préstamo' + (F.who ? ' de ' + F.who : ''), who: F.who || '', lent, n: n || 1, paidN: 0, cuota: num(F.cuota) || Math.round(lent / (n || 1)), firstMonth: 10 + (['Este mes', 'El mes que viene', 'En 2 meses'].indexOf(F.first || 'Este mes')), closed: false, extra: 0 }); }, 'Listo, guardamos la deuda.')(); }, 'primary')])] }); };
+    R.deuda = (r) => { const x = d.debts[r.i]; if (!x) return R.deudas(); const left = debtLeft(x); const endM = (x.firstMonth + x.n - 1) % 12; const endY = 2026 + Math.floor((x.firstMonth + x.n - 1) / 12);
+      const sched = []; for (let k = 0; k < x.n; k++) { const m = (x.firstMonth + k) % 12; const y = 2026 + Math.floor((x.firstMonth + k) / 12); const st = x.closed ? 'Cancelada' : (k < x.paidN ? 'Pagada' : (k === x.paidN ? 'Próxima' : 'Pendiente')); sched.push(row('Cuota ' + (k + 1), 'Vence el 27 de ' + MONTHS[m] + ' de ' + y, fmt(x.cuota), '', '', pill(st, st === 'Pagada' || st === 'Cancelada' ? 'ok' : (st === 'Próxima' ? 'warn' : 'info')))); }
+      return page({ title: x.name, hero: x.closed ? { label: 'Préstamo', value: 'Cerrado', sub: 'Lo terminaste de pagar.' } : { label: 'Te falta devolver', value: fmt(left), sub: x.paidN + ' de ' + x.n + ' cuotas pagadas · terminas en ' + MONTHS[endM] + ' de ' + endY, bar: Math.round(x.paidN / x.n * 100) + '%' },
+        blocks: x.closed ? [rows('Cronograma de cuotas', sched, '', 3)] : [
+          buttons([btn('Registrar pago de la cuota ' + (x.paidN + 1), go({ v: 'pagoCuota', i: r.i }, { amount: x.cuota.toLocaleString('es-AR'), acc: ACCS[0], when: 'Hoy' }), 'primary')]),
+          rows('', [row('Próxima cuota', 'Vence el 27 de ' + MONTHS[(x.firstMonth + x.paidN) % 12], fmt(x.cuota), I.cal, 'amber'), row('Te prestaron', '', fmt(x.lent), I.cash, 'gray'), row('Si pagas todas las cuotas', 'Pagas en total', fmt(x.cuota * x.n), I.chart, 'gray')]),
+          info('Si la cancelas hoy pagando el capital que falta, te ahorras ' + fmt(Math.round(left * 0.146)) + ' de intereses.'),
+          rows('¿Quieres pagar antes?', [tapRow('Pagar una parte por adelantado', 'Baja la cuota o el plazo', '', I.piggy, 'green', go({ v: 'adelanto', i: r.i }, { how: 'Que baje el plazo', acc: ACCS[0] })), tapRow('Cancelar total', 'Pagas lo que falta y cierras el préstamo', '', I.check, 'green', go({ v: 'cancelar', i: r.i }, { acc: ACCS[0] }))]),
+          rows('Cronograma de cuotas', sched, '', 3)
+        ] }); };
+    R.pagoCuota = (r) => { const x = d.debts[r.i]; return page({ title: 'Registrar pago', hero: { label: x.name, value: 'Cuota ' + (x.paidN + 1) + ' de ' + x.n, sub: 'Vence el 27 de ' + MONTHS[(x.firstMonth + x.paidN) % 12] }, blocks: [form([fMoney('amount', 'Importe'), fChips('acc', 'Sale de', ACCS), fChips('when', 'Fecha', ['Hoy', 'Ayer', 'Otra fecha'])].concat(F.when === 'Otra fecha' ? [fDate('date', 'Elige la fecha')] : [])), buttons([btn('Registrar pago', done((nd) => { const y = nd.debts[r.i]; y.paidN = Math.min(y.n, y.paidN + 1); if (y.paidN >= y.n) y.closed = true; const a = nd.accounts.find((z) => z.name === F.acc); if (a) { a.bal -= num(F.amount); a.outM += num(F.amount); } }, 'Listo, registramos el pago de la cuota.'), 'primary')])] }); };
+    R.adelanto = (r) => { const x = d.debts[r.i]; const amt = num(F.amount); const cuotasMenos = Math.floor(amt / x.cuota); return page({ title: 'Pagar por adelantado', blocks: [form([fMoney('amount', '¿Cuánto adelantas?'), fChips('acc', 'Sale de', ACCS), fChips('how', '¿Qué prefieres?', ['Que baje la cuota', 'Que baje el plazo']), fNote(!amt ? 'Escribe cuánto adelantas.' : (F.how === 'Que baje el plazo' ? 'Pagas la misma cuota y terminas ' + cuotasMenos + (cuotasMenos === 1 ? ' mes' : ' meses') + ' antes. Ahorras más intereses.' : 'Sigues con las mismas cuotas, pero de ' + fmt(Math.max(0, x.cuota - Math.round(amt / Math.max(1, x.n - x.paidN)))) + '.'))]),
+      buttons([btn('Registrar pago anticipado', () => { if (!amt) { toast('Escribe cuánto adelantas.'); return; } done((nd) => { const y = nd.debts[r.i]; if (F.how === 'Que baje el plazo') { y.n = Math.max(y.paidN + 1, y.n - cuotasMenos); y.extra += amt - cuotasMenos * y.cuota; } else { y.cuota = Math.max(0, y.cuota - Math.round(amt / Math.max(1, y.n - y.paidN))); } const a = nd.accounts.find((z) => z.name === F.acc); if (a) { a.bal -= amt; a.outM += amt; } }, 'Listo, registramos el pago anticipado.')(); }, 'primary')])] }); };
+    R.cancelar = (r) => { const x = d.debts[r.i]; const hoy = Math.round(debtLeft(x) * 0.854); return page({ title: 'Cancelar total', hero: { label: 'Importe a pagar hoy', value: fmt(hoy), sub: 'Te ahorras ' + fmt(debtLeft(x) - hoy) + ' de intereses.' }, blocks: [form([fChips('acc', 'Sale de', ACCS)]), buttons([btn('Confirmar cancelación', done((nd) => { nd.debts[r.i].closed = true; const a = nd.accounts.find((z) => z.name === F.acc); if (a) { a.bal -= hoy; a.outM += hoy; } }, 'Listo, cancelaste el préstamo.'), 'primary'), btn('Volver', back)])] }); };
+
+    R.recurrentes = () => { const ing = d.recs.map((x, i) => [x, i]).filter(([x]) => x.kind === 'Cobro'), pag = d.recs.map((x, i) => [x, i]).filter(([x]) => x.kind === 'Pago');
+      const rr = ([x, i]) => tapRow(x.name, 'Día ' + x.day + ' · ' + x.acc + (x.every && x.every > 1 ? ' · cada ' + x.every + ' meses' : ''), (x.kind === 'Cobro' ? '+ ' : '') + fmt(x.amount), x.kind === 'Cobro' ? I.cash : I.repeat, x.kind === 'Cobro' ? 'green' : 'amber', go({ v: 'recurrente', i }, { amount: x.amount.toLocaleString('es-AR'), day: String(x.day) }), Object.assign(x.kind === 'Cobro' ? { valueColor: C.pos } : {}, x.status !== 'Activa' ? pill(x.status, 'info') : {}));
+      const monthOut = d.recs.filter((x) => x.kind === 'Pago' && x.status === 'Activa').reduce((a, x) => a + x.amount, 0);
+      return page({ title: 'Pagos que se repiten', hero: { label: 'Pagas cada mes', value: fmt(monthOut), sub: 'Y cobras ' + fmt(d.recs.filter((x) => x.kind === 'Cobro' && x.status === 'Activa').reduce((a, x) => a + x.amount, 0)) + '. Aparecen solos en Próximos pagos.' },
+        blocks: [rows('Cobros', ing.length ? ing.map(rr) : [row('Sin cobros que se repiten', '', '', I.cash, 'gray')]), rows('Pagos', pag.length ? pag.map(rr) : [row('Sin pagos que se repiten', '', '', I.repeat, 'gray')], '', 3), buttons([btn('+ Nuevo pago o cobro que se repite', go({ v: 'nuevaRec' }, { kind: 'Pago', acc: ACCS[0], freq: 'Cada mes', cat: 'Servicios', weekend: 'Dejar la fecha', more: false }), 'primary')])] }); };
+    R.nuevaRec = () => { const fields = [fChips('kind', 'Tipo', ['Pago', 'Cobro']), fText('name', 'Concepto', 'Ej.: Expensas, Gimnasio'), fMoney('amount', 'Importe'), fMoney('day', 'Día del mes', '', '', ''), fChips('acc', 'Cuenta', ACCS), fChips('freq', 'Frecuencia', ['Cada mes', 'Cada 2 meses', 'Cada 3 meses', 'Cada 6 meses']), fChips('cat', 'Categoría', ['Servicios', 'Casa', 'Sueldo', 'Educación', 'Salud', 'Sin categoría']), fToggle('more', 'Más opciones')];
+      if (F.more) fields.push(fChips('weekend', 'Si cae sábado o domingo', ['Dejar la fecha', 'Pasar al lunes', 'Adelantar al viernes']));
+      return page({ title: 'Nuevo pago o cobro que se repite', blocks: [form(fields), buttons([btn('Crear', () => { if (!(F.name || '').trim() || !num(F.amount)) { toast('Completa el concepto y el importe.'); return; } done((nd) => { nd.recs.push({ kind: F.kind, name: F.name.trim(), amount: num(F.amount), day: Math.min(28, num(F.day) || 1), acc: F.acc, status: 'Activa', every: { 'Cada mes': 1, 'Cada 2 meses': 2, 'Cada 3 meses': 3, 'Cada 6 meses': 6 }[F.freq] }); }, 'Listo, se va a repetir solo.')(); }, 'primary')])] }); };
+    R.recurrente = (r) => { const x = d.recs[r.i]; if (!x) return R.recurrentes(); return page({ title: x.name, hero: { label: x.kind === 'Cobro' ? 'Cobras' : 'Pagas', value: fmt(x.amount), sub: 'Día ' + x.day + ' de cada mes · ' + x.acc + (x.status !== 'Activa' ? ' · ' + x.status : '') },
+      blocks: [form([fMoney('amount', 'Importe'), fMoney('day', 'Día del mes', 'Los cambios valen desde ahora. Lo anterior queda como estaba.', '', '')], 'Importe y día'), buttons([btn('Guardar cambios', done((nd) => { const y = nd.recs[r.i]; y.amount = num(F.amount) || y.amount; y.day = Math.min(28, num(F.day) || y.day); }, 'Listo, se guardaron los cambios.'), 'primary')]),
+        B({ title: 'Pausar o terminar', isButtons: true, buttons: [x.status === 'Pausada' ? btn('Reanudar', done((nd) => { nd.recs[r.i].status = 'Activa'; }, 'Listo, se vuelve a repetir.')) : btn('Pausar', done((nd) => { nd.recs[r.i].status = 'Pausada'; }, 'Listo, dejó de aparecer hasta que la reanudes.')), btn('Terminar desde hoy', done((nd) => { nd.recs[r.i].status = 'Terminada'; }, 'Listo, dejó de repetirse desde hoy.')), btn('Borrar', done((nd) => { nd.recs.splice(r.i, 1); }, 'Listo, se borró. Lo ya pagado quedó en tus movimientos.'), 'danger')] })] }); };
+
+    const FLOW = [
+      { m: 'Noviembre', ini: 265000, inYa: 1035000, outYa: 650500, inF: 20000, outF: 512800 },
+      { m: 'Diciembre', ini: 156700, inYa: 0, outYa: 0, inF: 950000, outF: 658400 },
+      { m: 'Enero', ini: 448300, inYa: 0, outYa: 0, inF: 950000, outF: 996200 },
+      { m: 'Febrero', ini: 402100, inYa: 0, outYa: 0, inF: 950000, outF: 954500 },
+      { m: 'Marzo', ini: 397600, inYa: 0, outYa: 0, inF: 950000, outF: 902300 }
+    ].map((x) => Object.assign(x, { fin: x.ini + x.inYa - x.outYa + x.inF - x.outF }));
+    R.flujo = () => { const mode = d.flowMode; const mx = Math.max(...FLOW.map((x) => x.fin));
+      return page(Object.assign({ title: 'Flujo de caja', hero: { label: 'Así terminas noviembre', value: fmt(FLOW[0].fin), sub: 'Tu saldo no baja de cero en este período.' } }, tabs(['Mes a mes', 'Día a día'], mode, (i) => upd((nd) => { nd.flowMode = i; })), {
+        blocks: mode === 0 ? [rows('Próximos meses', FLOW.map((x, i) => tapRow(x.m, 'Entra ' + fmt(x.inYa + x.inF) + ' · sale ' + fmt(x.outYa + x.outF), fmt(x.fin), I.chart, 'blue', go({ v: 'mes', i }), { bar: Math.round(x.fin / mx * 100) + '%', barColor: C.blue })), '', 3, 'Ver más meses'), info('Con el plan Gratis ves 1 año. Con Pro, 2, 3 y 5 años.'), B({ isChips: true, title: '¿Quieres cambiar algo?', chips: [{ label: 'Revisar presupuestos', go: go({ v: 'presupuestos' }) }, { label: 'Cargar un cobro que se repite', go: go({ v: 'nuevaRec' }, { kind: 'Cobro', acc: ACCS[0], freq: 'Cada mes', cat: 'Sueldo', more: false }) }] })]
+          : [lock('Saldo día por día', 'Con Pro ves el saldo de cada día, para saber exactamente qué día te quedas corto.')] })); };
+    R.mes = (r) => { const x = FLOW[r.i]; return page({ title: x.m, hero: { label: 'Saldo final', value: fmt(x.fin), sub: 'Resultado del mes: ' + (x.inYa + x.inF - x.outYa - x.outF >= 0 ? '+ ' : '') + fmt(x.inYa + x.inF - x.outYa - x.outF) },
+      blocks: [rows('', [row('Saldo inicial', '', fmt(x.ini), I.wallet, 'gray'), row('Ya entró', '', '+ ' + fmt(x.inYa), I.cash, 'green', { valueColor: C.pos }), row('Ya salió', '', fmt(x.outYa), I.cart, 'gray'), row('Falta entrar', '', '+ ' + fmt(x.inF), I.cash, 'green', { valueColor: C.pos }), row('Falta salir', '', fmt(x.outF), I.repeat, 'amber'), row('Saldo final', '', fmt(x.fin), I.flow, 'blue')])] }); };
+
+    R.presupuestos = () => { const m = d.budgetMonth; const tot = bud.reduce((a, x) => a + x.limit, 0), sp = bud.reduce((a, x) => a + x.spent, 0);
+      return page(Object.assign({ title: 'Presupuestos', hero: { label: 'Gastado en ' + (m === 0 ? 'noviembre' : 'diciembre'), value: fmt(sp), sub: tot ? 'De ' + fmt(tot) + ' que te propusiste' : 'Todavía no armaste el presupuesto de este mes.', bar: tot ? Math.min(100, Math.round(sp / tot * 100)) + '%' : '' } }, tabs(['Noviembre', 'Diciembre'], m, (i) => upd((nd) => { nd.budgetMonth = i; })), {
+        blocks: [bud.length ? rows('Por categoría', bud.map((x, i) => { const p = Math.round(x.spent / x.limit * 100); return tapRow(x.name, fmt(x.spent) + ' de ' + fmt(x.limit) + (x.proj ? ' · incluye lo que queda' : ''), p > 100 ? '' : p + ' %', x.name === 'Supermercado' ? I.cart : (x.name === 'Comida afuera' ? I.cup : (x.name === 'Transporte' ? I.bus : I.tag)), p > 100 ? 'red' : 'blue', go({ v: 'presuCat', i }, { limit: x.limit.toLocaleString('es-AR'), proj: x.proj }), Object.assign({ bar: Math.min(100, p) + '%', barColor: p > 100 ? C.neg : (p > 85 ? C.warn : C.blue) }, p > 100 ? pill('Te pasaste', 'bad') : {})); }))
+          : info('Este mes todavía no tiene presupuesto. Cópialo del mes anterior o agrega categorías.'),
+          buttons([btn('+ Agregar una categoría', go({ v: 'presuNueva' }, { cat: '' }), 'primary'), m === 1 && !bud.length ? btn('Copiar el del mes anterior', () => upd((nd) => { nd.budgets[1] = nd.budgets[0].map((x) => Object.assign({}, x, { spent: 0 })); }, { toast: 'Listo, copiamos el presupuesto de noviembre.' })) : null].filter(Boolean))] })); };
+    R.presuCat = (r) => { const x = bud[r.i]; return page({ title: x.name, hero: { label: 'Gastado este mes', value: fmt(x.spent), sub: 'Límite ' + fmt(x.limit) }, blocks: [form([fMoney('limit', 'Límite'), fToggle('proj', 'Incluir lo que queda en la proyección', 'Lo que falta gastar de este límite se suma al flujo de caja. No cuenta como gastado.')]), buttons([btn('Guardar presupuesto', done((nd) => { const y = nd.budgets[nd.budgetMonth][r.i]; y.limit = num(F.limit) || y.limit; y.proj = !!F.proj; }, 'Listo, guardamos el presupuesto.'), 'primary'), btn('Quitar categoría', done((nd) => { nd.budgets[nd.budgetMonth].splice(r.i, 1); }, 'Listo, quitamos la categoría.'), 'danger')])] }); };
+    R.presuNueva = () => { const used = bud.map((x) => x.name); const opts = ['Supermercado', 'Comida afuera', 'Transporte', 'Suscripciones', 'Casa', 'Salud', 'Ropa', 'Educación'].filter((x) => used.indexOf(x) < 0);
+      return page({ title: 'Agregar una categoría', blocks: [form([opts.length ? fChips('cat', 'Categoría', opts) : fNote('Ya agregaste todas las categorías.'), fMoney('limit', 'Límite del mes')]), buttons([btn('Agregar', () => { if (!F.cat || !num(F.limit)) { toast('Elige una categoría y escribe el límite.'); return; } done((nd) => { nd.budgets[nd.budgetMonth].push({ name: F.cat, limit: num(F.limit), spent: 0, proj: false }); }, 'Listo, agregamos ' + F.cat.toLowerCase() + '.')(); }, 'primary')])] }); };
+
+    const monthsTo = (g, m) => m > 0 ? Math.ceil(Math.max(0, g.target - g.saved) / m) : 0;
+    R.objetivos = () => page({ title: 'Objetivos de ahorro', hero: { label: 'Ahorrado para tus objetivos', value: fmt(d.goals.reduce((a, g) => a + g.saved, 0)), sub: d.goals.length + (d.goals.length === 1 ? ' objetivo' : ' objetivos') + (d.plan === 'Gratis' ? ' · hasta 3 en el plan Gratis' : '') },
+      blocks: [rows('', d.goals.map((g, i) => { const p = Math.min(100, Math.round(g.saved / g.target * 100)); return tapRow(g.name, fmt(g.saved) + ' de ' + fmt(g.target), p + ' %', I.target, 'green', go({ v: 'objetivo', i }), Object.assign({ bar: p + '%' }, p >= 100 ? pill('Cumplido', 'ok') : {})); })),
+        buttons([btn('+ Nuevo objetivo', d.goals.length >= 3 && d.plan === 'Gratis' ? () => toast('En Gratis puedes tener 3 objetivos. Pasa a Pro para sumar más.') : go({ v: 'nuevoObjetivo' }, {}), 'primary')])] });
+    R.nuevoObjetivo = () => page({ title: 'Nuevo objetivo', blocks: [form([fText('name', 'Nombre', 'Ej.: Fondo de emergencia'), fMoney('target', 'Meta'), fMoney('monthly', 'Aporte mensual', 'Cuánto piensas separar cada mes.'), fNote(num(F.target) && num(F.monthly) ? 'Con ese aporte llegas en ' + Math.ceil(num(F.target) / num(F.monthly)) + ' meses.' : 'Completa la meta y el aporte para ver en cuánto llegas.')]), buttons([btn('Crear objetivo', () => { if (!(F.name || '').trim() || !num(F.target)) { toast('Completa el nombre y la meta.'); return; } done((nd) => { nd.goals.push({ name: F.name.trim(), target: num(F.target), saved: 0, monthly: num(F.monthly) }); }, 'Listo, creamos el objetivo.')(); }, 'primary')])] });
+    R.objetivo = (r) => { const g = d.goals[r.i]; if (!g) return R.objetivos(); const p = Math.min(100, Math.round(g.saved / g.target * 100)); const sim = num(F.sim) || g.monthly; const falta = Math.max(0, g.target - g.saved);
+      return page({ title: g.name, hero: { label: p >= 100 ? 'Cumplido' : 'Llevas ahorrado', value: fmt(g.saved), sub: 'Meta ' + fmt(g.target) + ' · ' + p + ' %', bar: p + '%' },
+        blocks: [buttons([btn('+ Sumar un aporte', go({ v: 'aporte', i: r.i }, { amount: g.monthly ? g.monthly.toLocaleString('es-AR') : '' }), 'primary')]),
+          rows('', [row('Te falta', '', fmt(falta), I.target, 'green'), row('Aporte mensual', '', fmt(g.monthly), I.piggy, 'green'), row('Con tu aporte llegas en', '', falta ? monthsTo(g, g.monthly) + ' meses' : 'Ya llegaste', I.cal, 'green')]),
+          form([fMoney('sim', 'Si aportas por mes'), fNote(falta ? 'Llegas en ' + monthsTo(g, sim) + (monthsTo(g, sim) === 1 ? ' mes' : ' meses') + '.' : 'Ya cumpliste este objetivo.')], 'Prueba otro aporte'),
+          buttons([btn('Guardar este aporte', () => { if (!num(F.sim)) { toast('Escribe un aporte para guardarlo.'); return; } upd((nd) => { nd.goals[r.i].monthly = num(F.sim); }, { toast: 'Listo, guardamos el aporte mensual.', f: {} }); }), btn('Editar objetivo', go({ v: 'editObjetivo', i: r.i }, { name: g.name, target: g.target.toLocaleString('es-AR') })), btn('Eliminar', done((nd) => { nd.goals.splice(r.i, 1); }, 'Listo, eliminamos el objetivo.'), 'danger')])] }); };
+    R.aporte = (r) => page({ title: 'Sumar un aporte', blocks: [form([fMoney('amount', '¿Cuánto separaste?')]), buttons([btn('Sumar', () => { if (!num(F.amount)) { toast('Escribe cuánto separaste.'); return; } done((nd) => { nd.goals[r.i].saved += num(F.amount); }, 'Listo, sumamos el aporte.')(); }, 'primary')])] });
+    R.editObjetivo = (r) => page({ title: 'Editar objetivo', blocks: [form([fText('name', 'Nombre'), fMoney('target', 'Meta', 'La moneda y los aportes registrados se conservan. Editar la meta no mueve dinero.')]), buttons([btn('Guardar cambios', done((nd) => { const g = nd.goals[r.i]; g.name = (F.name || g.name).trim(); g.target = num(F.target) || g.target; }, 'Listo, guardamos los cambios.'), 'primary')])] });
+
+    R.simulador = () => { const price = num(F.price), n = num(F.n) || 1, cush = num(F.cush); const cuota = price ? Math.round(price * (F.interest ? 1.25 : 1) / n) : 0;
+      const base = [156700, 448300, 402100, 397600, 445300, 398000]; const startIdx = F.first === 'El mes que viene' ? 1 : 0; let low = Infinity, lowM = '';
+      const sim = base.map((b, k) => { const paidSoFar = k >= startIdx ? Math.min(n, k - startIdx + 1) * cuota : 0; const withB = b - paidSoFar; if (withB < low) { low = withB; lowM = ['Noviembre', 'Diciembre', 'Enero', 'Febrero', 'Marzo', 'Abril'][k]; } return row(['Noviembre', 'Diciembre', 'Enero', 'Febrero', 'Marzo', 'Abril'][k], 'Sin la compra ' + fmt(b) + (k >= startIdx && k - startIdx < n ? ' · cuota ' + fmt(cuota) : ''), fmt(withB), '', '', { valueColor: withB < cush ? C.neg : C.ink }); });
+      const ok = low >= cush;
+      const blocks = [form([fMoney('price', 'Precio'), fChips('n', 'Cuotas', ['1', '3', '6', '12']), fChips('first', 'Primera cuota', ['Este mes', 'El mes que viene']), fToggle('interest', 'Con interés', 'Si las cuotas tienen recargo.'), fMoney('cush', 'Colchón mínimo que quieres mantener')], 'Una compra en cuotas')];
+      if (price) { blocks.push(info(ok ? 'Te alcanza. Tu punto más bajo es ' + fmt(low) + ' en ' + lowM.toLowerCase() + '.' : (cush ? 'No te alcanza con tu colchón de ' + fmt(cush) + ': en ' : 'No te alcanza: en ') + lowM.toLowerCase() + ' bajas a ' + fmt(low) + '.', ok ? '' : 'warn')); blocks.push(rows('Cómo quedaría tu dinero', sim, '', 3, 'Ver todos los meses')); blocks.push(B({ isChips: true, title: 'Otras opciones · mismo total, distinta cantidad de cuotas', chips: ['3', '6', '12'].filter((x) => x !== String(n)).map((x) => ({ label: x + ' cuotas de ' + fmt(Math.round(price * (F.interest ? 1.25 : 1) / num(x))), go: () => setF('n', x) })) })); }
+      else blocks.push(info('Carga el precio y las cuotas para ver si te alcanza.'));
+      blocks.push(lock('Escenarios', 'Con Pro pruebas un ingreso extra, invertir por mes o perder un ingreso, y guardas tus escenarios para volver a verlos.'));
+      return page({ title: 'Simulador', blocks }); };
+
+    R.inversiones = () => page({ title: 'Inversiones y patrimonio', hero: { label: 'Patrimonio neto', value: fmt(net), sub: 'Lo que tienes menos lo que debes' },
+      blocks: [rows('Tus inversiones', d.invs.map((x, i) => { const res = x.value - x.invested; return tapRow(x.name, 'Invertido ' + fmt(x.invested) + ' · ' + (res >= 0 ? '+ ' : '') + fmt(res), fmt(x.value), I.chart, 'green', go({ v: 'inversion', i })); }), 'Vale hoy ' + fmt(invTotal), 3),
+        buttons([btn('+ Agregar inversión', go({ v: 'nuevaInv' }, { kind: 'Plazo fijo u otra', from: ACCS[0] }), 'primary')]),
+        rows('Bienes', d.assets.length ? d.assets.map((x, i) => tapRow(x.name, x.kind, fmt(x.value), I.box, 'gray', go({ v: 'bien', i }, { value: x.value.toLocaleString('es-AR') }))) : [row('Sin bienes cargados', 'Inmuebles, vehículos y otros, con valuación manual', '', I.home, 'gray')]),
+        buttons([btn('+ Nuevo bien', go({ v: 'nuevoBien' }, { kind: 'Inmueble' }))]),
+        rows('Patrimonio neto', [row('Lo que tienes', 'Cuentas, inversiones y bienes', fmt(totalAcc + invTotal + assetsTotal), I.wallet, 'green'), row('Lo que debes', 'Préstamos y tarjetas', '− ' + fmt(owe), I.bank, 'red', { valueColor: C.neg })])] });
+    R.nuevaInv = () => { const fields = [fChips('kind', 'Tipo', ['Bonos, acciones, cripto, FCI', 'Plazo fijo u otra'])];
+      if (F.kind === 'Bonos, acciones, cripto, FCI') fields.push(fText('name', 'Especie', 'Escribe el nombre: aparecen sugerencias'), fMoney('qty', 'Cantidad', '', '', 'unidades'), fMoney('amount', '¿Cuánto pagaste en total?'), fNote('El precio se actualiza solo con la cotización del día.'));
+      else fields.push(fText('name', '¿Qué es?', 'Ej.: Plazo fijo 30 días'), fMoney('amount', 'Cuánto pusiste'));
+      fields.push(fChips('from', '¿De dónde sale?', ACCS.concat(['No, ya lo tenía'])), fNote('Comprar no es un gasto: el dinero pasa de tu cuenta a la inversión.'));
+      return page({ title: 'Agregar inversión', blocks: [form(fields), buttons([btn('Crear inversión', () => { if (!(F.name || '').trim() || !num(F.amount)) { toast('Completa el nombre y el importe.'); return; } done((nd) => { nd.invs.push({ name: F.name.trim(), kind: F.kind, invested: num(F.amount), value: num(F.amount) }); const a = nd.accounts.find((z) => z.name === F.from); if (a) a.bal -= num(F.amount); }, 'Listo, agregamos la inversión.')(); }, 'primary')])] }); };
+    R.inversion = (r) => { const x = d.invs[r.i]; if (!x) return R.inversiones(); const res = x.value - x.invested; return page({ title: x.name, hero: { label: 'Vale hoy', value: fmt(x.value), sub: 'Invertido ' + fmt(x.invested) + ' · resultado ' + (res >= 0 ? '+ ' : '') + fmt(res) },
+      blocks: [form([fChips('mov', 'Movimiento', ['Aporte', 'Retiro', 'Actualizar valor']), fMoney('amount', F.mov === 'Actualizar valor' ? '¿Cuánto vale hoy?' : 'Importe')], 'Aportar, retirar o actualizar el valor'),
+        buttons([btn(F.mov === 'Actualizar valor' ? 'Actualizar valor' : 'Registrar', () => { if (!F.mov || !num(F.amount)) { toast('Elige el movimiento y escribe el importe.'); return; } upd((nd) => { const y = nd.invs[r.i]; const v = num(F.amount); if (F.mov === 'Aporte') { y.invested += v; y.value += v; } else if (F.mov === 'Retiro') { y.invested = Math.max(0, y.invested - v); y.value = Math.max(0, y.value - v); } else y.value = v; }, { f: {}, toast: F.mov === 'Actualizar valor' ? 'Listo, actualizamos el valor.' : 'Listo, registramos el ' + F.mov.toLowerCase() + '.' }); }, 'primary'), btn('Eliminar inversión', done((nd) => { nd.invs.splice(r.i, 1); }, 'Listo, eliminamos la inversión.'), 'danger')])] }); };
+    R.nuevoBien = () => page({ title: 'Nuevo bien', blocks: [form([fText('name', 'Nombre', 'Ej.: Departamento'), fChips('kind', 'Tipo', ['Inmueble', 'Vehículo', 'Otro']), fMoney('value', '¿Cuánto vale hoy?')]), buttons([btn('Guardar bien', () => { if (!(F.name || '').trim() || !num(F.value)) { toast('Completa el nombre y el valor.'); return; } done((nd) => { nd.assets.push({ name: F.name.trim(), kind: F.kind, value: num(F.value) }); }, 'Listo, guardamos el bien.')(); }, 'primary')])] });
+    R.bien = (r) => { const x = d.assets[r.i]; return page({ title: x.name, hero: { label: x.kind, value: fmt(x.value), sub: 'Valuación manual' }, blocks: [form([fMoney('value', 'Valor de hoy')]), buttons([btn('Guardar', done((nd) => { nd.assets[r.i].value = num(F.value) || nd.assets[r.i].value; }, 'Listo, actualizamos el valor.'), 'primary'), btn('Eliminar bien', done((nd) => { nd.assets.splice(r.i, 1); }, 'Listo, eliminamos el bien.'), 'danger')])] }); };
+
+    R.alertas = () => page({ title: 'Alertas y consejos', blocks: [rows('Para hoy', [
+      row('Internet venció hoy', 'Regístralo para mantener tus números al día', '', I.wifi, 'red', pill('Nueva', 'bad')),
+      tapRow('Tu tarjeta Visa vence el miércoles', 'Resumen de noviembre: ' + fmt(stmtLeft(card0 || { stmt: 0, paid: 0 })), '', I.card, 'amber', go({ v: 'tarjeta', i: 0 })),
+      tapRow('Comida afuera superó el presupuesto', 'Llevas $ 61.900 de $ 60.000', '', I.cup, 'amber', go({ v: 'presupuestos' }))
+    ]), buttons([link('Registrar el pago de Internet', 'Proximos.dc.html', 'primary')]), rows('Consejos', [
+      tapRow('Tu préstamo tiene una tasa alta', 'Si adelantas cuotas, ahorras intereses', '', I.bank, 'gray', go({ v: 'deuda', i: 0 })),
+      tapRow('Separa tu ahorro apenas cobras', 'Así no lo gastas sin querer', '', I.piggy, 'green', go({ v: 'objetivos' }))
+    ])] });
+
+    R.informes = () => page({ title: 'Informes', pro: true, blocks: [lock('Disponible en Pro', 'Mira en qué se va tu dinero mes a mes y compara para encontrar dónde ahorrar.'), rows('Qué incluye', [
+      row('Ingresos y gastos por mes', 'Entró y salió, con todas tus cuentas', '', I.chart, 'gray'),
+      row('Gastos por categoría', 'Cuánto se va en cada cosa', '', I.pie, 'gray'),
+      row('Comparar dos meses', 'Categoría por categoría, ordenado por lo que más cambió', '', I.swap, 'gray'),
+      row('Contra el año pasado', 'El mismo mes, un año antes', '', I.cal, 'gray'),
+      row('Excel y PDF', 'Descarga tus reportes', '', I.file, 'gray')
+    ], '', 3)] });
+
+    R.planes = () => { const yearly = F.period === 'Por año'; return page(Object.assign({ title: 'Planes' }, tabs(['Por mes', 'Por año'], yearly ? 1 : 0, (i) => setF('period', i ? 'Por año' : 'Por mes')), { blocks: [
+      rows('Gratis · tu plan', [row('Lo esencial, para siempre', 'Cuentas, movimientos, tarjetas, cuotas, próximos pagos, presupuestos, objetivos, flujo a 1 año, alertas, inversiones e importar CSV', '', I.check, 'green'), row('Límites', 'Hasta 5 cuentas y 3 objetivos', '', I.wallet, 'gray')]),
+      rows('Pro', [row('Escenarios en el simulador', '', '', I.sliders, 'amber'), row('Informes avanzados', 'Y exportar a Excel y PDF', '', I.file, 'amber'), row('Flujo de caja a 2, 3 y 5 años', 'Con saldo día por día', '', I.flow, 'amber'), row('Espacio compartido', 'Hasta 3 personas', '', I.home, 'amber'), row('Importar Excel y OFX, y leer el resumen en PDF', '', '', I.file, 'amber'), row('Sin límites y soporte prioritario', '', '', I.check, 'amber')], '', 3, 'Ver todo lo que suma'),
+      info('El precio ' + (yearly ? 'anual' : 'mensual') + ' lo ves antes de confirmar el pago.'),
+      buttons([btn('Probar Pro gratis 14 días', () => upd((nd) => { nd.plan = 'Prueba Pro'; }, { toast: 'Listo, empezó tu prueba de Pro por 14 días.', stack: [] }), 'primary'), btn('Suscribirme a Pro ' + (yearly ? 'por año' : 'por mes'), () => toast('Te llevamos a la pantalla de pago para confirmar.'))])
+    ] })); };
+
+    // ---------- hub
+    const DEF = { simulador: { n: '6', first: 'Este mes', interest: false } };
+    const open = (v) => go({ v }, DEF[v] || {});
+    const pro = { badge: 'PRO', badgeBg: dk ? 'rgba(242,179,107,.18)' : '#FFF0DB', badgeFg: dk ? '#F2B36B' : '#7A3E00' };
+    const it = (v, label, sub, icon, tone, extra) => Object.assign({ label, sub, icon, span: 'auto', minH: '0px', badge: '', badgeBg: '', badgeFg: '', hasBar: false, barW: '0%', barColor: C.brand, hasSpark: false, spark: '', open: open(v), iconBg: T[tone][0], iconFg: T[tone][1] }, extra || {});
+    const rev = d.review.filter(Boolean).length;
+    const g0 = d.goals[0];
+    const debt0 = d.debts.find((x) => !x.closed);
+    const supers = bud.find((x) => x.name === 'Supermercado');
+    const G = [
+      { title: 'Mi dinero', items: [
+        it('cuentas', 'Cuentas', d.accounts.length + ' cuentas · ' + fmt(totalAcc), I.wallet, 'green', {}),
+        it('revision', 'Revisión del mes', rev === 4 ? 'Todo listo este mes' : rev + ' de 4 pasos hechos', I.check, 'green', { hasBar: true, barW: (rev * 25) + '%' })
+      ] },
+      { title: 'Pagos y deudas', items: [
+        it('tarjetas', 'Tarjetas de crédito', card0 && stmtLeft(card0) ? card0.name + ' vence el mié ' + card0.due : 'Todas al día', I.card, 'amber', card0 && stmtLeft(card0) ? { badge: fmt(stmtLeft(card0)), badgeBg: dk ? 'rgba(242,179,107,.18)' : '#FFF5E8', badgeFg: dk ? '#F2B36B' : '#7A3E00' } : {}),
+        it('deudas', 'Deudas y préstamos', debt0 ? 'Cuota ' + Math.min(debt0.n, debt0.paidN + 1) + ' de ' + debt0.n : 'Sin deudas activas', I.bank, 'amber', debt0 ? { hasBar: true, barW: Math.round(debt0.paidN / debt0.n * 100) + '%', barColor: '#E08A1E' } : {}),
+        it('recurrentes', 'Pagos que se repiten', d.recs.filter((x) => x.status === 'Activa').length + ' activos: sueldo, alquiler, servicios y cuotas', I.repeat, 'amber', { span: '1 / -1', minH: '0px' })
+      ] },
+      { title: 'Planificar', items: [
+        it('flujo', 'Flujo de caja', 'Cómo terminas cada mes', I.flow, 'blue', {}),
+        it('presupuestos', 'Presupuestos', supers ? 'Supermercado al ' + Math.round(supers.spent / supers.limit * 100) + ' %' : 'Arma el de este mes', I.pie, 'blue', supers ? { hasBar: true, barW: Math.min(100, Math.round(supers.spent / supers.limit * 100)) + '%', barColor: C.blue } : {}),
+        it('objetivos', 'Objetivos de ahorro', g0 ? g0.name + ' al ' + Math.min(100, Math.round(g0.saved / g0.target * 100)) + ' %' : 'Crea tu primer objetivo', I.target, 'blue', g0 ? { hasBar: true, barW: Math.min(100, Math.round(g0.saved / g0.target * 100)) + '%' } : {}),
+        it('simulador', 'Simulador', '¿Puedo comprarlo en cuotas?', I.sliders, 'blue')
+      ] },
+      { title: 'Patrimonio y análisis', items: [
+        it('inversiones', 'Inversiones y patrimonio', 'Patrimonio neto ' + fmt(net), I.scale, 'gray', {}),
+        it('alertas', 'Alertas y consejos', 'Tienes 1 alerta nueva', I.bell, 'gray', { badge: '1', badgeBg: dk ? 'rgba(242,139,130,.18)' : '#FDECEA', badgeFg: dk ? '#F28B82' : '#A3201D' }),
+        it('informes', 'Informes', 'Tus últimos 6 meses', I.file, 'gray', Object.assign({ span: '1 / -1', minH: '0px' }, pro))
+      ] }
+    ];
+    const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const q = norm(s.q.trim());
+    const groups = G.map((g) => ({ ...g, items: q ? g.items.filter((i) => norm(i.label + ' ' + i.sub).includes(q)).map((i) => ({ ...i, span: 'auto', minH: '0px' })) : g.items })).filter((g) => g.items.length);
+    const route = s.stack[s.stack.length - 1];
+    const P = route && R[route.v] ? R[route.v](route) : page({});
+    P.blocks = (P.blocks || []).filter(Boolean);
+    P.backHref = P.backHref || ''; P.backBtn = !P.backHref;
+    if (P.hasHero) { const mm = /^(− )?\$ ([\d.]+)$/.exec(P.hero.value || ''); if (mm) { const target = (mm[1] ? -1 : 1) * parseInt(mm[2].replace(/\./g, ''), 10); P.hero = Object.assign({}, P.hero, { value: fmt(tw('hero:' + route.v + ':' + (route.i || 0), target, true)) }); } }
+    return {
+      themeClass: dk ? 'dark' : '',
+      isHub: !route, isPage: !!route, P,
+      heroBg: dk ? '#1F3A2E' : '#16493A',
+      sparkColor: C.brand,
+      q: s.q, onSearch: (e) => this.setState({ q: e.target.value || '' }),
+      groups, none: groups.length === 0, showRest: !q,
+      planLine: 'Plan ' + d.plan + ' · Tu espacio',
+      back, home: () => set({ stack: [], f: {} }),
+      openPlans: go({ v: 'planes' }, { period: 'Por mes' }),
+      toast: s.toast,
+      darkOn: dk ? 'true' : 'false', switchBg: dk ? '#4A8669' : '#C9D0CB', knobLeft: dk ? '24px' : '4px',
+      toggleDark: () => this.setState({ dark: !dk })
+    };
+  }
+}
+</script>
+</body>
+</html>

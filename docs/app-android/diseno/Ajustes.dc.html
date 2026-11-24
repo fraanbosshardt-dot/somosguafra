@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Configuración</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+.ex-root{--bg:#F6F7F5;--card:#FFFFFF;--ink:#0E1A15;--muted:#4E5B55;--line:#EEF0EE;--field:#FFFFFF;--fieldLine:#E1E5E1;--chev:#8A958F;--brand:#16493A;--brandInk:#FFFFFF;--track:#EDF0ED;--nav:#FFFFFF;--navLine:#E7EAE6;--navActive:#DDEEE3;--navActiveInk:#16493A;--chipOn:#EEF6F1;--soft:#F2F4F2;--info:#EEF6F1;--infoInk:#0F3A2D;--warnBg:#FFF5E8;--warnInk:#7A3E00}
+.ex-root.dark{--bg:#111613;--card:#1A211D;--ink:#EEF2EF;--muted:#A9B5AE;--line:#26302A;--field:#1A211D;--fieldLine:#34403A;--chev:#7C8A82;--brand:#8EC4A0;--brandInk:#0E2E24;--track:#2A342E;--nav:#161C19;--navLine:#26302A;--navActive:#24392E;--navActiveInk:#A9D3B7;--chipOn:#24392E;--soft:#222A25;--info:#1F3A2E;--infoInk:#CFE3D6;--warnBg:#3A2C1A;--warnInk:#F2C48A}
+.ex-root input::placeholder,.ex-root textarea::placeholder{color:var(--chev)}
+.ex-scroll::-webkit-scrollbar{display:none}
+.ex-scroll>*{flex-shrink:0}
+.ex-num{font-variant-numeric:tabular-nums}
+.ex-r:last-child{border-bottom:none !important}
+.ex-tap:active{background:var(--soft) !important}
+.ex-card{transition:transform .15s ease}
+.ex-card:active{transform:scale(.98)}
+.ex-in{animation:exIn .26s cubic-bezier(.2,.9,.3,1) both}
+@keyframes exIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.ex-toast{animation:exToast .3s cubic-bezier(.2,.9,.3,1) both}
+@keyframes exToast{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="ex-root mo-press {{ themeClass }}" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); font-family: Manrope, system-ui, sans-serif; color: var(--ink); transition: background .25s">
+
+  <sc-if value="{{ isPage }}" hint-placeholder-val="{{ false }}">
+  <div class="ex-scroll ex-in" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 110px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 44px">
+      <sc-if value="{{ P.backHref }}" hint-placeholder-val="{{ false }}">
+        <a href="{{ P.backHref }}" aria-label="Volver" style="width: 44px; height: 44px; border-radius: 14px; background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </a>
+      </sc-if>
+      <sc-if value="{{ P.backBtn }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ back }}" aria-label="Volver" style="width: 44px; height: 44px; border-radius: 14px; border: none; background: var(--card); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </button>
+      </sc-if>
+      <h1 style="flex: 1; min-width: 0; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2">{{ P.title }}</h1>
+      <sc-if value="{{ P.pro }}" hint-placeholder-val="{{ false }}">
+        <span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #FFF0DB; color: #7A3E00; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">PRO</span>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ P.hasTabs }}" hint-placeholder-val="{{ false }}">
+      <div role="group" aria-label="Vista" style="display: grid; grid-template-columns: repeat({{ P.tabCount }}, minmax(0, 1fr)); gap: 4px; background: var(--soft); padding: 4px; border-radius: 14px">
+        <sc-for list="{{ P.tabs }}" as="t" hint-placeholder-count="2">
+          <button type="button" onClick="{{ t.pick }}" aria-pressed="{{ t.on }}" style="height: 40px; border-radius: 11px; border: none; background: {{ t.bg }}; color: var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; opacity: {{ t.op }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ P.hasHero }}" hint-placeholder-val="{{ true }}">
+      <div style="background: {{ heroBg }}; color: #FFFFFF; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 6px">
+        <div style="font-size: 13px; font-weight: 700; color: #CFE3D6">{{ P.hero.label }}</div>
+        <div class="ex-num" style="font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1">{{ P.hero.value }}</div>
+        <sc-if value="{{ P.hero.sub }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size: 13px; font-weight: 600; color: #CFE3D6; line-height: 1.45">{{ P.hero.sub }}</div>
+        </sc-if>
+        <sc-if value="{{ P.hero.bar }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 8px; border-radius: 8px; background: rgba(255,255,255,.18); overflow: hidden; margin-top: 6px"><div class="gb" style="height: 8px; border-radius: 8px; width: {{ P.hero.bar }}; background: #8EC4A0; transition: width .4s"></div></div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-for list="{{ P.blocks }}" as="b" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <sc-if value="{{ b.title }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 2px">
+            <h2 style="margin: 0; font-size: 16px; font-weight: 800">{{ b.title }}</h2>
+            <sc-if value="{{ b.aside }}" hint-placeholder-val="{{ false }}"><span class="ex-num" style="font-size: 13px; font-weight: 700; color: var(--muted)">{{ b.aside }}</span></sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isInfo }}" hint-placeholder-val="{{ false }}">
+          <div style="background: {{ b.bg }}; color: {{ b.fg }}; border-radius: 16px; padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.5">{{ b.text }}</div>
+        </sc-if>
+
+        <sc-if value="{{ b.isRows }}" hint-placeholder-val="{{ true }}">
+          <div class="cas" style="background: var(--card); border-radius: 20px; padding: 4px 0; overflow: hidden">
+            <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="3">
+              <sc-if value="{{ r.tap }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ r.tap }}" class="ex-r ex-tap" style="width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: none; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer">
+                  <span style="display: flex; align-items: center; gap: 12px; width: 100%">
+                    <sc-if value="{{ r.icon }}" hint-placeholder-val="{{ true }}"><span style="width: 38px; height: 38px; border-radius: 11px; background: {{ r.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ r.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></span></sc-if>
+                    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                      <span style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ r.name }}</span>
+                      <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ true }}"><span class="ex-num" style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ r.sub }}</span></sc-if>
+                    </span>
+                    <sc-if value="{{ r.value }}" hint-placeholder-val="{{ true }}"><span class="ex-num" style="font-size: 15px; font-weight: 800; color: {{ r.valueColor }}; flex: none; text-align: right">{{ r.value }}</span></sc-if>
+                    <sc-if value="{{ r.pill }}" hint-placeholder-val="{{ false }}"><span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {{ r.pillBg }}; color: {{ r.pillFg }}; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">{{ r.pill }}</span></sc-if>
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color: var(--chev); flex: none"><path d="M9 5l7 7-7 7"></path></svg>
+                  </span>
+                  <sc-if value="{{ r.bar }}" hint-placeholder-val="{{ false }}"><span style="display: block; width: 100%; height: 7px; border-radius: 7px; background: var(--track); overflow: hidden"><span class="gb" style="display: block; height: 7px; border-radius: 7px; width: {{ r.bar }}; background: {{ r.barColor }}"></span></span></sc-if>
+                </button>
+              </sc-if>
+              <sc-if value="{{ r.still }}" hint-placeholder-val="{{ true }}">
+                <div class="ex-r" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line)">
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <sc-if value="{{ r.icon }}" hint-placeholder-val="{{ true }}"><div style="width: 38px; height: 38px; border-radius: 11px; background: {{ r.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ r.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icon }}"></path></svg></div></sc-if>
+                    <div style="flex: 1; min-width: 0">
+                      <div style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ r.name }}</div>
+                      <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ true }}"><div class="ex-num" style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ r.sub }}</div></sc-if>
+                    </div>
+                    <sc-if value="{{ r.value }}" hint-placeholder-val="{{ true }}"><div class="ex-num" style="font-size: 15px; font-weight: 800; color: {{ r.valueColor }}; flex: none; text-align: right">{{ r.value }}</div></sc-if>
+                    <sc-if value="{{ r.pill }}" hint-placeholder-val="{{ false }}"><span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {{ r.pillBg }}; color: {{ r.pillFg }}; font-size: 12px; font-weight: 800; display: flex; align-items: center; flex: none">{{ r.pill }}</span></sc-if>
+                  </div>
+                  <sc-if value="{{ r.bar }}" hint-placeholder-val="{{ false }}"><div style="height: 7px; border-radius: 7px; background: var(--track); overflow: hidden"><div class="gb" style="height: 7px; border-radius: 7px; width: {{ r.bar }}; background: {{ r.barColor }}"></div></div></sc-if>
+                </div>
+              </sc-if>
+            </sc-for>
+            <sc-if value="{{ b.hasMore }}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{ b.toggleMore }}" aria-expanded="{{ b.expanded }}" style="width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border: none; border-top: 1px solid var(--line); background: transparent; color: var(--brand); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">{{ b.moreLabel }}
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate({{ b.chevRot }}); transition: transform .2s"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isSteps }}" hint-placeholder-val="{{ false }}">
+          <div class="cas" style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ b.steps }}" as="st" hint-placeholder-count="4">
+              <div style="background: var(--card); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; border: 1.5px solid {{ st.border }}">
+                <div style="display: flex; gap: 12px; align-items: flex-start">
+                  <button type="button" role="checkbox" aria-checked="{{ st.checked }}" aria-label="{{ st.aria }}" onClick="{{ st.toggle }}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid {{ st.ring }}; background: {{ st.fill }}; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; padding: 0; margin-top: 2px">
+                    <sc-if value="{{ st.done }}" hint-placeholder-val="{{ false }}"><svg class="tk" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                    <sc-if value="{{ st.todo }}" hint-placeholder-val="{{ true }}"><span style="font-size: 13px; font-weight: 800; color: var(--muted)">{{ st.n }}</span></sc-if>
+                  </button>
+                  <div style="flex: 1; min-width: 0">
+                    <div style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ st.title }}</div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.45">{{ st.text }}</div>
+                  </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-left: 44px">
+                  <sc-for list="{{ st.actions }}" as="ac" hint-placeholder-count="1">
+                    <sc-if value="{{ ac.href }}" hint-placeholder-val="{{ false }}"><a href="{{ ac.href }}" style="height: 38px; padding: 0 12px; border-radius: 10px; background: var(--soft); color: var(--ink); text-decoration: none; font-size: 13px; font-weight: 800; display: flex; align-items: center">{{ ac.label }}</a></sc-if>
+                    <sc-if value="{{ ac.go }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ ac.go }}" style="height: 38px; padding: 0 12px; border-radius: 10px; border: none; background: var(--soft); color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer">{{ ac.label }}</button></sc-if>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isLock }}" hint-placeholder-val="{{ false }}">
+          <div style="background: var(--card); border-radius: 22px; padding: 20px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+            <div style="width: 52px; height: 52px; border-radius: 16px; background: #FFF0DB; display: flex; align-items: center; justify-content: center">
+              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A35200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"></path></svg>
+            </div>
+            <div style="font-size: 16px; font-weight: 800">{{ b.lockTitle }}</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--muted); line-height: 1.5">{{ b.text }}</div>
+            <button type="button" onClick="{{ openPlans }}" style="height: 46px; padding: 0 20px; border-radius: 14px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Ver planes</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isForm }}" hint-placeholder-val="{{ false }}">
+          <div style="background: var(--card); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+            <sc-for list="{{ b.fields }}" as="f" hint-placeholder-count="3">
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <sc-if value="{{ f.isToggle }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <div style="flex: 1; min-width: 0">
+                      <div id="{{ f.id }}" style="font-size: 14px; font-weight: 800">{{ f.label }}</div>
+                      <sc-if value="{{ f.help }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ f.help }}</div></sc-if>
+                    </div>
+                    <button type="button" role="switch" aria-checked="{{ f.checked }}" aria-labelledby="{{ f.id }}" onClick="{{ f.toggle }}" style="width: 52px; height: 32px; border-radius: 999px; border: none; background: {{ f.swBg }}; position: relative; cursor: pointer; padding: 0; flex: none; transition: background .2s">
+                      <span style="position: absolute; top: 4px; left: {{ f.knob }}; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .2s"></span>
+                    </button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.hasLabel }}" hint-placeholder-val="{{ true }}">
+                  <label for="{{ f.id }}" style="font-size: 14px; font-weight: 800">{{ f.label }}</label>
+                </sc-if>
+                <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}">
+                  <input id="{{ f.id }}" type="text" value="{{ f.value }}" placeholder="{{ f.placeholder }}" onInput="{{ f.onInput }}" style="height: 50px; border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline-color: #16493A">
+                </sc-if>
+                <sc-if value="{{ f.isArea }}" hint-placeholder-val="{{ false }}">
+                  <textarea id="{{ f.id }}" rows="4" placeholder="{{ f.placeholder }}" onInput="{{ f.onInput }}" style="border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); padding: 12px 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline-color: #16493A; resize: none">{{ f.value }}</textarea>
+                </sc-if>
+                <sc-if value="{{ f.isMoney }}" hint-placeholder-val="{{ false }}">
+                  <div style="height: 52px; border-radius: 14px; border: 1.5px solid var(--fieldLine); background: var(--field); display: flex; align-items: center; gap: 6px; padding: 0 14px">
+                    <span style="font-size: 18px; font-weight: 800; color: var(--muted)">{{ f.prefix }}</span>
+                    <input id="{{ f.id }}" type="text" inputmode="numeric" value="{{ f.value }}" placeholder="0" onInput="{{ f.onInput }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 19px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums">
+                    <span style="font-size: 14px; font-weight: 700; color: var(--muted)">{{ f.suffix }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isDate }}" hint-placeholder-val="{{ false }}">
+                  <input id="{{ f.id }}" type="date" value="{{ f.value }}" min="2026-01-01" max="2026-12-31" onInput="{{ f.onInput }}" style="height: 50px; border-radius: 14px; border: 1.5px solid var(--brand); background: var(--field); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); outline-color: #16493A; box-sizing: border-box; width: 100%">
+                </sc-if>
+                <sc-if value="{{ f.isChips }}" hint-placeholder-val="{{ false }}">
+                  <div role="group" aria-label="{{ f.label }}" style="display: flex; flex-wrap: wrap; gap: 8px">
+                    <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="3">
+                      <button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 40px; padding: 6px 12px; border-radius: 12px; border: 1.5px solid {{ o.border }}; background: {{ o.bg }}; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; text-align: left">{{ o.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ f.isNote }}" hint-placeholder-val="{{ false }}">
+                  <div class="ex-num" style="background: var(--info); color: var(--infoInk); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 700; line-height: 1.45">{{ f.value }}</div>
+                </sc-if>
+                <sc-if value="{{ f.showHelp }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4">{{ f.help }}</div></sc-if>
+                <sc-if value="{{ f.error }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 700; color: #D93025">{{ f.error }}</div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isButtons }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ b.buttons }}" as="bt" hint-placeholder-count="2">
+              <sc-if value="{{ bt.href }}" hint-placeholder-val="{{ false }}">
+                <a href="{{ bt.href }}" style="height: 52px; border-radius: 14px; border: {{ bt.border }}; background: {{ bt.bg }}; color: {{ bt.fg }}; text-decoration: none; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box">{{ bt.label }}</a>
+              </sc-if>
+              <sc-if value="{{ bt.go }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ bt.go }}" style="height: 52px; border-radius: 14px; border: {{ bt.border }}; background: {{ bt.bg }}; color: {{ bt.fg }}; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">{{ bt.label }}</button>
+              </sc-if>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b.isChips }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{ b.chips }}" as="c" hint-placeholder-count="3">
+              <button type="button" onClick="{{ c.go }}" style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--fieldLine); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" class="ex-toast" style="position: absolute; left: 20px; right: 20px; bottom: 98px; background: #0E1A15; color: #FFFFFF; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; line-height: 1.4; box-shadow: 0 12px 30px rgba(0,0,0,.25)">
+      <svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8EC4A0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      <span>{{ toast }}</span>
+    </div>
+  </sc-if>
+
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: var(--nav); border-top: 1px solid var(--navLine); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px 6px 0; box-sizing: border-box; align-items: start">
+    <a href="Inicio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg></span>Inicio</a>
+    <a href="Movimientos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg></span>Movimientos</a>
+    <a href="Cargar.dc.html" aria-label="Cargar un movimiento" style="display: flex; justify-content: center; text-decoration: none">
+      <span style="width: 52px; height: 48px; border-radius: 16px; background: #16493A; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+    <a href="Proximos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; position: relative"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"></path></svg><span style="position: absolute; top: 2px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #D93025; border: 2px solid var(--nav)"></span></span>Próximos</a>
+    <a href="Mas.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: var(--navActiveInk); font: inherit; font-size: 11px; font-weight: 800">
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: var(--navActive); display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"></path></svg></span>Explorar</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dark: false, open: {}, stack: [], f: {}, toast: '', tick: 0, d: { plan: 'Gratis', trialUsed: false, name: 'Lucía Martínez', email: 'lucia@ejemplo.com', country: 'Argentina', cur: 'Peso argentino', others: ['Dólar'], push: false,
+      mods: { tipos: true, tarjetas: true, deudas: true, calendario: true, flujo: true, presupuestos: true, objetivos: true, simulador: true, inversiones: true, activos: false, informes: false, alertas: true, reglas: true, cereal: false },
+      members: [{ name: 'Lucía Martínez', role: 'Dueña' }], invite: '', inviteRole: '', twofa: false, sessions: ['Este celular', 'Computadora · navegador'],
+      accounts: [{ name: 'Banco' }, { name: 'Billetera virtual' }, { name: 'Efectivo' }], imports: [],
+      cats: { out: [{ name: 'Supermercado', subs: [] }, { name: 'Comida afuera', subs: ['Café', 'Delivery'] }, { name: 'Transporte', subs: ['Combustible'] }, { name: 'Casa', subs: ['Alquiler', 'Servicios'] }, { name: 'Salud', subs: [] }, { name: 'Suscripciones', subs: [] }, { name: 'Ropa', subs: [] }, { name: 'Educación', subs: [] }], in: [{ name: 'Sueldo', subs: [] }, { name: 'Trabajo extra', subs: [] }, { name: 'Ventas', subs: [] }, { name: 'Reintegros', subs: [] }] } } };
+  }
+  renderVals() {
+    const s = this.state, d = s.d, dk = s.dark;
+    const tw = (k, target, from0) => { const me = this; me._tw = me._tw || {}; const now = Date.now(); let t = me._tw[k]; const ease = (x) => 1 - Math.pow(1 - x, 3);
+      if (!t) t = me._tw[k] = { from: from0 ? 0 : target, to: target, start: now };
+      else if (t.to !== target) { const p0 = Math.min(1, (now - t.start) / 550); t = me._tw[k] = { from: t.from + (t.to - t.from) * ease(p0), to: target, start: now }; }
+      const p = Math.min(1, (now - t.start) / 550);
+      if (p < 1 && !me._raf) me._raf = requestAnimationFrame(() => { me._raf = null; me.forceUpdate(); });
+      return Math.round(t.from + (t.to - t.from) * ease(p)); };
+
+    const fmt = (n) => (n < 0 ? '− ' : '') + '$ ' + Math.abs(Math.round(n)).toLocaleString('es-AR');
+    const num = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+    const I = {
+      wallet: 'M3 7h18v12H3zM3 7l3-3h12M16 13h2', check: 'M5 12.5l4.5 4.5L19 7.5', card: 'M3 6h18v12H3zM3 10h18M7 15h4',
+      bank: 'M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z', repeat: 'M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5',
+      flow: 'M3 17l6-6 4 4 8-8M15 7h6v6', pie: 'M12 3v9h9M21 12a9 9 0 1 1-9-9', target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
+      sliders: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4', scale: 'M12 3v18M5 7h14M5 7l-3 7h6zM19 7l-3 7h6zM8 21h8',
+      bell: 'M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 21h4', file: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6', cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+      home: 'M3 11l9-8 9 8M5 10v10h14V10', bolt: 'M13 3L5 14h6l-1 7 8-11h-6z', wifi: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
+      play: 'M5 4h14v16H5zM10 9l5 3-5 3z', cart: 'M3 4h2l2.5 11h11L21 7H6.5M9 20h.01M18 20h.01', cup: 'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2',
+      bus: 'M5 4h14v12H5zM5 11h14M8 19v-3M16 19v-3', tag: 'M3 12V4h8l10 10-8 8zM7.5 8h.01', shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+      plane: 'M3 13l18-8-6 16-3-7z', chart: 'M3 17l6-6 4 4 8-8M15 7h6v6', piggy: 'M5 11a7 6 0 0 1 13-2h2v4h-2a7 6 0 0 1-3 3v3h-3v-2H9v2H6v-4a6 6 0 0 1-1-4zM15 10h.01',
+      box: 'M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', swap: 'M4 8h14l-3-3M20 16H6l3 3'
+    };
+    const T = {
+      green: dk ? ['rgba(142,196,160,.16)', '#A9D3B7'] : ['#EEF6F1', '#16493A'],
+      amber: dk ? ['rgba(242,179,107,.16)', '#F2B36B'] : ['#FFF5E8', '#A35200'],
+      blue: dk ? ['rgba(140,165,230,.16)', '#AFC2F2'] : ['#EEF1F8', '#2F4A8A'],
+      red: dk ? ['rgba(242,139,130,.16)', '#F28B82'] : ['#FDECEA', '#C5221F'],
+      gray: dk ? ['rgba(255,255,255,.07)', '#DDE3DF'] : ['#F2F4F2', '#0E1A15']
+    };
+    const C = { pos: dk ? '#7FD69A' : '#1E7A3B', neg: dk ? '#F28B82' : '#C5221F', warn: dk ? '#F2B36B' : '#A35200', ink: dk ? '#EEF2EF' : '#0E1A15', brand: dk ? '#8EC4A0' : '#16493A', blue: dk ? '#AFC2F2' : '#2F4A8A' };
+    const PILL = { ok: dk ? ['rgba(127,214,154,.16)', '#7FD69A'] : ['#E6F4EA', '#1E7A3B'], warn: dk ? ['rgba(242,179,107,.16)', '#F2B36B'] : ['#FFF0DB', '#7A3E00'], bad: dk ? ['rgba(242,139,130,.16)', '#F28B82'] : ['#FDECEA', '#A3201D'], info: dk ? ['rgba(255,255,255,.08)', '#DDE3DF'] : ['#F2F4F2', '#33403A'] };
+
+    const set = (patch) => this.setState(patch);
+    const upd = (fn, patch) => { const nd = JSON.parse(JSON.stringify(d)); fn(nd); const p = Object.assign({ d: nd }, patch || {}); if (p.toast) { const t = (s.tick || 0) + 1; p.tick = t; setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); } this.setState(p); };
+    const toast = (msg) => { const t = (s.tick || 0) + 1; this.setState({ toast: msg, tick: t }); setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); };
+    const go = (route, f) => () => set({ stack: s.stack.concat([route]), f: f || {} });
+    const back = () => set({ stack: s.stack.slice(0, -1), f: {} });
+    const done = (fn, msg, pops) => () => { const nd = JSON.parse(JSON.stringify(d)); const res = fn ? fn(nd) : null; if (res === false) return; const t = (s.tick || 0) + 1; this.setState({ d: nd, stack: s.stack.slice(0, -(pops || 1)), f: {}, toast: msg, tick: t }); setTimeout(() => { if (this.state.tick === t) this.setState({ toast: '' }); }, 2600); };
+    const F = s.f;
+    const setF = (k, v) => this.setState({ f: Object.assign({}, s.f, { [k]: v }) });
+
+    // --- form field builders
+    let fid = 0;
+    const base = (label, extra) => Object.assign({ id: 'ex-f' + (fid++), label, hasLabel: true, isText: false, isArea: false, isMoney: false, isDate: false, isChips: false, isToggle: false, isNote: false, value: '', placeholder: '', options: [], help: '', showHelp: false, error: '', prefix: '$', suffix: '', checked: 'false', swBg: '', knob: '', onInput: null, toggle: null }, extra);
+    const fText = (k, label, ph, help) => base(label, { isText: true, value: F[k] || '', placeholder: ph || '', help: help || '', showHelp: !!help, onInput: (e) => setF(k, e.target.value) });
+    const fArea = (k, label, ph) => base(label, { isArea: true, value: F[k] || '', placeholder: ph || '', onInput: (e) => setF(k, e.target.value) });
+    const fMoney = (k, label, help, prefix, suffix) => base(label, { isMoney: true, value: F[k] || '', help: help || '', showHelp: !!help, prefix: prefix === undefined ? '$' : prefix, suffix: suffix || '', onInput: (e) => { const v = String(e.target.value || '').replace(/\D/g, ''); setF(k, v ? parseInt(v, 10).toLocaleString('es-AR') : ''); } });
+    const fChips = (k, label, opts, help) => base(label, { isChips: true, help: help || '', showHelp: !!help, options: opts.map((o) => ({ label: o, on: F[k] === o ? 'true' : 'false', bg: F[k] === o ? 'var(--chipOn)' : 'var(--field)', border: F[k] === o ? C.brand : 'var(--fieldLine)', pick: () => setF(k, o) })) });
+    const fToggle = (k, label, help) => base(label, { hasLabel: false, isToggle: true, help: help || '', checked: F[k] ? 'true' : 'false', swBg: F[k] ? '#16493A' : '#C9D0CB', knob: F[k] ? '24px' : '4px', toggle: () => setF(k, !F[k]) });
+    const fDate = (k, label) => base(label, { isDate: true, value: F[k] || '2026-11-20', onInput: (e) => setF(k, e.target.value) });
+    const fNote = (text) => base('', { hasLabel: false, isNote: true, value: text });
+
+    // --- block builders
+    const B = (o) => Object.assign({ hasMore: false, moreLabel: '', expanded: 'false', chevRot: '0deg', toggleMore: null, title: '', aside: '', isInfo: false, isRows: false, isSteps: false, isLock: false, isForm: false, isButtons: false, isChips: false, rows: [], steps: [], fields: [], buttons: [], chips: [], text: '', lockTitle: '', bg: '', fg: '' }, o);
+    const row = (name, sub, value, icon, tone, extra) => Object.assign({ name, sub: sub || '', value: value || '', valueColor: C.ink, icon: icon || '', iconBg: icon ? T[tone || 'gray'][0] : '', iconFg: icon ? T[tone || 'gray'][1] : '', pill: '', pillBg: '', pillFg: '', bar: '', barColor: C.brand, tap: null, still: true }, extra || {});
+    const tapRow = (name, sub, value, icon, tone, onTap, extra) => Object.assign(row(name, sub, value, icon, tone, extra), { tap: onTap, still: false });
+    const pill = (text, kind) => ({ pill: text, pillBg: PILL[kind][0], pillFg: PILL[kind][1] });
+    const rows = (title, list, aside, fold, moreText) => {
+      const key = 'fold:' + title;
+      if (fold === undefined || list.length <= fold) return B({ title, aside: aside || '', isRows: true, rows: list });
+      const open = !!(s.open || {})[key];
+      return B({ title, aside: aside || '', isRows: true, rows: open ? list : list.slice(0, fold), hasMore: true, expanded: open ? 'true' : 'false', chevRot: open ? '180deg' : '0deg',
+        moreLabel: open ? 'Ver menos' : (moreText || 'Ver todo') + ' (' + list.length + ')', toggleMore: () => this.setState({ open: Object.assign({}, s.open || {}, { [key]: !open }) }) });
+    };
+    const info = (text, kind) => B({ isInfo: true, text, bg: kind === 'warn' ? 'var(--warnBg)' : 'var(--info)', fg: kind === 'warn' ? 'var(--warnInk)' : 'var(--infoInk)' });
+    const form = (fields, title) => B({ isForm: true, fields, title: title || '' });
+    const btn = (label, onGo, kind) => ({ label, go: onGo, href: '', bg: kind === 'primary' ? '#16493A' : (kind === 'danger' ? 'var(--card)' : 'var(--card)'), fg: kind === 'primary' ? '#FFFFFF' : (kind === 'danger' ? '#D93025' : 'var(--ink)'), border: kind === 'primary' ? 'none' : '1.5px solid var(--fieldLine)' });
+    const link = (label, href, kind) => ({ label, href, go: null, bg: kind === 'primary' ? '#16493A' : 'var(--card)', fg: kind === 'primary' ? '#FFFFFF' : 'var(--ink)', border: kind === 'primary' ? 'none' : '1.5px solid var(--fieldLine)' });
+    const buttons = (list) => B({ isButtons: true, buttons: list });
+    const lock = (title, text) => B({ isLock: true, lockTitle: title, text });
+    const page = (o) => Object.assign({ title: '', pro: false, hasTabs: false, tabs: [], tabCount: 2, hasHero: false, hero: { label: '', value: '', sub: '', bar: '' }, blocks: [] }, o, o.hero ? { hasHero: true, hero: Object.assign({ label: '', value: '', sub: '', bar: '' }, o.hero) } : {});
+    const tabs = (list, cur, onPick) => ({ hasTabs: true, tabCount: list.length, tabs: list.map((l, i) => ({ label: l, on: cur === i ? 'true' : 'false', bg: cur === i ? 'var(--card)' : 'transparent', op: 1, pick: () => onPick(i) })) });
+    Object.assign(I, { user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', share: 'M8 12a3 3 0 1 1 0-.01M16 6a3 3 0 1 1 0-.01M16 18a3 3 0 1 1 0-.01M10.6 10.7l2.8-1.6M10.6 13.3l2.8 1.6', phone: 'M8 3h8v18H8zM11 18h2', screen: 'M3 5h18v11H3zM8 20h8M12 16v4', help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01', chat: 'M4 5h16v11H9l-5 4z', mail: 'M3 6h18v12H3zM3 7l9 6 9-6' });
+    const ACCS = d.accounts.map((a) => a.name);
+    // ---------- Configuración
+    const R = {};
+    const CU = { 'Argentina': 'Peso argentino', 'Brasil': 'Real', 'Chile': 'Peso chileno', 'Uruguay': 'Peso uruguayo', 'Estados Unidos': 'Dólar', 'España': 'Euro' };
+    const fMulti = (k, label, opts, help) => base(label, { isChips: true, help: help || '', showHelp: !!help, options: opts.map((o) => { const on = (F[k] || []).indexOf(o) >= 0; return { label: o, on: on ? 'true' : 'false', bg: on ? 'var(--chipOn)' : 'var(--field)', border: on ? C.brand : 'var(--fieldLine)', pick: () => setF(k, on ? F[k].filter((x) => x !== o) : (F[k] || []).concat([o])) }; }) });
+    const isPro = d.plan !== 'Gratis';
+    R.menu = () => page({ title: 'Configuración', backHref: 'Mas.dc.html', blocks: [
+      B({ isRows: true, rows: [row(d.name, d.email + ' · Plan ' + d.plan, '', '', '', {})] }),
+      rows('Tu cuenta', [
+        tapRow('General', 'Nombre, país, moneda y avisos', '', I.user, 'gray', go({ v: 'general' }, { name: d.name, email: d.email, country: d.country, cur: d.cur, others: d.others.slice(), push: d.push })),
+        tapRow('Funciones', 'Elige qué secciones ves', '', I.grid, 'gray', go({ v: 'funciones' }, { mods: Object.assign({}, d.mods) })),
+        tapRow('Compartir', 'Invita a alguien a tu espacio', '', I.share, 'gray', go({ v: 'compartir' }, { role: 'Carga y edita' }), isPro ? {} : pill('Pro', 'warn')),
+        tapRow('Seguridad', d.twofa ? 'Verificación en dos pasos activa' : 'Activa la verificación en dos pasos', '', I.shield, d.twofa ? 'green' : 'amber', go({ v: 'seguridad' }), d.twofa ? {} : pill('Recomendada', 'warn')),
+        tapRow('Plan', 'Plan ' + d.plan, '', I.tag, 'gray', go({ v: 'plan' })),
+        tapRow('Tus datos', 'Descárgalos o bórralos cuando quieras', '', I.file, 'gray', go({ v: 'datos' }))
+      ]),
+      rows('Organización', [
+        tapRow('Categorías', 'Ordena tus gastos e ingresos', '', I.tag, 'gray', go({ v: 'categorias' }, { tab: 0 })),
+        tapRow('Importar y exportar', 'Trae o lleva tus datos en un archivo', '', I.swap, 'gray', go({ v: 'importar' }, { acc: 'Banco' }))
+      ]),
+      buttons([link('Ayuda', 'Ayuda.dc.html')])
+    ] });
+    R.general = () => page({ title: 'General', blocks: [form([
+      fText('name', 'Nombre'), fText('email', 'Correo', '', 'Si lo cambias, te pedimos confirmarlo con un código.'),
+      fChips('country', 'País', Object.keys(CU)), fChips('cur', 'Moneda principal', ['Peso argentino', 'Peso uruguayo', 'Peso chileno', 'Real', 'Dólar', 'Euro'], 'Lo que te queda y tus totales se muestran en esta moneda.'),
+      fMulti('others', 'Otras monedas que usas', ['Dólar', 'Euro', 'Real', 'Peso uruguayo', 'Peso chileno'].filter((x) => x !== F.cur)),
+      fToggle('push', 'Avisos en el celular', 'Te avisamos de vencimientos y pagos. En iPhone, primero instala la app en la pantalla de inicio.')
+    ]), buttons([btn('Guardar', done((nd) => { nd.name = (F.name || nd.name).trim(); nd.email = (F.email || nd.email).trim(); nd.country = F.country; nd.cur = F.cur; nd.others = F.others || []; nd.push = !!F.push; }, 'Listo, guardamos los cambios.'), 'primary')])] });
+    const MODS = [['tipos', 'Pestañas de ingresos, gastos y transferencias', 'Dentro de Movimientos, una pestaña para cada tipo.'], ['tarjetas', 'Tarjetas de crédito', 'Resúmenes, pago mínimo y compras en cuotas.'], ['deudas', 'Deudas y préstamos', 'Cronogramas, cancelación anticipada y orden de pago.'], ['calendario', 'Calendario', 'Vista mensual de cobros y pagos.'], ['flujo', 'Flujo de caja', 'Cuánto vas a tener mes a mes.'], ['presupuestos', 'Presupuestos', 'Límites de gasto por categoría.'], ['objetivos', 'Objetivos de ahorro', 'Metas con el aporte mensual que necesitas.'], ['simulador', 'Simulador', '¿Puedo comprarlo en cuotas? y escenarios (Pro), sin tocar tus datos.'], ['inversiones', 'Inversiones y patrimonio', 'Cartera, rendimientos y patrimonio neto.'], ['activos', 'Bienes', 'Inmuebles, vehículos y otros bienes, dentro de Patrimonio.'], ['informes', 'Informes y estadísticas · Pro', 'Reportes y comparativos.'], ['alertas', 'Alertas y consejos', 'Avisos de vencimientos, meses en rojo y deudas caras.'], ['reglas', 'Pagos que se repiten', 'Sueldos, servicios y cuotas que se repiten solos.'], ['cereal', 'Agro: ventas de granos · Pro', 'Quintales o toneladas, precio por tonelada, impuestos y descuentos.']];
+    R.funciones = () => { const fields = MODS.map(([k, label, help]) => base(label, { hasLabel: false, isToggle: true, help, checked: F.mods[k] ? 'true' : 'false', swBg: F.mods[k] ? '#16493A' : '#C9D0CB', knob: F.mods[k] ? '24px' : '4px', toggle: () => setF('mods', Object.assign({}, F.mods, { [k]: !F.mods[k] })) }));
+      return page({ title: 'Funciones', blocks: [info('Lo que apagas desaparece del menú y tus datos quedan guardados.'), form(fields), buttons([btn('Guardar funciones', done((nd) => { nd.mods = Object.assign({}, F.mods); }, 'Listo, guardamos tus funciones.'), 'primary')])] }); };
+    R.compartir = () => { const people = d.members.map((m, i) => (i === 0 ? row(m.name, 'Dueña del espacio', '', I.user, 'green') : tapRow(m.name, m.role, '', I.user, 'gray', go({ v: 'miembro', i }, { role: m.role }))));
+      if (!isPro) return page({ title: 'Compartir', blocks: [rows('Personas en este espacio', people), lock('Compartir es de Pro', 'Invita hasta 3 personas: tu pareja o tu familia. Pueden cargar y editar, o solo mirar. Cada una entra con su cuenta.'), buttons([btn('Probar Pro gratis 14 días', () => upd((nd) => { nd.plan = 'Prueba Pro'; nd.trialUsed = true; }, { toast: 'Listo, empezó tu prueba de Pro por 14 días.' }), 'primary')])] });
+      return page({ title: 'Compartir', blocks: [rows('Personas en este espacio', people, d.members.length + ' de 4'),
+        form([fChips('role', 'La persona que invitas', ['Carga y edita', 'Solo mira']), d.invite ? fNote('Enlace de invitación: somosguafra.com/invitacion/' + d.invite) : fNote('Genera un enlace y compártelo. Vence en 7 días.')], 'Invitar a alguien'),
+        buttons([d.invite ? btn('Copiar enlace', () => toast('Copiamos el enlace de invitación.'), 'primary') : btn('Crear enlace de invitación', () => { if (d.members.length >= 4) { toast('Ya tienes el máximo de 3 personas.'); return; } upd((nd) => { nd.invite = 'k7Q2mX'; nd.inviteRole = F.role; }, { toast: 'Listo, creamos el enlace.' }); }, 'primary'), d.invite ? btn('Simular que aceptó la invitación', () => upd((nd) => { nd.members.push({ name: 'Martín', role: nd.inviteRole || 'Carga y edita' }); nd.invite = ''; }, { toast: 'Martín se sumó a tu espacio.' })) : null].filter(Boolean))] }); };
+    R.miembro = (r) => { const m = d.members[r.i]; return page({ title: m.name, blocks: [form([fChips('role', 'Qué puede hacer', ['Carga y edita', 'Solo mira'])]), buttons([btn('Cambiar', done((nd) => { nd.members[r.i].role = F.role; }, 'Listo, cambiamos lo que puede hacer.'), 'primary'), btn('Quitar del espacio', done((nd) => { nd.members.splice(r.i, 1); }, 'Listo, ya no está en tu espacio.'), 'danger')])] }); };
+    R.seguridad = () => page({ title: 'Seguridad', hero: { label: 'Estado de tu cuenta', value: d.twofa ? 'Protegida' : 'Puede estar mejor', sub: 'Lo importante para que nadie más pueda entrar.' }, blocks: [
+      rows('', [row('Correo confirmado', d.email, '', I.check, 'green', pill('Listo', 'ok')),
+        tapRow('Verificación en dos pasos', d.twofa ? 'Te pedimos un código del celular al entrar' : 'Protege tu cuenta con un código del celular', '', I.shield, d.twofa ? 'green' : 'amber', d.twofa ? go({ v: 'desactivar2fa' }) : go({ v: 'activar2fa' }, { code: '' }), d.twofa ? pill('Activa', 'ok') : pill('Recomendada', 'warn'))]),
+      rows('Sesiones abiertas', d.sessions.map((x, i) => row(x, i === 0 ? 'Esta sesión' : 'Abierta', '', i === 0 ? I.phone : I.screen, 'gray'))),
+      d.sessions.length > 1 ? buttons([btn('Cerrar las demás', () => upd((nd) => { nd.sessions = nd.sessions.slice(0, 1); }, { toast: 'Listo, cerramos las demás sesiones.' }))]) : null,
+      info('Somos Guafra nunca te pide ni guarda las contraseñas de tu banco.'),
+      buttons([btn('Borrar mi cuenta', go({ v: 'borrar' }, { pass: '', mail: '' }), 'danger')])
+    ] });
+    R.activar2fa = () => { const code = String(F.code || '').replace(/\D/g, ''); return page({ title: 'Verificación en dos pasos', blocks: [
+      B({ isSteps: true, steps: [
+        { n: '1', title: 'Instala una app de códigos', text: 'Google Authenticator, Microsoft Authenticator o la que ya uses.' },
+        { n: '2', title: 'Escanea este código', text: 'En la app toca “+” y elige escanear. ¿No puedes escanear? Carga la clave: JBSW Y3DP EHPK 3PXP' },
+        { n: '3', title: 'Escribe el código', text: 'Son 6 números que cambian cada 30 segundos.' }
+      ].map((x) => Object.assign(x, { done: false, todo: true, checked: 'false', aria: 'Paso ' + x.n, toggle: null, ring: 'var(--fieldLine)', fill: 'transparent', border: 'var(--fieldLine)', actions: [] })) }),
+      form([fMoney('code', 'Código de 6 números', '', '', '')]),
+      buttons([btn('Activar', () => { if (code.length !== 6) { toast('El código tiene 6 números.'); return; } done((nd) => { nd.twofa = true; }, 'Listo, tu cuenta está protegida.')(); }, 'primary')])] }); };
+    R.desactivar2fa = () => page({ title: 'Desactivar la verificación', blocks: [info('Tu cuenta va a quedar menos protegida. Te avisamos por correo si alguien la desactiva.', 'warn'), buttons([btn('Desactivar la verificación', done((nd) => { nd.twofa = false; }, 'Listo, desactivamos la verificación.'), 'danger'), btn('Mejor no', back)])] });
+    R.borrar = () => page({ title: 'Borrar mi cuenta', blocks: [info('Se borran tus cuentas, movimientos y todo lo que cargaste. No se puede deshacer. Antes puedes descargar tus datos.', 'warn'), form([fText('pass', 'Tu contraseña'), fText('mail', 'Para confirmar, escribe tu correo', d.email)]), buttons([btn('Borrar mi cuenta para siempre', () => { if (!F.pass || (F.mail || '').trim().toLowerCase() !== d.email) { toast('Escribe tu contraseña y tu correo exacto para confirmar.'); return; } set({ stack: [{ v: 'borrada' }], f: {} }); }, 'danger'), btn('Descargar mis datos antes', () => toast('Preparamos el archivo con todos tus datos.'))])] });
+    R.borrada = () => page({ title: 'Cuenta borrada', backHref: 'Ingresar.dc.html', blocks: [info('Listo. Borramos tu cuenta y tus datos. Gracias por haber usado Somos Guafra.'), buttons([link('Volver al inicio de sesión', 'Ingresar.dc.html', 'primary')])] });
+    R.plan = () => page({ title: 'Plan', hero: { label: 'Tu plan', value: d.plan, sub: d.plan === 'Gratis' ? 'Lo esencial, para siempre.' : 'Te quedan 14 días de prueba. Si no contratas, vuelves a Gratis.' }, blocks: [
+      rows('Qué suma Pro', [row('Escenarios en el simulador', '', '', I.sliders, 'amber'), row('Informes avanzados', 'Y exportar a Excel y PDF', '', I.file, 'amber'), row('Flujo de caja a 2, 3 y 5 años', 'Con saldo día por día', '', I.flow, 'amber'), row('Espacio compartido', 'Hasta 3 personas', '', I.share, 'amber'), row('Sin límites y soporte prioritario', '', '', I.check, 'amber')], '', 2, 'Ver todo lo que suma'),
+      buttons([!d.trialUsed ? btn('Probar Pro gratis 14 días', () => upd((nd) => { nd.plan = 'Prueba Pro'; nd.trialUsed = true; }, { toast: 'Listo, empezó tu prueba de Pro por 14 días.' }), 'primary') : null, btn('Suscribirme a Pro', go({ v: 'suscribir' }, { period: 'Por mes' }), d.trialUsed ? 'primary' : '')].filter(Boolean)),
+      rows('Historial de pagos', [row('Todavía no hay pagos', '', '', I.file, 'gray')]),
+      rows('Invita y gana Pro', [tapRow('Tu enlace para invitar', 'Cuando la persona que invitas carga su primer movimiento, sumas Pro', '', I.share, 'green', () => toast('Copiamos tu enlace para invitar.'))])
+    ] });
+    R.suscribir = () => page({ title: 'Suscribirme a Pro', blocks: [form([fChips('period', '¿Cómo quieres pagar?', ['Por mes', 'Por año']), fNote('Antes de confirmar ves el importe, la frecuencia y la fecha del primer cobro. Puedes cancelar cuando quieras.')]), buttons([btn('Continuar al pago', () => toast('Te llevamos a la pantalla de pago para confirmar.'), 'primary')])] });
+    R.datos = () => page({ title: 'Tus datos', blocks: [info('Son tuyos: puedes llevártelos o borrarlos cuando quieras.'), rows('', [
+      tapRow('Descargar mis movimientos', 'Un archivo CSV que abre en Excel o Google Sheets', '', I.file, 'gray', () => toast('Descargando tus movimientos (CSV)…')),
+      tapRow('Descargar todos mis datos', 'Respaldo completo de tu espacio en un archivo', '', I.box, 'gray', () => toast('Preparamos el respaldo completo.')),
+      tapRow('Importar movimientos', 'Desde la planilla o el extracto de tu banco', '', I.swap, 'gray', go({ v: 'importar' }, { acc: 'Banco' })),
+      tapRow('Eliminar cuenta y datos', 'Revisa qué se elimina y confirma la baja', '', I.shield, 'red', go({ v: 'borrar' }, { pass: '', mail: '' }))
+    ])] });
+    R.categorias = () => { const tab = F.tab || 0; const list = d.cats[tab ? 'in' : 'out'];
+      return page(Object.assign({ title: 'Categorías' }, tabs(['Gastos', 'Ingresos'], tab, (i) => setF('tab', i)), { blocks: [
+        rows(tab ? 'Ingresos' : 'Gastos', list.map((c, i) => tapRow(c.name, c.subs.length ? c.subs.join(', ') : 'Sin subcategorías', '', I.tag, tab ? 'green' : 'gray', go({ v: 'categoria', t: tab, i }, { name: c.name }))), '', 5),
+        buttons([btn('+ Nueva categoría', go({ v: 'nuevaCat', t: tab }, { parent: 'Ninguna' }), 'primary')])
+      ] })); };
+    R.nuevaCat = (r) => { const list = d.cats[r.t ? 'in' : 'out']; return page({ title: 'Nueva categoría', blocks: [form([fText('name', 'Nombre', 'Ej.: Mascotas'), fChips('parent', 'Dentro de', ['Ninguna'].concat(list.map((c) => c.name)), 'Si eliges una, queda como subcategoría.')]), buttons([btn('Crear categoría', () => { if (!(F.name || '').trim()) { toast('Escribe un nombre.'); return; } done((nd) => { const l = nd.cats[r.t ? 'in' : 'out']; if (F.parent && F.parent !== 'Ninguna') l.find((c) => c.name === F.parent).subs.push(F.name.trim()); else l.push({ name: F.name.trim(), subs: [] }); }, 'Listo, creamos la categoría.')(); }, 'primary')])] }); };
+    R.categoria = (r) => { const list = d.cats[r.t ? 'in' : 'out']; const c = list[r.i]; return page({ title: c.name, blocks: [form([fText('name', 'Nombre', '', 'Los movimientos, pagos y presupuestos siguen en esta categoría con el nombre nuevo.')]), buttons([btn('Guardar cambios', done((nd) => { nd.cats[r.t ? 'in' : 'out'][r.i].name = (F.name || c.name).trim(); }, 'Listo, guardamos los cambios.'), 'primary'), btn('Borrar', go({ v: 'borrarCat', t: r.t, i: r.i }, { to: 'Sin categoría' }), 'danger')])] }); };
+    R.borrarCat = (r) => { const list = d.cats[r.t ? 'in' : 'out']; const c = list[r.i]; return page({ title: 'Borrar ' + c.name, blocks: [form([fChips('to', 'Sus movimientos pasan a', ['Sin categoría'].concat(list.filter((x, k) => k !== r.i).map((x) => x.name)))]), buttons([btn('Borrar categoría', done((nd) => { nd.cats[r.t ? 'in' : 'out'].splice(r.i, 1); }, 'Categoría borrada. Sus movimientos quedaron donde elegiste.', 2), 'danger')])] }); };
+    R.importar = () => { const fields = [base('Archivo', { isNote: true, value: F.file ? 'Archivo elegido: ' + F.file : 'Todavía no elegiste un archivo. Sirve el CSV de tu banco o billetera (con Pro también Excel y OFX).' })];
+      fields.push(fChips('acc', 'Cuenta de los movimientos', ACCS));
+      if (F.reviewed) fields.push(fNote('Vamos a cargar 24 movimientos del 1 al 22 de noviembre en ' + F.acc + '. Todavía no guardamos nada.'));
+      return page({ title: 'Importar y exportar', blocks: [form(fields, 'Importar un archivo'),
+        buttons([!F.file ? btn('Elegir archivo', () => setF('file', 'extracto-noviembre.csv'), 'primary') : (!F.reviewed ? btn('Revisar', () => setF('reviewed', true), 'primary') : btn('Importar', () => upd((nd) => { nd.imports.unshift({ name: F.file, acc: F.acc, n: 24 }); }, { f: { acc: F.acc }, toast: 'Listo, importamos los movimientos.' }), 'primary')), F.file ? btn('Elegir otro archivo', () => this.setState({ f: { acc: F.acc } })) : null].filter(Boolean)),
+        rows('Importaciones', d.imports.length ? d.imports.map((x, i) => tapRow(x.name, x.n + ' movimientos · ' + x.acc, '', I.file, 'gray', go({ v: 'importacion', i }))) : [row('Todavía no importaste archivos', '', '', I.file, 'gray')]),
+        rows('Exportar', [tapRow('Movimientos en CSV', 'Abre en Excel o Google Sheets', '', I.file, 'gray', () => toast('Descargando tus movimientos (CSV)…')), tapRow('Excel', 'Con formato y totales', '', I.file, 'gray', () => toast(isPro ? 'Descargando el Excel…' : 'Exportar a Excel es de Pro.'), isPro ? {} : pill('Pro', 'warn')), tapRow('PDF', 'Reporte para imprimir o compartir', '', I.file, 'gray', () => toast(isPro ? 'Descargando el PDF…' : 'Exportar a PDF es de Pro.'), isPro ? {} : pill('Pro', 'warn'))])
+      ] }); };
+    R.importacion = (r) => { const x = d.imports[r.i]; return page({ title: x.name, hero: { label: 'Importación', value: x.n + ' movimientos', sub: 'En ' + x.acc }, blocks: [info('Si algo salió mal, puedes deshacer la importación: se borran solo esos movimientos.'), buttons([btn('Deshacer importación', done((nd) => { nd.imports.splice(r.i, 1); }, 'Listo, deshicimos la importación.'), 'danger')])] }); };
+    const ROOT = { v: 'menu' };
+    const route = s.stack[s.stack.length - 1] || ROOT;
+    const P = R[route.v] ? R[route.v](route) : page({});
+    P.blocks = (P.blocks || []).filter(Boolean);
+    P.backHref = P.backHref || ''; P.backBtn = !P.backHref;
+    return {
+      themeClass: dk ? 'dark' : '', isHub: false, isPage: true, P,
+      heroBg: dk ? '#1F3A2E' : '#16493A', sparkColor: C.brand,
+      back, home: () => set({ stack: [], f: {} }),
+      openPlans: () => toast('Mira los planes en Configuración → Plan.'),
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

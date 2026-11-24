@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Bienvenida</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+input::placeholder{color:#8A958F}
+.bv-scroll::-webkit-scrollbar{display:none}
+.bv-scroll>*{flex-shrink:0}
+.bv-step{animation:bvIn .3s cubic-bezier(.2,.9,.3,1) both}
+@keyframes bvIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes bvSheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes bvBack{from{opacity:0}to{opacity:1}}
+.bv-num{font-variant-numeric:tabular-nums}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15">
+  <div style="position: absolute; left: 0; right: 0; top: 0; padding: 14px 20px 10px; display: flex; flex-direction: column; gap: 12px; background: #F6F7F5; z-index: 2">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+      <div style="font-family: Fredoka, Manrope, sans-serif; font-weight: 600; font-size: 20px; color: #16493A">somosguafra</div>
+      <a href="InicioNuevo.dc.html" style="font-size: 14px; font-weight: 800; text-decoration: none; min-height: 44px; display: flex; align-items: center">Saltar e ir a la app</a>
+    </div>
+    <div role="progressbar" aria-label="Pasos de la bienvenida" aria-valuemin="1" aria-valuemax="5" aria-valuenow="{{ stepN }}" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{ dots }}" as="dt" hint-placeholder-count="5">
+        <div style="height: 5px; border-radius: 5px; background: {{ dt.c }}; transition: background .3s"></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div class="bv-scroll" style="position: absolute; left: 0; right: 0; top: 92px; bottom: 96px; overflow-y: auto; scrollbar-width: none; padding: 12px 20px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+    <sc-if value="{{ s1 }}" hint-placeholder-val="{{ true }}">
+      <div class="bv-step" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15">¡Hola, Lucía! Empecemos</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">En dos minutos dejamos Somos Guafra listo para que sepas cuánto puedes gastar hasta tu próximo cobro.</p>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 20px; padding: 4px 0">
+          <button type="button" onClick="{{ openCountry }}" style="width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border: none; border-bottom: 1px solid #EEF0EE; background: transparent; color: #0E1A15; font: inherit; text-align: left; cursor: pointer">
+            <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 700; color: #4E5B55">País</span><span style="font-size: 16px; font-weight: 800">{{ country }}</span></span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A958F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+          </button>
+          <button type="button" onClick="{{ openCur }}" style="width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border: none; border-bottom: 1px solid #EEF0EE; background: transparent; color: #0E1A15; font: inherit; text-align: left; cursor: pointer">
+            <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 700; color: #4E5B55">Moneda principal</span><span style="font-size: 16px; font-weight: 800">{{ curLabel }}</span></span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A958F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+          </button>
+          <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; font-weight: 700; color: #4E5B55">¿Ahorras o cobras en otra moneda?</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <sc-for list="{{ others }}" as="o" hint-placeholder-count="1">
+                <button type="button" onClick="{{ o.remove }}" aria-label="{{ o.aria }}" style="height: 38px; padding: 0 10px 0 12px; border-radius: 12px; border: 1.5px solid #16493A; background: #EEF6F1; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px">{{ o.label }}<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+              </sc-for>
+              <button type="button" onClick="{{ openOther }}" style="height: 38px; padding: 0 12px; border-radius: 12px; border: 1.5px dashed #C9D0CB; background: #FFFFFF; color: #16493A; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">+ Agregar moneda</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+      <div class="bv-step" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15">¿Dónde tienes tu dinero hoy?</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Empieza con la cuenta que más usas. Después sumas las demás.</p>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; opacity: {{ accOp }}">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="bv-acc" style="font-size: 14px; font-weight: 800">Nombre</label>
+            <input id="bv-acc" type="text" placeholder="Ej.: el nombre de tu banco" value="{{ accName }}" onInput="{{ onAccName }}" style="height: 50px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15; outline-color: #16493A">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="bv-amt" style="font-size: 14px; font-weight: 800">¿Cuánto tienes ahí hoy?</label>
+            <div style="height: 52px; border-radius: 14px; border: 1.5px solid #E1E5E1; display: flex; align-items: center; gap: 6px; padding: 0 14px">
+              <span style="font-size: 18px; font-weight: 800; color: #4E5B55">$</span>
+              <input id="bv-amt" type="text" inputmode="numeric" placeholder="0" value="{{ accAmt }}" onInput="{{ onAccAmt }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 19px; font-weight: 800; color: #0E1A15">
+            </div>
+          </div>
+        </div>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #33403A; min-height: 44px">
+          <input type="checkbox" checked="{{ skipAcc }}" onChange="{{ toggleSkip }}" style="width: 20px; height: 20px; accent-color: #16493A; margin: 0">
+          Prefiero cargarla después
+        </label>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+      <div class="bv-step" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15">¿Cuándo te entra dinero?</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Con esto calculamos cuánto puedes gastar hasta tu próximo cobro.</p>
+        </div>
+        <sc-for list="{{ incomes }}" as="inc" hint-placeholder-count="1">
+          <div style="background: #FFFFFF; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; gap: 10px">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0">
+                <label for="{{ inc.nameId }}" style="font-size: 14px; font-weight: 800">Qué es</label>
+                <input id="{{ inc.nameId }}" type="text" placeholder="Ej.: Sueldo" value="{{ inc.name }}" onInput="{{ inc.onName }}" style="height: 48px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15; outline-color: #16493A; min-width: 0">
+              </div>
+              <div style="width: 96px; display: flex; flex-direction: column; gap: 6px">
+                <label for="{{ inc.dayId }}" style="font-size: 14px; font-weight: 800">Día del mes</label>
+                <input id="{{ inc.dayId }}" type="text" inputmode="numeric" placeholder="1 a 31" value="{{ inc.day }}" onInput="{{ inc.onDay }}" style="height: 48px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 700; color: #0E1A15; outline-color: #16493A; width: 100%; box-sizing: border-box">
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #33403A; min-height: 40px">
+                <input type="checkbox" checked="{{ inc.variable }}" onChange="{{ inc.onVar }}" style="width: 20px; height: 20px; accent-color: #16493A; margin: 0">El monto cambia
+              </label>
+              <sc-if value="{{ inc.canRemove }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ inc.remove }}" style="min-height: 40px; border: none; background: transparent; color: #C5221F; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Quitar</button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <button type="button" onClick="{{ addIncome }}" style="height: 48px; border-radius: 14px; border: 1.5px dashed #C9D0CB; background: transparent; color: #16493A; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">+ Otro ingreso</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+      <div class="bv-step" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15">¿Qué quieres ordenar?</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Elige todas las que quieras. Prendemos las funciones que te sirven. Todo se cambia cuando quieras en Configuración.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{ uses }}" as="u" hint-placeholder-count="7">
+            <button type="button" onClick="{{ u.pick }}" aria-pressed="{{ u.on }}" style="min-height: 64px; border-radius: 16px; border: 2px solid {{ u.border }}; background: {{ u.bg }}; color: #0E1A15; font: inherit; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 14px; text-align: left">
+              <span style="width: 24px; height: 24px; border-radius: 7px; border: 2px solid {{ u.border }}; background: {{ u.box }}; display: flex; align-items: center; justify-content: center; flex: none">
+                <sc-if value="{{ u.isOn }}" hint-placeholder-val="{{ false }}"><svg class="tk" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                <span style="font-size: 15px; font-weight: 800">{{ u.title }}</span>
+                <span style="font-size: 13px; font-weight: 600; color: #4E5B55">{{ u.desc }}</span>
+              </span>
+              <sc-if value="{{ u.pro }}" hint-placeholder-val="{{ false }}"><span style="height: 22px; padding: 0 8px; border-radius: 8px; background: #FFF0DB; color: #7A3E00; font-size: 11px; font-weight: 800; display: flex; align-items: center; flex: none">PRO</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+      <div class="bv-step" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15">Así va a quedar tu Inicio</h1>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Se arma con lo que vas cargando. Después puedes cambiar todo.</p>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px rgba(14,26,21,.08)">
+          <div style="font-size: 13px; font-weight: 700; color: #4E5B55">{{ previewLabel }}</div>
+          <div class="bv-num" style="font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05">{{ previewAmt }}</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <span style="height: 28px; padding: 0 10px; border-radius: 999px; background: #DDEEE3; color: #0F3A2D; font-size: 13px; font-weight: 800; display: flex; align-items: center">{{ previewChip }}</span>
+          </div>
+          <div style="height: 1px; background: #EEF0EE; margin: 4px 0"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700"><span style="color: #4E5B55">Próximo cobro</span><span>{{ nextIncome }}</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700"><span style="color: #4E5B55">Lo que quieres ordenar</span><span>{{ modsCount }}</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 700; color: #33403A">
+          <div style="display: flex; align-items: center; gap: 8px"><svg class="tk" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Nunca te pedimos la clave del banco.</div>
+          <div style="display: flex; align-items: center; gap: 8px"><svg class="tk" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Es gratis y no pide tarjeta.</div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px 24px; background: #F6F7F5; display: flex; gap: 10px">
+    <sc-if value="{{ hasBack }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ prev }}" style="height: 56px; padding: 0 20px; border-radius: 16px; border: 1.5px solid #E1E5E1; background: #FFFFFF; color: #0E1A15; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Atrás</button>
+    </sc-if>
+    <sc-if value="{{ notLast }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ next }}" style="flex: 1; height: 56px; border-radius: 16px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Seguir</button>
+    </sc-if>
+    <sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}">
+      <a href="InicioNuevo.dc.html" style="flex: 1; height: 56px; border-radius: 16px; background: #16493A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800">Entrar a Somos Guafra</a>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ showPicker }}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="Cerrar" onClick="{{ closePicker }}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(14,26,21,.45); cursor: pointer; z-index: 5; animation: bvBack .2s ease-out both"></button>
+    <div role="dialog" aria-modal="true" aria-label="{{ pickerTitle }}" style="position: absolute; left: 0; right: 0; bottom: 0; height: 640px; z-index: 6; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 20px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; animation: bvSheet .3s cubic-bezier(.2,.9,.3,1) both">
+      <div style="width: 40px; height: 5px; border-radius: 5px; background: #D9DED9; align-self: center; flex: none"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 800">{{ pickerTitle }}</h2>
+        <button type="button" aria-label="Cerrar" onClick="{{ closePicker }}" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #F2F4F2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <label style="height: 48px; border-radius: 14px; background: #F2F4F2; display: flex; align-items: center; gap: 10px; padding: 0 14px; flex: none">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E5B55" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+        <input type="search" aria-label="Buscar" placeholder="{{ pickerPh }}" value="{{ pq }}" onInput="{{ onPq }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15">
+      </label>
+      <div class="bv-scroll" style="flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column">
+        <sc-for list="{{ pickList }}" as="pk" hint-placeholder-count="8">
+          <button type="button" onClick="{{ pk.pick }}" aria-pressed="{{ pk.on }}" style="min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 4px; border: none; border-bottom: 1px solid #EEF0EE; background: transparent; color: #0E1A15; font: inherit; text-align: left; cursor: pointer; flex: none">
+            <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700">{{ pk.label }}</span><sc-if value="{{ pk.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 600; color: #4E5B55">{{ pk.sub }}</span></sc-if></span>
+            <sc-if value="{{ pk.isOn }}" hint-placeholder-val="{{ false }}"><svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+          </button>
+        </sc-for>
+        <sc-if value="{{ pickEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding: 20px 0; text-align: center; font-size: 14px; font-weight: 600; color: #4E5B55">No encontramos «{{ pq }}».</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 1, picker: null, pq: '', cur: 'Peso argentino', country: 'Argentina', others: ['Dólar estadounidense'], accName: 'Banco', accAmt: '250.000', skipAcc: false, incomes: [{ name: 'Sueldo', day: '1', variable: false }], uses: ['gastos'] };
+  }
+  renderVals() {
+    const s = this.state;
+    const COUNTRIES = [['Argentina','ARS'],['Bolivia','BOB'],['Brasil','BRL'],['Chile','CLP'],['Colombia','COP'],['Costa Rica','CRC'],['Cuba','CUP'],['Ecuador','USD'],['El Salvador','USD'],['España','EUR'],['Estados Unidos','USD'],['Guatemala','GTQ'],['Honduras','HNL'],['México','MXN'],['Nicaragua','NIO'],['Panamá','USD'],['Paraguay','PYG'],['Perú','PEN'],['Puerto Rico','USD'],['República Dominicana','DOP'],['Uruguay','UYU'],['Venezuela','VES'],['Canadá','CAD'],['Reino Unido','GBP'],['Italia','EUR'],['Francia','EUR'],['Alemania','EUR'],['Portugal','EUR'],['Suiza','CHF'],['Australia','AUD']];
+    const CURS = [['ARS','Peso argentino'],['USD','Dólar estadounidense'],['EUR','Euro'],['BRL','Real brasileño'],['CLP','Peso chileno'],['UYU','Peso uruguayo'],['PYG','Guaraní paraguayo'],['BOB','Boliviano'],['PEN','Sol peruano'],['COP','Peso colombiano'],['MXN','Peso mexicano'],['VES','Bolívar venezolano'],['CRC','Colón costarricense'],['GTQ','Quetzal guatemalteco'],['HNL','Lempira hondureño'],['NIO','Córdoba nicaragüense'],['DOP','Peso dominicano'],['CUP','Peso cubano'],['CAD','Dólar canadiense'],['GBP','Libra esterlina'],['CHF','Franco suizo'],['AUD','Dólar australiano'],['JPY','Yen japonés'],['CNY','Yuan chino'],['BTC','Bitcoin'],['USDT','Tether (USDT)']];
+    const curName = (code) => (CURS.find((c) => c[0] === code) || [code, code])[1];
+    const nz = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const pq = nz(s.pq.trim());
+    let pickList = [];
+    if (s.picker === 'country') pickList = COUNTRIES.filter(([n, c]) => !pq || nz(n + ' ' + curName(c)).includes(pq)).map(([n, c]) => ({ label: n, sub: curName(c), isOn: s.country === n, on: s.country === n ? 'true' : 'false', pick: () => this.setState({ country: n, cur: curName(c), others: s.others.filter((o) => o !== curName(c)), picker: null }) }));
+    else if (s.picker) pickList = CURS.filter(([c, n]) => (s.picker === 'cur' || n !== s.cur) && (!pq || nz(n + ' ' + c).includes(pq))).map(([c, n]) => { const on = s.picker === 'cur' ? s.cur === n : s.others.indexOf(n) >= 0; return { label: n, sub: c, isOn: on, on: on ? 'true' : 'false', pick: () => this.setState(s.picker === 'cur' ? { cur: n, others: s.others.filter((o) => o !== n), picker: null } : { others: on ? s.others.filter((o) => o !== n) : s.others.concat([n]), picker: null }) }; });
+    const chip = (on) => ({ on: on ? 'true' : 'false', bg: on ? '#EEF6F1' : '#FFFFFF', border: on ? '#16493A' : '#E1E5E1' });
+    const USES = [
+      ['gastos', 'Ordenar los gastos del día a día', 'Saber en qué se va el dinero.', 3, false],
+      ['deudas', 'Pagar tarjetas y deudas', 'Cuotas, vencimientos y cancelaciones.', 2, false],
+      ['ahorro', 'Ahorrar para algo', 'Metas con el aporte mensual que necesitas.', 1, false],
+      ['futuro', 'Saber cuánto voy a tener', 'Flujo de caja y simulador.', 2, false],
+      ['inversiones', 'Seguir mis inversiones', 'Cartera, rendimientos y patrimonio.', 1, false],
+      ['agro', 'Soy productor agropecuario', 'Ventas de granos con su neto, mes a mes.', 1, true],
+      ['independiente', 'Trabajo por mi cuenta', 'Cobros que varían mes a mes.', 1, false]
+    ];
+    const num = (v) => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+    const fmt = (n) => '$ ' + n.toLocaleString('es-AR');
+    const setInc = (i, patch) => this.setState({ incomes: s.incomes.map((x, k) => (k === i ? Object.assign({}, x, patch) : x)) });
+    const dayN = Math.min(31, Math.max(1, num((s.incomes[0] || {}).day) || 1));
+    const today = 23;
+    const nextDate = dayN > today ? dayN + ' de noviembre' : dayN + ' de diciembre';
+    const daysLeft = dayN > today ? dayN - today : 30 - today + dayN;
+    const amt = s.skipAcc ? 0 : num(s.accAmt);
+    return {
+      stepN: String(s.step),
+      dots: [1, 2, 3, 4, 5].map((i) => ({ c: i <= s.step ? '#16493A' : '#DDE3DF' })),
+      s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4, s5: s.step === 5,
+      country: s.country, curLabel: s.cur,
+      others: s.others.map((o) => ({ label: o, aria: 'Quitar ' + o, remove: () => this.setState({ others: s.others.filter((x) => x !== o) }) })),
+      openCountry: () => this.setState({ picker: 'country', pq: '' }), openCur: () => this.setState({ picker: 'cur', pq: '' }), openOther: () => this.setState({ picker: 'other', pq: '' }),
+      closePicker: () => this.setState({ picker: null }),
+      showPicker: !!s.picker, pickerTitle: { country: 'Elige tu país', cur: 'Moneda principal', other: 'Agregar otra moneda' }[s.picker] || '',
+      pickerPh: s.picker === 'country' ? 'Buscar un país' : 'Buscar una moneda', pq: s.pq, onPq: (e) => this.setState({ pq: e.target.value || '' }),
+      pickList, pickEmpty: pickList.length === 0,
+      accName: s.accName, accAmt: s.accAmt, skipAcc: s.skipAcc, accOp: s.skipAcc ? 0.45 : 1,
+      onAccName: (e) => this.setState({ accName: e.target.value }),
+      onAccAmt: (e) => { const v = String(e.target.value || '').replace(/\D/g, ''); this.setState({ accAmt: v ? parseInt(v, 10).toLocaleString('es-AR') : '' }); },
+      toggleSkip: () => this.setState({ skipAcc: !s.skipAcc }),
+      incomes: s.incomes.map((x, i) => ({ name: x.name, day: x.day, variable: x.variable, nameId: 'bv-in-n' + i, dayId: 'bv-in-d' + i, canRemove: s.incomes.length > 1,
+        onName: (e) => setInc(i, { name: e.target.value }), onDay: (e) => setInc(i, { day: String(e.target.value || '').replace(/\D/g, '').slice(0, 2) }), onVar: () => setInc(i, { variable: !x.variable }),
+        remove: () => this.setState({ incomes: s.incomes.filter((_, k) => k !== i) }) })),
+      addIncome: () => this.setState({ incomes: s.incomes.concat([{ name: '', day: '', variable: true }]) }),
+      uses: USES.map(([id, title, desc, mods, pro]) => { const on = s.uses.indexOf(id) >= 0; return { title, desc, pro, isOn: on, on: on ? 'true' : 'false', bg: on ? '#EEF6F1' : '#FFFFFF', border: on ? '#16493A' : '#E1E5E1', box: on ? '#16493A' : '#FFFFFF', pick: () => this.setState({ uses: on ? s.uses.filter((u) => u !== id) : s.uses.concat([id]) }) }; }),
+      previewLabel: 'Te queda hasta tu cobro del ' + nextDate,
+      previewAmt: fmt(amt),
+      previewChip: amt ? 'Unos ' + fmt(Math.round(amt / daysLeft)) + ' por día durante ' + daysLeft + ' días' : 'Carga tu cuenta para ver cuánto te queda',
+      nextIncome: ((s.incomes[0] || {}).name || 'Ingreso') + ' · ' + nextDate,
+      modsCount: s.uses.length + (s.uses.length === 1 ? ' tema' : ' temas'),
+      hasBack: s.step > 1, notLast: s.step < 5, isLast: s.step === 5,
+      prev: () => this.setState({ step: Math.max(1, s.step - 1) }),
+      next: () => this.setState({ step: Math.min(5, s.step + 1) })
+    };
+  }
+}
+</script>
+</body>
+</html>

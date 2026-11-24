@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Verificar el ingreso</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+input::placeholder{color:#8A958F}
+.vf-shake{animation:vfShake .35s ease-in-out}
+@keyframes vfShake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.vf-key:active{background:#E7EAE6}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15; padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 16px">
+  <a href="Ingresar.dc.html" aria-label="Usar otra cuenta" style="width: 44px; height: 44px; border-radius: 14px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+  </a>
+  <div style="width: 56px; height: 56px; border-radius: 18px; background: #DDEEE3; display: flex; align-items: center; justify-content: center">
+    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16493A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+  </div>
+
+  <sc-if value="{{ isCode }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Revisa tu app de códigos</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Activaste la verificación en dos pasos. Escribe el código de 6 números de Somos Guafra; cambia cada 30 segundos.</p>
+    </div>
+    <div class="{{ shakeClass }}" role="group" aria-label="Código de 6 números" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{ boxes }}" as="b" hint-placeholder-count="6">
+        <div style="height: 58px; border-radius: 14px; background: #FFFFFF; border: 2px solid {{ b.border }}; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums">{{ b.d }}</div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 700; color: #D93025; margin-top: -6px">{{ error }}</div></sc-if>
+    <button type="button" onClick="{{ toRecovery }}" style="align-self: flex-start; min-height: 44px; border: none; background: transparent; padding: 0; color: #16493A; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Usar un código de recuperación</button>
+    <div style="flex: 1"></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+        <button type="button" class="vf-key" onClick="{{ k.press }}" aria-label="{{ k.aria }}" style="height: 52px; border-radius: 14px; border: none; background: {{ k.bg }}; color: #0E1A15; font: inherit; font-size: 22px; font-weight: 700; cursor: pointer; visibility: {{ k.vis }}">{{ k.label }}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+      <a href="Inicio.dc.html" style="height: 54px; border-radius: 14px; background: #16493A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800">Verificar</a>
+    </sc-if>
+    <sc-if value="{{ notReady }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ incomplete }}" style="height: 54px; border-radius: 14px; border: none; background: #A9B4AE; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Verificar</button>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isRecovery }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Usa un código de recuperación</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #4E5B55">Son los códigos que guardaste al activar la verificación. Cada uno sirve una sola vez.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="vf-rec" style="font-size: 13px; font-weight: 700; color: #33403A">Código de recuperación</label>
+      <input id="vf-rec" type="text" placeholder="xxxxx-xxxxx-xxxxx-xxxxx" value="{{ rec }}" onInput="{{ onRec }}" style="height: 52px; border-radius: 14px; border: 1.5px solid #E1E5E1; background: #FFFFFF; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 700; color: #0E1A15; outline-color: #16493A; letter-spacing: .04em">
+    </div>
+    <button type="button" onClick="{{ toCode }}" style="align-self: flex-start; min-height: 44px; border: none; background: transparent; padding: 0; color: #16493A; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Volver al código de la app</button>
+    <div style="flex: 1"></div>
+    <a href="Inicio.dc.html" style="height: 54px; border-radius: 14px; background: #16493A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800">Ingresar con este código</a>
+  </sc-if>
+
+  <a href="Ayuda.dc.html" style="text-align: center; font-size: 14px; font-weight: 700; color: #4E5B55; text-decoration: none; min-height: 40px; display: flex; align-items: center; justify-content: center">¿Perdiste el celular? Escríbenos</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { code: '', mode: 'code', rec: '', error: '', shake: 0 }; }
+  renderVals() {
+    const s = this.state;
+    const press = (k) => () => { let c = s.code; if (k === 'del') c = c.slice(0, -1); else if (c.length < 6) c += k; this.setState({ code: c, error: '' }); };
+    return {
+      isCode: s.mode === 'code', isRecovery: s.mode === 'rec',
+      boxes: [0, 1, 2, 3, 4, 5].map((i) => ({ d: s.code[i] || '', border: s.error ? '#D93025' : (i === s.code.length ? '#16493A' : '#E1E5E1') })),
+      keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].map((k) => ({ label: k === 'del' ? '⌫' : k, aria: k === 'del' ? 'Borrar' : (k || 'vacío'), vis: k === '' ? 'hidden' : 'visible', bg: '#FFFFFF', press: k === '' ? () => {} : press(k) })),
+      ready: s.code.length === 6, notReady: s.code.length < 6,
+      incomplete: () => this.setState({ error: 'Faltan números: el código tiene 6.', shake: s.shake + 1 }),
+      shakeClass: s.error ? 'vf-shake' : '',
+      error: s.error,
+      toRecovery: () => this.setState({ mode: 'rec', error: '' }), toCode: () => this.setState({ mode: 'code' }),
+      rec: s.rec, onRec: (e) => this.setState({ rec: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

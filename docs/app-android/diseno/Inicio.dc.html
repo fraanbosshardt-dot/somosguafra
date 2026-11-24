@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Inicio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+.f-scroll::-webkit-scrollbar{display:none}
+.f-scroll>*{flex-shrink:0}
+.f-num{font-variant-numeric:tabular-nums}
+.f-row:active{background:#F6F7F5}
+.f-in{animation:fin .35s cubic-bezier(.2,.9,.3,1) both}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fSheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fBack{from{opacity:0}to{opacity:1}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+.fd-in{animation:fdIn .25s cubic-bezier(.2,.9,.3,1) both}
+@keyframes fdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.vh-dot{width:8px;height:8px;border-radius:50%;background:#E08A1E;flex:none;animation:vhDot 1.2s ease-out 2}
+@keyframes vhDot{0%{box-shadow:0 0 0 0 rgba(224,138,30,.55)}100%{box-shadow:0 0 0 9px rgba(224,138,30,0)}}
+.vh-done{animation:vhDone .55s cubic-bezier(.2,.9,.3,1) both}
+@keyframes vhDone{0%{background:#FFF5E8;border-color:#F4DDBE;min-height:126px}100%{background:#DDEEE3;border-color:transparent;min-height:0}}
+.vh-tick path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .2s cubic-bezier(.2,.9,.3,1) forwards}
+.vh-msg{animation:vhMsg .35s .15s ease-out both}
+@keyframes vhMsg{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.vh-gone{animation:vhGone .45s cubic-bezier(.6,0,.4,1) both}
+@keyframes vhGone{0%{max-height:80px;opacity:1;transform:none}100%{max-height:0;padding-top:0;padding-bottom:0;margin-top:-22px;opacity:0;transform:scale(.96)}}
+@media (prefers-reduced-motion: reduce){.vh-tick path{stroke-dashoffset:0!important}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15">
+  <div class="f-scroll" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="width: 40px; height: 40px; border-radius: 50%; background: #16493A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex: none">LM</div>
+      <div style="flex: 1; min-width: 0; font-size: 17px; font-weight: 800">Hola, Lucía</div>
+      <button type="button" aria-label="Buscar" onClick="{{ openSearch }}" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+      </button>
+      <button type="button" aria-label="{{ eyeLabel }}" onClick="{{ toggleHide }}" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ eyeIcon }}"></path></svg>
+      </button>
+      <button type="button" aria-label="Alertas, hay 1 nueva" onClick="{{ openAlerts }}" style="width: 44px; height: 44px; border-radius: 50%; border: none; background: #FFFFFF; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 21h4"></path></svg>
+        <span style="position: absolute; top: 11px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #C5221F; border: 2px solid #FFFFFF"></span>
+      </button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <button type="button" onClick="{{ openCalc }}" aria-label="Te queda hasta tu cobro del 1 dic. Ver cómo se calcula" style="border: none; background: transparent; padding: 0; margin: 0; color: #0E1A15; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #4E5B55">Te queda hasta tu cobro del 1 dic
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01"></path></svg>
+        </span>
+        <span class="f-num" style="font-size: 42px; font-weight: 800; letter-spacing: -.035em; line-height: 1.05">{{ left }}</span>
+      </button>
+      <div style="display: flex; align-items: center; gap: 8px; padding-top: 4px">
+        <span class="f-num" style="height: 28px; padding: 0 10px; border-radius: 999px; background: #DDEEE3; color: #0F3A2D; font-size: 13px; font-weight: 800; display: flex; align-items: center">{{ perDayText }}</span>
+        <span style="font-size: 13px; font-weight: 600; color: #4E5B55">durante 8 días</span>
+      </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px">
+        <div style="font-size: 13px; font-weight: 700; color: #4E5B55">En tus cuentas</div>
+        <div class="f-num" style="font-size: 16px; font-weight: 800">{{ inAccounts }}</div>
+      </div>
+      <div style="display: flex; height: 8px; gap: 3px">
+        <div class="gb" style="flex: 45; background: #16493A; border-radius: 8px"></div>
+        <div class="gb" style="flex: 55; background: #E8A24A; border-radius: 8px; animation-delay: .12s"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; color: #33403A">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #16493A"></span><span>{{ leftText }}</span></span>
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #E8A24A"></span><span>{{ toPayText }}</span></span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{ actions }}" as="a" hint-placeholder-count="4">
+        <a href="{{ a.href }}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: #0E1A15">
+          <span style="width: 56px; height: 56px; border-radius: 18px; background: {{ a.bg }}; display: flex; align-items: center; justify-content: center">
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{ a.fg }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg>
+          </span>
+          <span style="font-size: 13px; font-weight: 700">{{ a.label }}</span>
+        </a>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ vhPending }}" hint-placeholder-val="{{ true }}">
+      <div class="f-in" style="background: #FFF5E8; border: 1.5px solid #F4DDBE; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div style="flex: 1; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #8A4500"><span class="vh-dot" aria-hidden="true"></span>Vence hoy</div>
+            <div style="font-size: 15px; font-weight: 800">¿Ya pagaste Internet?</div>
+          </div>
+          <div class="f-num" style="font-size: 16px; font-weight: 800; flex: none">{{ internet }}</div>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button type="button" onClick="{{ confirm }}" style="flex: 1; height: 44px; border-radius: 12px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Sí, lo pagué</button>
+          <button type="button" onClick="{{ openEdit }}" style="flex: 1; height: 44px; border-radius: 12px; border: 1.5px solid #E6CFAE; background: #FFFFFF; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Otro monto o fecha</button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ vhDone }}" hint-placeholder-val="{{ false }}">
+      <div role="status" class="vh-done" style="border-radius: 20px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-sizing: border-box; border: 1.5px solid transparent">
+        <span class="tk" style="width: 36px; height: 36px; border-radius: 50%; background: #16493A; display: flex; align-items: center; justify-content: center; flex: none">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="vh-tick"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+        </span>
+        <div class="vh-msg" style="font-size: 15px; font-weight: 800; color: #0F3A2D; line-height: 1.35">{{ confirmMsg }}</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ vhGone }}" hint-placeholder-val="{{ false }}">
+      <div class="vh-gone" aria-hidden="true" style="border-radius: 20px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-sizing: border-box; background: #DDEEE3; overflow: hidden">
+        <span style="width: 36px; height: 36px; border-radius: 50%; background: #16493A; flex: none"></span>
+        <div style="font-size: 15px; font-weight: 800; color: #0F3A2D; white-space: nowrap">{{ confirmMsg }}</div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 800">Próximos 7 días</h2>
+        <a href="Proximos.dc.html" style="font-size: 14px; font-weight: 800; text-decoration: none; min-height: 44px; display: flex; align-items: center">Ver todo</a>
+      </div>
+      <div class="cas" style="background: #FFFFFF; border-radius: 20px; padding: 4px 0">
+        <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="3">
+          <div class="f-row" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px">
+            <div style="width: 42px; height: 42px; border-radius: 12px; background: #F2F4F2; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; flex: none">
+              <span style="font-size: 10px; font-weight: 800; color: #4E5B55">{{ u.wd }}</span>
+              <span style="font-size: 16px; font-weight: 800">{{ u.day }}</span>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 15px; font-weight: 700">{{ u.name }}</div>
+              <div style="font-size: 13px; font-weight: 600; color: #4E5B55">{{ u.note }}</div>
+            </div>
+            <div class="f-num" style="font-size: 15px; font-weight: 800; color: {{ u.color }}; flex: none">{{ u.amount }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 800">Gastos de noviembre</h2>
+      <div style="background: #FFFFFF; border-radius: 20px; padding: 16px; display: flex; gap: 16px; align-items: center">
+        <div style="position: relative; width: 96px; height: 96px; flex: none">
+          <svg aria-hidden="true" width="96" height="96" viewBox="0 0 96 96" style="transform: rotate(-90deg)">
+            <sc-for list="{{ arcs }}" as="r" hint-placeholder-count="4">
+              <circle cx="48" cy="48" r="38" fill="none" stroke="{{ r.color }}" stroke-width="{{ r.w }}" stroke-dasharray="{{ r.dash }}" stroke-dashoffset="{{ r.off }}"></circle>
+            </sc-for>
+          </svg>
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center">
+            <div class="f-num" style="font-size: 17px; font-weight: 800">{{ catPct }}</div>
+          </div>
+        </div>
+        <div class="cas" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+          <sc-for list="{{ cats }}" as="c" hint-placeholder-count="4">
+            <button type="button" onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="min-height: 34px; border: none; border-radius: 10px; background: {{ c.bg }}; display: flex; align-items: center; gap: 8px; padding: 0 8px; font: inherit; cursor: pointer; color: #0E1A15; text-align: left">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ c.color }}; flex: none"></span>
+              <span style="flex: 1; font-size: 13px; font-weight: 700">{{ c.name }}</span>
+              <span class="f-num" style="font-size: 13px; font-weight: 800; flex: none">{{ c.amount }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E7EAE6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px 6px 0; box-sizing: border-box; align-items: start">
+    <a href="Inicio.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #16493A; font-size: 11px; font-weight: 800">
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: #DDEEE3; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg></span>Inicio</a>
+    <a href="Movimientos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg></span>Movimientos</a>
+    <a href="Cargar.dc.html" aria-label="Cargar un movimiento" style="display: flex; justify-content: center; text-decoration: none">
+      <span style="width: 52px; height: 48px; border-radius: 16px; background: #16493A; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+    <a href="Proximos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center; position: relative"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"></path></svg><span style="position: absolute; top: 2px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #C5221F; border: 2px solid #FFFFFF"></span></span>Próximos</a>
+    <a href="Mas.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"></path></svg></span>Explorar</a>
+  </nav>
+
+  <sc-if value="{{ showSheet }}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="Cerrar" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(14,26,21,.45); cursor: pointer; animation: fBack .2s ease-out both"></button>
+    <div role="dialog" aria-modal="true" aria-label="{{ sheetTitle }}" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; animation: fSheet .3s cubic-bezier(.2,.9,.3,1) both; max-height: 720px">
+      <div style="width: 40px; height: 5px; border-radius: 5px; background: #D9DED9; align-self: center"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 800">{{ sheetTitle }}</h2>
+        <button type="button" aria-label="Cerrar" onClick="{{ closeSheet }}" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #F2F4F2; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+
+      <sc-if value="{{ isAlerts }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{ alerts }}" as="al" hint-placeholder-count="3">
+            <div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF0EE">
+              <div style="width: 40px; height: 40px; border-radius: 12px; background: {{ al.bg }}; display: flex; align-items: center; justify-content: center; flex: none">
+                <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ al.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ al.icon }}"></path></svg>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-size: 15px; font-weight: 800; line-height: 1.3">{{ al.title }}</div>
+                <div style="font-size: 13px; font-weight: 600; color: #4E5B55; line-height: 1.4">{{ al.text }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <a href="Mas.dc.html" style="height: 50px; border-radius: 14px; border: 1.5px solid #E1E5E1; color: #16493A; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800">Ver todo en Explorar</a>
+      </sc-if>
+
+      <sc-if value="{{ isCalc }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column">
+          <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF0EE; font-size: 15px; font-weight: 700"><span>Lo que tienes en tus cuentas</span><span class="f-num">$ 412.300</span></div>
+          <sc-for list="{{ calcRows }}" as="cr" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0 10px 12px; border-bottom: 1px solid #EEF0EE; font-size: 14px; font-weight: 600; color: #4E5B55"><span>{{ cr.name }}</span><span class="f-num">{{ cr.amount }}</span></div>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; font-size: 16px; font-weight: 800"><span>Te queda</span><span class="f-num" style="color: #16493A">$ 184.500</span></div>
+        </div>
+        <div style="background: #EEF6F1; color: #0F3A2D; border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 600; line-height: 1.5">Es tu dinero en cuentas menos lo que tienes que pagar antes de tu próximo cobro. No cuenta inversiones ni lo que todavía no cobraste.</div>
+      </sc-if>
+
+      <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+        <label style="height: 50px; border-radius: 14px; border: 1.5px solid #16493A; display: flex; align-items: center; gap: 10px; padding: 0 14px">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E5B55" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>
+          <input type="search" aria-label="Buscar" placeholder="Buscar movimientos, cuentas, categorías…" value="{{ sq }}" onInput="{{ onSq }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #0E1A15">
+        </label>
+        <div style="display: flex; flex-direction: column; max-height: 420px; overflow-y: auto">
+          <sc-for list="{{ results }}" as="rs" hint-placeholder-count="4">
+            <a href="{{ rs.href }}" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #EEF0EE; text-decoration: none; color: #0E1A15">
+              <span style="height: 24px; padding: 0 8px; border-radius: 8px; background: #F2F4F2; color: #33403A; font-size: 11px; font-weight: 800; display: flex; align-items: center; flex: none">{{ rs.kind }}</span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">{{ rs.name }}</span><span style="font-size: 13px; font-weight: 600; color: #4E5B55">{{ rs.sub }}</span></span>
+              <span class="f-num" style="font-size: 14px; font-weight: 800; flex: none">{{ rs.value }}</span>
+            </a>
+          </sc-for>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}"><div style="padding: 16px 0; font-size: 14px; font-weight: 600; color: #4E5B55; text-align: center">No encontramos nada con «{{ sq }}».</div></sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size: 14px; font-weight: 600; color: #4E5B55; margin-top: -8px">Internet · vencía hoy por $ 18.900</div>
+        <label style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">¿Cuánto pagaste?</span>
+          <span style="height: 56px; border-radius: 14px; border: 1.5px solid #16493A; display: flex; align-items: center; gap: 6px; padding: 0 16px">
+            <span style="font-size: 22px; font-weight: 800; color: #4E5B55">$</span>
+            <input type="text" inputmode="numeric" value="{{ editAmount }}" onInput="{{ onEditAmount }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 24px; font-weight: 800; color: #0E1A15; font-variant-numeric: tabular-nums">
+          </span>
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">¿Cuándo lo pagaste?</span>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{ dates }}" as="dt" hint-placeholder-count="3">
+              <button type="button" onClick="{{ dt.pick }}" aria-pressed="{{ dt.on }}" style="height: 44px; border-radius: 12px; border: 1.5px solid {{ dt.border }}; background: {{ dt.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ dt.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ showDateInput }}" hint-placeholder-val="{{ false }}">
+          <label class="fd-in" style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 13px; font-weight: 700; color: #33403A">Elige la fecha</span>
+            <input type="date" value="{{ otherDate }}" min="2026-01-01" max="{{ maxDate }}" onInput="{{ onOtherDate }}" style="height: 50px; border-radius: 14px; border: 1.5px solid #16493A; background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700; color: #0E1A15; outline-color: #16493A; box-sizing: border-box; width: 100%">
+          </label>
+        </sc-if>
+        <button type="button" onClick="{{ saveEdit }}" style="height: 54px; border-radius: 14px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Guardar pago</button>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { hide: false, confirmed: false, cat: 0, phase: 'pending', sheet: null, editAmount: '18.900', editDate: 0, otherDate: '2026-11-20', msg: 'Listo, registramos el pago.' }; }
+  renderVals() {
+    const s = this.state;
+    const done = (msg, extra) => { this.setState(Object.assign({ confirmed: true, msg, phase: 'done' }, extra || {})); setTimeout(() => this.setState({ phase: 'gone' }), 2200); setTimeout(() => this.setState({ phase: 'hidden' }), 2650); };
+    const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const fdate = (iso) => { const p = String(iso || '').split('-'); return p.length === 3 ? parseInt(p[2], 10) + ' de ' + MESES[parseInt(p[1], 10) - 1] : 'otra fecha'; };
+    const tw = (k, target, from0) => { const me = this; me._tw = me._tw || {}; const now = Date.now(); let t = me._tw[k]; const ease = (x) => 1 - Math.pow(1 - x, 3);
+      if (!t) t = me._tw[k] = { from: from0 ? 0 : target, to: target, start: now };
+      else if (t.to !== target) { const p0 = Math.min(1, (now - t.start) / 550); t = me._tw[k] = { from: t.from + (t.to - t.from) * ease(p0), to: target, start: now }; }
+      const p = Math.min(1, (now - t.start) / 550);
+      if (p < 1 && !me._raf) me._raf = requestAnimationFrame(() => { me._raf = null; me.forceUpdate(); });
+      return Math.round(t.from + (t.to - t.from) * ease(p)); };
+    const fmtN = (n) => '$ ' + n.toLocaleString('es-AR');
+
+    const m = (v) => (s.hide ? '$ •••' : v);
+    const cats = [
+      { name: 'Supermercado', amount: '$ 148.200', pct: 55, color: '#16493A' },
+      { name: 'Comida afuera', amount: '$ 61.900', pct: 23, color: '#4A8669' },
+      { name: 'Transporte', amount: '$ 38.400', pct: 14, color: '#E8A24A' },
+      { name: 'Suscripciones', amount: '$ 21.700', pct: 8, color: '#A9C9B6' }
+    ];
+    const C = 2 * Math.PI * 38;
+    let acc = 0;
+    const arcs = cats.map((c, i) => {
+      const len = C * c.pct / 100;
+      const a = { color: c.color, w: i === s.cat ? 14 : 9, dash: Math.max(0, len - 3) + ' ' + (C - Math.max(0, len - 3)), off: -acc };
+      acc += len;
+      return a;
+    });
+    const SR = (() => {
+        const ALL = [
+          { kind: 'Movimiento', name: 'Supermercado', sub: 'Hoy · Banco', value: '$ 12.500', href: 'Movimientos.dc.html' },
+          { kind: 'Movimiento', name: 'Café', sub: 'Hoy · Efectivo', value: '$ 3.200', href: 'Movimientos.dc.html' },
+          { kind: 'Movimiento', name: 'Cena afuera', sub: 'Sábado 21 · Tarjeta Visa', value: '$ 34.500', href: 'Movimientos.dc.html' },
+          { kind: 'Movimiento', name: 'Trabajo extra', sub: 'Viernes 20 · Billetera virtual', value: '+ $ 85.000', href: 'Movimientos.dc.html' },
+          { kind: 'Cuenta', name: 'Banco', sub: 'Caja de ahorro', value: '$ 268.400', href: 'Mas.dc.html' },
+          { kind: 'Cuenta', name: 'Billetera virtual', sub: 'Disponible al instante', value: '$ 98.200', href: 'Mas.dc.html' },
+          { kind: 'Cuenta', name: 'Efectivo', sub: 'Lo que tienes a mano', value: '$ 45.700', href: 'Mas.dc.html' },
+          { kind: 'Categoría', name: 'Supermercado', sub: 'Gastos de noviembre', value: '$ 148.200', href: 'Movimientos.dc.html' },
+          { kind: 'Categoría', name: 'Comida afuera', sub: 'Gastos de noviembre', value: '$ 61.900', href: 'Movimientos.dc.html' },
+          { kind: 'Próximo', name: 'Tarjeta Visa', sub: 'Vence el mié 25', value: '$ 152.400', href: 'Proximos.dc.html' }
+        ];
+        const nz = (x) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const q = nz((s.sq || '').trim());
+        return q ? ALL.filter((r) => nz(r.name + ' ' + r.sub + ' ' + r.kind).includes(q)) : ALL.slice(0, 6);
+      })();
+    return {
+      eyeLabel: s.hide ? 'Mostrar montos' : 'Ocultar montos',
+      eyeIcon: s.hide ? 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 7.6C3.8 9.3 2 12 2 12s3.5 6 10 6a9.6 9.6 0 0 0 4.4-1' : 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+      toggleHide: () => this.setState({ hide: !s.hide }),
+      left: m(fmtN(tw('left', 184500, true))),
+      leftText: 'Te queda ' + m('$ 184.500'),
+      perDayText: m('$ 23.060') + ' por día',
+      inAccounts: m(fmtN(tw('acc', s.confirmed ? 393400 : 412300))),
+      toPayText: 'A pagar ' + m(fmtN(tw('pay', s.confirmed ? 208900 : 227800))),
+      internet: m('$ 18.900'),
+      actions: [
+        { label: 'Gasto', href: 'Cargar.dc.html', bg: '#16493A', fg: '#FFFFFF', icon: 'M12 5v14M5 12h14' },
+        { label: 'Ingreso', href: 'CargarIngreso.dc.html', bg: '#FFFFFF', fg: '#16493A', icon: 'M12 19V5M5 12l7-7 7 7' },
+        { label: 'Transferir', href: 'CargarTransferir.dc.html', bg: '#FFFFFF', fg: '#16493A', icon: 'M4 8h14l-3-3M20 16H6l3 3' },
+        { label: 'Calendario', href: 'Proximos.dc.html', bg: '#FFFFFF', fg: '#16493A', icon: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4' }
+      ],
+      vhPending: s.phase === 'pending', vhDone: s.phase === 'done', vhGone: s.phase === 'gone',
+      confirmed: s.confirmed,
+      confirm: () => done('Listo, registramos el pago.'),
+      confirmMsg: s.msg,
+      showSheet: !!s.sheet,
+      isAlerts: s.sheet === 'alerts',
+      isEdit: s.sheet === 'edit',
+      isCalc: s.sheet === 'calc',
+      isSearch: s.sheet === 'search',
+      sheetTitle: { alerts: 'Alertas', edit: 'Registrar pago de Internet', calc: '¿Cómo se calcula lo que me queda?', search: 'Buscar' }[s.sheet] || '',
+      openCalc: () => this.setState({ sheet: 'calc' }),
+      openSearch: () => this.setState({ sheet: 'search', sq: '' }),
+      calcRows: [
+        { name: '− Internet · vence hoy', amount: '$ 18.900' },
+        { name: '− Tarjeta Visa · mié 25', amount: '$ 152.400' },
+        { name: '− Cuota del préstamo · vie 27', amount: '$ 56.500' }
+      ],
+      sq: s.sq || '',
+      onSq: (e) => this.setState({ sq: e.target.value || '' }),
+      results: SR,
+      noResults: !!(s.sq || '').trim() && SR.length === 0,
+      openAlerts: () => this.setState({ sheet: 'alerts' }),
+      openEdit: () => this.setState({ sheet: 'edit' }),
+      closeSheet: () => this.setState({ sheet: null }),
+      alerts: [
+        { title: 'Internet venció hoy', text: 'Registra el pago para mantener tus números al día.', icon: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01', bg: '#FDECEA', fg: '#C5221F' },
+        { title: 'Tu tarjeta Visa vence el miércoles', text: 'Resumen de noviembre: $ 152.400.', icon: 'M3 6h18v12H3zM3 10h18M7 15h4', bg: '#FFF5E8', fg: '#A35200' },
+        { title: 'Comida afuera superó el presupuesto', text: 'Llevas $ 61.900 de $ 60.000 este mes.', icon: 'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2', bg: '#FFF5E8', fg: '#A35200' }
+      ],
+      editAmount: s.editAmount,
+      onEditAmount: (e) => { const v = (e.target.value || '').replace(/\D/g, ''); this.setState({ editAmount: v ? parseInt(v, 10).toLocaleString('es-AR') : '' }); },
+      dates: ['Hoy', 'Ayer', 'Otra fecha'].map((label, i) => ({ label, on: s.editDate === i ? 'true' : 'false', bg: s.editDate === i ? '#EEF6F1' : '#FFFFFF', border: s.editDate === i ? '#16493A' : '#E1E5E1', pick: () => this.setState({ editDate: i }) })),
+      showDateInput: s.editDate === 2, otherDate: s.otherDate, maxDate: '2026-11-23', onOtherDate: (e) => this.setState({ otherDate: e.target.value }),
+      saveEdit: () => done('Listo, registramos $ ' + (s.editAmount || '0') + ' ' + ['hoy', 'ayer', 'el ' + fdate(s.otherDate)][s.editDate] + '.', { sheet: null }),
+      upcoming: [
+        { wd: 'MIÉ', day: '25', name: 'Tarjeta Visa', note: 'Resumen de noviembre', amount: m('$ 152.400'), color: '#0E1A15' },
+        { wd: 'VIE', day: '27', name: 'Cuota del préstamo', note: 'Cuota 7 de 12', amount: m('$ 56.500'), color: '#0E1A15' },
+        { wd: 'DOM', day: '29', name: 'Te devuelve Martín', note: 'A cobrar', amount: m('+ $ 20.000'), color: '#1E7A3B' }
+      ],
+      arcs,
+      catPct: cats[s.cat].pct + ' %',
+      cats: cats.map((c, i) => ({ name: c.name, color: c.color, amount: m(c.amount), on: i === s.cat ? 'true' : 'false', bg: i === s.cat ? '#F2F4F2' : 'transparent', pick: () => this.setState({ cat: i }) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

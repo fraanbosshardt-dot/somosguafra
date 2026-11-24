@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Próximos pagos y cobros</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#16493A}a:hover{color:#0F3A2D}
+.px-scroll::-webkit-scrollbar{display:none}
+.px-scroll>*{flex-shrink:0}
+.px-swipe::-webkit-scrollbar{display:none}
+.px-num{font-variant-numeric:tabular-nums}
+.px-in{animation:pxin .3s ease-out both}
+@keyframes pxin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pxSheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes pxBack{from{opacity:0}to{opacity:1}}
+.mo-press button:not(:disabled),.mo-press a{transition:transform .12s ease}
+.mo-press button:not(:disabled):active,.mo-press a:active{transform:scale(.97)}
+.tk{animation:tkPop .4s cubic-bezier(.2,1.6,.4,1) both}
+.tk path{stroke-dasharray:24;stroke-dashoffset:24;animation:tkDraw .4s .08s cubic-bezier(.2,.9,.3,1) forwards}
+@keyframes tkDraw{to{stroke-dashoffset:0}}
+@keyframes tkPop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.gb{transform-origin:left center;animation:gbX .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbX{from{transform:scaleX(0)}}
+.gbY{transform-origin:center bottom;animation:gbY .6s cubic-bezier(.2,.9,.3,1) both}
+@keyframes gbY{from{transform:scaleY(0)}}
+.cas>*{animation:casIn .32s cubic-bezier(.2,.9,.3,1) both}
+.cas>*:nth-child(2){animation-delay:.04s}.cas>*:nth-child(3){animation-delay:.08s}.cas>*:nth-child(4){animation-delay:.12s}.cas>*:nth-child(5){animation-delay:.16s}.cas>*:nth-child(6){animation-delay:.2s}.cas>*:nth-child(n+7){animation-delay:.24s}
+@keyframes casIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tk path{stroke-dashoffset:0!important}}
+.px-done{animation:pxDone .7s ease-out both}
+@keyframes pxDone{0%{background:#E6F4EA;opacity:1}100%{background:transparent;opacity:.75}}
+.px-strike{position:relative}
+.px-strike::after{content:"";position:absolute;left:0;right:0;top:55%;height:2px;border-radius:2px;background:#6B7771;transform-origin:left;animation:pxStrike .4s .15s cubic-bezier(.2,.9,.3,1) both}
+@keyframes pxStrike{from{transform:scaleX(0)}}
+.fd-in{animation:fdIn .25s cubic-bezier(.2,.9,.3,1) both}
+@keyframes fdIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div class="mo-press" style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F7F5; font-family: Manrope, system-ui, sans-serif; color: #0E1A15">
+  <div class="px-scroll" style="position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; padding: 14px 20px 104px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em">Próximos</h1>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <div style="background: #FFFFFF; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; font-weight: 700; color: #4E5B55">{{ payLabel }}</div>
+        <div class="px-num" style="font-size: 19px; font-weight: 800">{{ toPay }}</div>
+      </div>
+      <div style="background: #FFFFFF; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; font-weight: 700; color: #4E5B55">{{ getLabel }}</div>
+        <div class="px-num" style="font-size: 19px; font-weight: 800; color: #1E7A3B">{{ toGet }}</div>
+      </div>
+    </div>
+
+    <div style="background: #FFFFFF; border-radius: 22px; padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <button type="button" onClick="{{ prev }}" aria-label="Mes anterior" disabled="{{ prevDisabled }}" style="width: 44px; height: 44px; border-radius: 12px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: {{ prevOp }}">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+        </button>
+        <div style="font-size: 16px; font-weight: 800">{{ monthTitle }}</div>
+        <button type="button" onClick="{{ next }}" aria-label="Mes siguiente" disabled="{{ nextDisabled }}" style="width: 44px; height: 44px; border-radius: 12px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: {{ nextOp }}">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+        </button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-size: 12px; font-weight: 800; color: #6B7771">
+        <div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+        <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+          <button type="button" onClick="{{ c.pick }}" disabled="{{ c.empty }}" aria-label="{{ c.aria }}" aria-pressed="{{ c.on }}" style="height: 44px; border-radius: 12px; border: none; background: {{ c.bg }}; color: {{ c.fg }}; font: inherit; font-size: 15px; font-weight: {{ c.weight }}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; visibility: {{ c.vis }}">
+            <span class="px-num">{{ c.n }}</span>
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: {{ c.dot }}"></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 16px; justify-content: center; font-size: 12px; font-weight: 700; color: #4E5B55">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #E08A1E"></span>Pago</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1E8E3E"></span>Cobro</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #C5221F"></span>Atrasado</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 800">{{ dayTitle }}</h2>
+      <sc-if value="{{ hasItems }}" hint-placeholder-val="{{ true }}">
+        <div class="px-in cas" style="background: #FFFFFF; border-radius: 20px; overflow: hidden">
+          <sc-for list="{{ items }}" as="it" hint-placeholder-count="2">
+            <sc-if value="{{ it.pending }}" hint-placeholder-val="{{ true }}">
+              <div class="px-swipe" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-bottom: 1px solid #EEF0EE">
+                <button type="button" onClick="{{ it.open }}" aria-label="{{ it.aria }}" style="flex: 0 0 100%; scroll-snap-align: start; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: none; background: #FFFFFF; color: #0E1A15; font: inherit; text-align: left; cursor: pointer; box-sizing: border-box">
+                  <span style="width: 42px; height: 42px; border-radius: 12px; background: {{ it.iconBg }}; display: flex; align-items: center; justify-content: center; flex: none">
+                    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ it.iconFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.icon }}"></path></svg>
+                  </span>
+                  <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                    <span style="font-size: 15px; font-weight: 800">{{ it.name }}</span>
+                    <span style="font-size: 13px; font-weight: 600; color: {{ it.noteColor }}">{{ it.note }}</span>
+                  </span>
+                  <span class="px-num" style="font-size: 15px; font-weight: 800; color: {{ it.amountColor }}; flex: none">{{ it.amount }}</span>
+                </button>
+                <button type="button" onClick="{{ it.open }}" tabindex="-1" aria-hidden="true" style="flex: 0 0 116px; scroll-snap-align: end; border: none; background: {{ it.swipeBg }}; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px">
+                  <svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{ it.swipeText }}
+                </button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ it.done }}" hint-placeholder-val="{{ false }}">
+              <div class="px-done" style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #EEF0EE">
+                <span style="width: 42px; height: 42px; border-radius: 12px; background: #E6F4EA; display: flex; align-items: center; justify-content: center; flex: none">
+                  <svg class="tk" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E7A3B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                </span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+                  <span class="px-strike" style="font-size: 15px; font-weight: 800; align-self: flex-start">{{ it.name }}</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #1E7A3B">{{ it.doneText }}</span>
+                </span>
+                <span class="px-num" style="font-size: 15px; font-weight: 800; color: #6B7771; flex: none">{{ it.amount }}</span>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #4E5B55; padding: 0 2px">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>
+          Desliza a la izquierda o toca para registrar
+        </div>
+      </sc-if>
+      <sc-if value="{{ noItems }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FFFFFF; border-radius: 20px; padding: 20px 16px; text-align: center; font-size: 14px; font-weight: 600; color: #4E5B55">No vence nada este día.</div>
+      </sc-if>
+    </div>
+  </div>
+
+  <nav aria-label="Navegación principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E7EAE6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px 6px 0; box-sizing: border-box; align-items: start">
+    <a href="Inicio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"></path></svg></span>Inicio</a>
+    <a href="Movimientos.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg></span>Movimientos</a>
+    <a href="Cargar.dc.html" aria-label="Cargar un movimiento" style="display: flex; justify-content: center; text-decoration: none">
+      <span style="width: 52px; height: 48px; border-radius: 16px; background: #16493A; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></a>
+    <a href="Proximos.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #16493A; font-size: 11px; font-weight: 800">
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: #DDEEE3; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"></path></svg></span>Próximos</a>
+    <a href="Mas.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none; color: #4E5B55; font-size: 11px; font-weight: 700">
+      <span style="width: 52px; height: 30px; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"></path></svg></span>Explorar</a>
+  </nav>
+
+  <sc-if value="{{ showSheet }}" hint-placeholder-val="{{ false }}">
+    <button type="button" aria-label="Cerrar" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(14,26,21,.45); cursor: pointer; animation: pxBack .2s ease-out both"></button>
+    <div role="dialog" aria-modal="true" aria-label="{{ sh.title }}" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; animation: pxSheet .3s cubic-bezier(.2,.9,.3,1) both">
+      <div style="width: 40px; height: 5px; border-radius: 5px; background: #D9DED9; align-self: center"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+        <h2 style="margin: 0; font-size: 19px; font-weight: 800">{{ sh.title }}</h2>
+        <button type="button" aria-label="Cerrar" onClick="{{ closeSheet }}" style="width: 40px; height: 40px; border-radius: 12px; border: none; background: #F2F4F2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E1A15" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+      <div style="font-size: 14px; font-weight: 600; color: #4E5B55; margin-top: -8px">{{ sh.sub }}</div>
+      <label style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; font-weight: 700; color: #33403A">{{ sh.amountQ }}</span>
+        <span style="height: 56px; border-radius: 14px; border: 1.5px solid #16493A; display: flex; align-items: center; gap: 6px; padding: 0 16px">
+          <span style="font-size: 22px; font-weight: 800; color: #4E5B55">$</span>
+          <input type="text" inputmode="numeric" value="{{ sheetAmount }}" onInput="{{ onAmount }}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 24px; font-weight: 800; color: #0E1A15; font-variant-numeric: tabular-nums">
+        </span>
+      </label>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 700; color: #33403A">{{ sh.accQ }}</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{ accs }}" as="a" hint-placeholder-count="3">
+            <button type="button" onClick="{{ a.pick }}" aria-pressed="{{ a.on }}" style="height: 42px; padding: 0 14px; border-radius: 12px; border: 1.5px solid {{ a.border }}; background: {{ a.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ a.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 700; color: #33403A">¿Cuándo?</span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{ dates }}" as="dt" hint-placeholder-count="3">
+            <button type="button" onClick="{{ dt.pick }}" aria-pressed="{{ dt.on }}" style="height: 42px; border-radius: 12px; border: 1.5px solid {{ dt.border }}; background: {{ dt.bg }}; color: #0E1A15; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{ dt.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ showDateInput }}" hint-placeholder-val="{{ false }}">
+        <label class="fd-in" style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; color: #33403A">Elige la fecha</span>
+          <input type="date" value="{{ otherDate }}" min="2026-01-01" max="{{ maxDate }}" onInput="{{ onOtherDate }}" style="height: 50px; border-radius: 14px; border: 1.5px solid #16493A; background: #FFFFFF; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700; color: #0E1A15; outline-color: #16493A; box-sizing: border-box; width: 100%">
+        </label>
+      </sc-if>
+      <button type="button" onClick="{{ confirmSheet }}" style="height: 54px; border-radius: 14px; border: none; background: #16493A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer">{{ sh.cta }}</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { month: 0, day: 23, paid: {}, sheet: null, sheetAmount: '', sheetAcc: 0, sheetDate: 0, otherDate: '2026-11-20' }; }
+  renderVals() {
+    const s = this.state;
+    const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const fdate = (iso) => { const p = String(iso || '').split('-'); return p.length === 3 ? parseInt(p[2], 10) + ' de ' + MESES[parseInt(p[1], 10) - 1] : 'otra fecha'; };
+    const tw = (k, target, from0) => { const me = this; me._tw = me._tw || {}; const now = Date.now(); let t = me._tw[k]; const ease = (x) => 1 - Math.pow(1 - x, 3);
+      if (!t) t = me._tw[k] = { from: from0 ? 0 : target, to: target, start: now };
+      else if (t.to !== target) { const p0 = Math.min(1, (now - t.start) / 550); t = me._tw[k] = { from: t.from + (t.to - t.from) * ease(p0), to: target, start: now }; }
+      const p = Math.min(1, (now - t.start) / 550);
+      if (p < 1 && !me._raf) me._raf = requestAnimationFrame(() => { me._raf = null; me.forceUpdate(); });
+      return Math.round(t.from + (t.to - t.from) * ease(p)); };
+
+    const I = {
+      wifi: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',
+      card: 'M3 6h18v12H3zM3 10h18M7 15h4',
+      bank: 'M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z',
+      home: 'M3 11l9-8 9 8M5 10v10h14V10',
+      bolt: 'M13 3L5 14h6l-1 7 8-11h-6z',
+      user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+      cash: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'
+    };
+    const M = [
+      { title: 'Noviembre 2026', name: 'noviembre', days: 30, offset: 6, today: 23, ev: {
+        23: [{ k: 'late', name: 'Internet', note: 'Venció hoy', amount: 18900, icon: I.wifi }],
+        25: [{ k: 'pay', name: 'Tarjeta Visa', note: 'Resumen de noviembre', amount: 152400, icon: I.card }],
+        27: [{ k: 'pay', name: 'Cuota del préstamo', note: 'Cuota 7 de 12', amount: 56500, icon: I.bank }],
+        29: [{ k: 'get', name: 'Te devuelve Martín', note: 'Préstamo a un amigo', amount: 20000, icon: I.user }]
+      } },
+      { title: 'Diciembre 2026', name: 'diciembre', days: 31, offset: 1, today: 0, ev: {
+        1: [{ k: 'get', name: 'Sueldo', note: 'Se repite cada mes', amount: 950000, icon: I.cash }, { k: 'pay', name: 'Alquiler', note: 'Se repite cada mes', amount: 280000, icon: I.home }],
+        4: [{ k: 'pay', name: 'Luz', note: 'Se repite cada mes', amount: 24300, icon: I.bolt }],
+        25: [{ k: 'pay', name: 'Tarjeta Visa', note: 'Resumen de diciembre', amount: 98700, icon: I.card }]
+      } }
+    ];
+    const mo = M[s.month];
+    const fmt = (n) => '$ ' + n.toLocaleString('es-AR');
+    const key = (d, i) => s.month + '-' + d + '-' + i;
+    const isPaid = (d, i) => !!s.paid[key(d, i)];
+    let pay = 0, get = 0;
+    Object.keys(mo.ev).forEach((d) => mo.ev[d].forEach((e, i) => { if (isPaid(d, i)) return; if (e.k === 'get') get += e.amount; else pay += e.amount; }));
+    const cells = [];
+    for (let i = 0; i < mo.offset; i++) cells.push({ n: '', empty: true, vis: 'hidden', bg: 'transparent', fg: '#0E1A15', weight: 600, dot: 'transparent', aria: '', on: 'false', pick: () => {} });
+    for (let d = 1; d <= mo.days; d++) {
+      const ev = (mo.ev[d] || []).filter((e, i) => !isPaid(d, i));
+      const sel = d === s.day, today = d === mo.today;
+      const late = ev.some((e) => e.k === 'late'), hasPay = ev.some((e) => e.k === 'pay'), hasGet = ev.some((e) => e.k === 'get');
+      const dot = late ? '#C5221F' : (hasPay ? '#E08A1E' : (hasGet ? '#1E8E3E' : 'transparent'));
+      cells.push({
+        n: String(d), empty: false, vis: 'visible',
+        bg: sel ? '#16493A' : (today ? '#EEF6F1' : 'transparent'),
+        fg: sel ? '#FFFFFF' : '#0E1A15', weight: sel || today || ev.length ? 800 : 600,
+        dot: sel && dot !== 'transparent' ? '#FFFFFF' : dot,
+        aria: d + ' de ' + mo.name + (ev.length ? ', ' + ev.length + ' vencimiento' + (ev.length > 1 ? 's' : '') : ''),
+        on: sel ? 'true' : 'false',
+        pick: () => this.setState({ day: d })
+      });
+    }
+    const list = (mo.ev[s.day] || []).map((e, i) => ({
+      pending: !isPaid(s.day, i), done: isPaid(s.day, i),
+      doneText: (e.k === 'get' ? 'Cobro registrado ' : 'Pago registrado ') + (typeof s.paid[key(s.day, i)] === 'string' ? s.paid[key(s.day, i)] : 'hoy'),
+      swipeText: e.k === 'get' ? 'Registrar cobro' : 'Registrar pago', swipeBg: e.k === 'get' ? '#1E7A3B' : '#16493A',
+      aria: e.name + ', ' + (e.k === 'get' ? '+ ' : '') + fmt(e.amount) + '. Tocar para registrar ' + (e.k === 'get' ? 'el cobro' : 'el pago'),
+      open: () => this.setState({ sheet: { k: key(s.day, i), name: e.name, amount: e.amount, get: e.k === 'get', late: e.k === 'late' }, sheetAmount: e.amount.toLocaleString('es-AR'), sheetAcc: 0, sheetDate: 0 }),
+      name: e.name, icon: e.icon, note: e.note,
+      noteColor: e.k === 'late' ? '#C5221F' : '#4E5B55',
+      amount: (e.k === 'get' ? '+ ' : '') + fmt(e.amount),
+      amountColor: e.k === 'get' ? '#1E7A3B' : '#0E1A15',
+      iconBg: e.k === 'get' ? '#EEF6F1' : (e.k === 'late' ? '#FDECEA' : '#FFF5E8'),
+      iconFg: e.k === 'get' ? '#16493A' : (e.k === 'late' ? '#C5221F' : '#A35200'),
+      action: e.k === 'get' ? 'Registrar cobro' : 'Registrar pago',
+      btnBg: e.k === 'late' ? '#16493A' : '#FFFFFF', btnFg: e.k === 'late' ? '#FFFFFF' : '#16493A',
+      btnBorder: e.k === 'late' ? 'none' : '1.5px solid #E1E5E1'
+    }));
+    const wd = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const dow = wd[(mo.offset + s.day) % 7];
+    return {
+      payLabel: 'A pagar en ' + mo.name, getLabel: 'A cobrar en ' + mo.name, monthTitle: mo.title,
+      toPay: fmt(tw('pay', pay)), toGet: '+ ' + fmt(tw('get', get)),
+      prev: () => this.setState({ month: 0, day: 23 }), next: () => this.setState({ month: 1, day: 1 }),
+      prevDisabled: s.month === 0, nextDisabled: s.month === 1,
+      prevOp: s.month === 0 ? 0.3 : 1, nextOp: s.month === 1 ? 0.3 : 1,
+      cells,
+      dayTitle: mo.today === s.day ? 'Hoy, ' + dow + ' ' + s.day : dow.charAt(0).toUpperCase() + dow.slice(1) + ' ' + s.day + ' de ' + mo.name,
+      items: list, hasItems: list.length > 0, noItems: list.length === 0, hasPending: list.some((x) => x.pending),
+      showSheet: !!s.sheet,
+      sh: s.sheet ? {
+        title: (s.sheet.get ? 'Registrar cobro' : 'Registrar pago'),
+        sub: s.sheet.name + ' · ' + fmt(s.sheet.amount),
+        amountQ: s.sheet.get ? '¿Cuánto cobraste?' : '¿Cuánto pagaste?',
+        accQ: s.sheet.get ? '¿A qué cuenta entró?' : '¿Con qué pagaste?',
+        cta: s.sheet.get ? 'Confirmar cobro' : 'Confirmar pago'
+      } : { title: '', sub: '', amountQ: '', accQ: '', cta: '' },
+      sheetAmount: s.sheetAmount,
+      onAmount: (e) => { const v = (e.target.value || '').replace(/\D/g, ''); this.setState({ sheetAmount: v ? parseInt(v, 10).toLocaleString('es-AR') : '' }); },
+      accs: ['Banco', 'Efectivo', 'Billetera virtual'].map((label, i) => ({ label, on: s.sheetAcc === i ? 'true' : 'false', bg: s.sheetAcc === i ? '#EEF6F1' : '#FFFFFF', border: s.sheetAcc === i ? '#16493A' : '#E1E5E1', pick: () => this.setState({ sheetAcc: i }) })),
+      dates: ['Hoy', 'Ayer', 'Otra fecha'].map((label, i) => ({ label, on: s.sheetDate === i ? 'true' : 'false', bg: s.sheetDate === i ? '#EEF6F1' : '#FFFFFF', border: s.sheetDate === i ? '#16493A' : '#E1E5E1', pick: () => this.setState({ sheetDate: i }) })),
+      closeSheet: () => this.setState({ sheet: null }),
+      showDateInput: s.sheetDate === 2, otherDate: s.otherDate, maxDate: '2026-12-31', onOtherDate: (e) => this.setState({ otherDate: e.target.value }),
+      confirmSheet: () => this.setState({ paid: Object.assign({}, s.paid, { [s.sheet.k]: ['hoy', 'ayer', 'el ' + fdate(s.otherDate)][s.sheetDate] }), sheet: null })
+    };
+  }
+}
+</script>
+</body>
+</html>
