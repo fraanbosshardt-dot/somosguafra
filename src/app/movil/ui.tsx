@@ -90,6 +90,19 @@ export function HideAmounts() {
   );
 }
 
+// Aviso abajo de la pantalla que se va solo ("Listo, guardamos…").
+export function Toast({ text }: { text: string }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => { const t = setTimeout(() => setOn(false), 2600); return () => clearTimeout(t); }, []);
+  if (!on) return null;
+  return (
+    <div role="status" className="mv-toast">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8EC4A0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d={PATHS.check} /></svg>
+      <span>{text}</span>
+    </div>
+  );
+}
+
 // Confirmación que se ve unos segundos y se va (después de "Sí, lo pagué").
 export function DoneCard({ text }: { text: string }) {
   const [phase, setPhase] = useState<"on" | "gone" | "off">("on");

@@ -119,6 +119,22 @@
 .mv-input { height: 50px; border-radius: 14px; border: 1.5px solid var(--field-line); background: #fff; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); width: 100%; outline-color: var(--brand); }
 .mv-error { margin: 0; background: #FDECEA; color: #7A1A16; border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }
 
+/* Movimientos */
+.mv-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 116px; }
+.mv-bars a { height: 116px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+.mv-bars i { display: block; width: 100%; border-radius: 8px; transform-origin: center bottom; animation: mvGrowY .6s cubic-bezier(.2,.9,.3,1) both; }
+.mv-bars span { font-size: 12px; font-weight: 800; }
+@keyframes mvGrowY { from { transform: scaleY(0); } }
+.mv-search { height: 48px; border-radius: 14px; background: var(--card); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); }
+.mv-search input { flex: 1; min-width: 0; border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); outline: none; }
+.mv-chips a { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--field-line); background: #fff; font-size: 13px; font-weight: 800; display: flex; align-items: center; }
+.mv-chips a.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.mv-toast { position: fixed; left: 20px; right: 20px; bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom)); z-index: 30; max-width: 520px; margin: 0 auto; background: var(--ink); color: #fff; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 12px 30px rgba(0,0,0,.25); animation: mvIn .3s cubic-bezier(.2,.9,.3,1) both; }
+
+.mv-lbl { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.mv-lbl select.mv-input { appearance: auto; }
+.mv-btn.mv-danger { border-color: #F1C9C5; color: #A3231B; flex: none; height: 48px; }
+
 /* Ocultar montos */
 .mv[data-hide="1"] .mv-amt { color: transparent !important; position: relative; }
 .mv[data-hide="1"] .mv-amt::after { content: "$ •••"; position: absolute; left: 0; top: 0; color: var(--ink); }

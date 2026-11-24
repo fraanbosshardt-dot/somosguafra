@@ -452,6 +452,7 @@ export async function updateMovementAction(_: FormState, fd: FormData): Promise<
     await audit("tx.updated", { userId: user.id, workspaceId: workspace.id, entity: "transaction", entityId: id });
   } catch (e) { return fail(e); }
   revalidatePath("/app", "layout");
+  if (String(fd.get("back") ?? "") === "/movil") { revalidatePath("/movil", "layout"); redirect("/movil/movimientos?guardado=1"); }
   redirect("/app/movimientos?guardado=1");
 }
 
@@ -540,15 +541,17 @@ export async function bulkMovementsAction(_: FormState, fd: FormData): Promise<F
 export async function deleteMovementAction(fd: FormData) {
   const { user, workspace } = await requireWorkspace();
   const id = String(fd.get("id") ?? "");
+  const back = String(fd.get("back") ?? "");
+  const mobile = /^\/movil(\/|\?|$)/.test(back);
   try {
     await deleteMovement(getDb(), workspace.id, id);
   } catch (e) {
-    if (e instanceof UserError) redirect(`/app/movimientos/${id}?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof UserError) redirect(`${mobile ? "/movil" : "/app"}/movimientos/${id}?error=${encodeURIComponent(e.message)}`);
     throw e;
   }
   await audit("tx.deleted", { userId: user.id, workspaceId: workspace.id, entity: "transaction", entityId: id });
   revalidatePath("/app", "layout");
-  const back = String(fd.get("back") ?? "");
+  if (mobile) { revalidatePath("/movil", "layout"); redirect(back); }
   redirect(/^\/app(\/|\?|$)/.test(back) ? back : "/app/movimientos?borrado=1");
 }
 
