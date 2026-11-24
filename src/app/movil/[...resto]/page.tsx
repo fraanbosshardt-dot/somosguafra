@@ -4,9 +4,8 @@ import { redirect } from "next/navigation";
 // abre su equivalente de la web. Cada pantalla nueva de /movil tiene su propia ruta y deja de pasar por acá.
 const BRIDGE: [RegExp, (m: RegExpMatchArray, q: URLSearchParams) => string][] = [
   [/^buscar$/, () => "/app/buscar"],
-uentas\/nueva/d
-uentas\/nueva/d
-uentas\/nueva/d
+  [/^explorar\/pro$/, () => "/app/contratar"],
+  [/^explorar\/([\w-]+(?:\/[\w-]+)*)$/, (m) => `/app/${m[1]}`],
 ];
 
 export default async function Bridge({ params, searchParams }: { params: Promise<{ resto: string[] }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -219,3 +219,6 @@
 .mv-procard b { color: #fff; }
 .mv-procard .mv-btn { background: #fff; color: var(--brand); border: none; }
 .mv-ok { margin: 0; background: var(--mint); color: #0F3A2D; border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }
+.mv-flow { display: block; }
+.mv-flow summary { display: flex; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
+.mv-flow summary::-webkit-details-marker { display: none; }

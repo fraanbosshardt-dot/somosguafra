@@ -1,6 +1,12 @@
 "use server";
 import { reportError } from "@/lib/diagnostics";
-import { revalidatePath } from "next/cache";
+import { revalidatePath as revalidateWeb } from "next/cache";
+
+// Lo que cambia en la web también cambia en la app (/movil): se refrescan las dos.
+function revalidatePath(path: string, type?: "layout" | "page") {
+  revalidateWeb(path, type);
+  if (path.startsWith("/app")) revalidateWeb("/movil", "layout");
+}
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import QRCode from "qrcode";
