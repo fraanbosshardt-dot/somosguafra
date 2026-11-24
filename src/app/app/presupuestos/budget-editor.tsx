@@ -56,7 +56,7 @@ export function BudgetEditor({ period, cats, symbol, hasBudget, ended }: { perio
           </select>
         </div>
       )}
-      <div className="stm-foot"><p className="sub">La estimación se actualiza al cargar compras o pendientes. No crea gastos ni pagos y no cambia tus saldos. Guardá para aplicarla. Quitar una categoría conserva sus gastos y elimina solo el límite. Para repetirla otro mes, copiá el presupuesto.</p><Submit>Guardar presupuesto</Submit></div>
+      <div className="stm-foot"><p className="sub">Guardá para aplicar los límites y sus opciones. No mueve dinero. Quitar una categoría conserva sus gastos; solo quita el límite.</p><Submit>Guardar presupuesto</Submit></div>
     </ActionForm>
   );
 }

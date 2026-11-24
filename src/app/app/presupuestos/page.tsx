@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireWorkspace } from "@/lib/auth/session";
+import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { budgetFor } from "@/server/planning";
 import { formatMoney, ZERO } from "@/lib/money";
@@ -14,7 +14,8 @@ import { symbolOf } from "@/lib/countries";
 export const metadata: Metadata = { title: "Presupuestos" };
 
 export default async function Budgets({ searchParams }: { searchParams: Promise<{ mes?: string; copiado?: string }> }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, plan } = await requireWorkspace();
+  const canCarry = await canUse(plan, "informes");
   const sp = await searchParams;
   const p = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.mes ?? "") ? sp.mes! : period(todayIn(workspace.timezone));
   const cur = workspace.baseCurrency;
@@ -36,16 +37,23 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
   const parentOf = new Map(allCats.map((c) => [c.id, c.parentId ?? c.id]));
   const avg = new Map<string, number>();
   for (const t of txs) { const k = parentOf.get(t.categoryId ?? "") ?? ""; const v = Number(t._sum.amount ?? 0) * (t.direction === "OUT" ? 1 : -1); avg.set(k, (avg.get(k) ?? 0) + v / 3); }
+  const editor = (
+      <div className="card">
+        <details className="more" open={!hasBudget}>
+          <summary>{hasBudget ? "Editar límites del mes" : "Crear presupuesto del mes"}</summary>
+          <BudgetEditor key={`${p}:${b.budget?.id ?? "new"}`} period={p} symbol={symbolOf(cur)} hasBudget={hasBudget} ended={periodEnd(p) < todayIn(workspace.timezone)} cats={b.categories.map((c) => { const l = b.budget?.lines.find((x) => x.categoryId === c.id); return { id: c.id, name: c.name, avg: avg.get(c.id) ?? 0, used: (() => { const r = b.rows.find((r) => r.id === c.id); return r ? (r.spent.gt(0) ? r.spent : ZERO).plus(r.committed).plus(r.scheduled).toFixed(2) : "0"; })(), limit: l ? l.limitAmount.toFixed(2) : null, projectRemaining: l?.projectRemaining ?? false }; })} />
+        </details>
+      </div>
+  );
   return (
     <>
-      <PageHead crumb="Planificar" title="Presupuestos" desc="Elegí cuánto gastar por categoría y seguí tu margen durante el mes."
-        actions={<><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><span className="btn" style={{ minWidth: 150, justifyContent: "center" }}>{fmtPeriod(p)}</span><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></>} />
+      <PageHead crumb="Planificar" title="Presupuestos" desc="Controlá tus gastos por categoría, sin confundir el límite con lo gastado." toolbar={<nav className="budget-period" aria-label="Mes del presupuesto"><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, -1)}`} aria-label="Mes anterior">‹</Link><strong>{fmtPeriod(p)}</strong><Link className="btn" href={`/app/presupuestos?mes=${addMonths(p, 1)}`} aria-label="Mes siguiente">›</Link></nav>} />
       {sp.copiado === "1" && <p className="notice g" role="status">Presupuesto copiado. Se conservaron los límites y las opciones, sin copiar gastos.</p>}
-      <p className="sub">Un límite no es un gasto. Las compras consumen el presupuesto; los pendientes y lo programado se muestran por separado. Para estimar el resto en el flujo, activá la opción en cada categoría.</p>
       {hasBudget ? (
         <>
           <div className="card bdg-stats"><Stat label="Límite del mes" value={fm(lim)} /><Stat label="Gastado" value={fm(spentLim)} /><Stat label="Previsto" value={fm(commLim)} /><Stat label={left.isNegative() ? "Exceso entre gastado y previsto" : "Margen del presupuesto"} value={fm(left.abs())} tone={left.isNegative() ? "neg" : "pos"} /></div>
           <p className="sub">«Previsto» incluye lo que falta pagar y lo programado por categoría. El margen es lo que queda de tus límites, no el saldo de tus cuentas.</p>
+          {editor}
           {/* Una tarjeta por categoría con límite: cuánto queda, la barra y lo gastado */}
           <div className="bdg-grid">{limited.map((r) => {
             const pct = r.spent.dividedBy(r.limit!).times(100).toNumber();
@@ -79,18 +87,14 @@ export default async function Budgets({ searchParams }: { searchParams: Promise<
           )}
         </>
       ) : (
-        <div className="card hero"><div><div className="lbl">Sin presupuesto para {fmtPeriod(p).toLowerCase()}</div><p className="sub" style={{ maxWidth: "48ch", margin: "8px 0 12px" }}>Poné un límite a las categorías que quieras controlar. Lo que gastes y lo que tengas pendiente se descuenta solo.</p>
-          <ActionForm action={copyBudgetAction}><input type="hidden" name="from" value={addMonths(p, -1)} /><input type="hidden" name="to" value={p} /><Submit className="btn" pending="Copiando…">Copiar el del mes anterior</Submit></ActionForm></div>
-          <div className="hero-side"><div className="hrow"><span>Gastado este mes</span><b>{fm(b.totals.spent)}</b></div><div className="hrow"><span>Comprometido</span><b>{fm(b.totals.committed)}</b></div></div></div>
+        <>{editor}<p className="sub">Ya registraste {fm(b.totals.spent)} en gastos este mes. Crear límites te permite seguirlos por categoría; no vuelve a registrar esas compras.</p></>
       )}
-      <p className="sub"><Link className="lnk" href={`/app/presupuestos/trasladar?desde=${addMonths(p,-1)}`}>Revisar traslado del margen anterior · Pro</Link>. Opcional: muestra el desglose antes de copiar; no mueve dinero.</p>
+      <details className="card more budget-options"><summary>Opciones del mes</summary><div className="product-form">
+        <div><b>Copiar límites del mes anterior</b><p className="sub">Conserva los límites y sus opciones, sin copiar gastos. Solo si este mes todavía no tiene límites.</p><ActionForm action={copyBudgetAction}><input type="hidden" name="from" value={addMonths(p, -1)} /><input type="hidden" name="to" value={p} /><Submit className="btn" disabled={hasBudget} pending="Copiando…">Copiar límites</Submit></ActionForm></div>
+        <div><b>Copiar y sumar margen {!canCarry && <span className="pill">Pro</span>}</b><p className="sub">Revisá cuánto margen positivo del mes terminado se sumaría al límite siguiente. No mueve dinero ni se repite automáticamente.</p><Link className="btn" href={`/app/presupuestos/trasladar?desde=${addMonths(p,-1)}`}>{canCarry ? "Revisar antes de copiar" : "Conocer esta opción Pro"}</Link></div>
+      </div></details>
       <details className="card more"><summary>Cómo se calcula y cómo usarlo con tarjetas</summary><p className="sub">El límite menos lo gastado y lo previsto da el margen. Una compra pendiente pasa de previsto a gastado al pagarla: no se descuenta dos veces. La proyección agrega solo el margen estimado al flujo y no mueve dinero.</p><p className="sub">Si cargás la tarjeta solo por el total del resumen, no se puede conocer cuánto corresponde a cada categoría. Para que esos consumos descuenten de su presupuesto, usá el detalle de compras por categoría. Las compras en cuotas consumen el presupuesto por el total en el mes de compra; las cuotas siguen sus vencimientos en el flujo.</p><p className="sub">En Inicio, el disponible hasta tu próximo cobro descuenta pagos cargados; no incluye todo el presupuesto pendiente de gastar. Para anticiparlo, consultá Flujo de caja con estimaciones.</p></details>
-      <div className="card">
-        <details className="more" open={!hasBudget}>
-          <summary>{hasBudget ? "Editar límites" : "Armar el presupuesto"}</summary>
-          <BudgetEditor key={`${p}:${b.budget?.id ?? "new"}`} period={p} symbol={symbolOf(cur)} hasBudget={hasBudget} ended={periodEnd(p) < todayIn(workspace.timezone)} cats={b.categories.map((c) => { const l = b.budget?.lines.find((x) => x.categoryId === c.id); return { id: c.id, name: c.name, avg: avg.get(c.id) ?? 0, used: (() => { const r = b.rows.find((r) => r.id === c.id); return r ? (r.spent.gt(0) ? r.spent : ZERO).plus(r.committed).plus(r.scheduled).toFixed(2) : "0"; })(), limit: l ? l.limitAmount.toFixed(2) : null, projectRemaining: l?.projectRemaining ?? false }; })} />
-        </details>
-      </div>
+
     </>
   );
 }

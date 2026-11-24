@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireWorkspace } from "@/lib/auth/session";
+import { canUse, requireWorkspace } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { fmtDate, isoDate, todayIn } from "@/lib/dates";
 import { applyWeekend, occurrences } from "@/server/recurring";
 import { Empty, PageHead, SettingsTabs } from "@/components/page";
 import { ActionForm, Submit } from "@/components/forms";
-import { CloseDetails } from "@/components/close-details";
+import { EditPanel } from "@/components/edit-panel";
 import { createRuleAction, deleteRuleAction, endRuleAction, pauseRuleAction, saveRuleAction } from "@/app/actions/modules";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { ListSearch } from "@/components/list-search";
@@ -19,7 +19,8 @@ const FREQ: Record<string, string> = { DAILY: "Todos los días", WEEKLY: "Cada s
 const MONTHLY_LIKE = ["MONTHLY", "BIMONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"];
 
 export default async function Rules({ searchParams }: { searchParams: Promise<{ nueva?: string; borrada?: string; terminada?: string }> }) {
-  const { workspace } = await requireWorkspace();
+  const { workspace, plan } = await requireWorkspace();
+  const hasCosts = await canUse(plan, "informes");
   const sp = await searchParams as { nueva?: string; borrada?: string; terminada?: string; guardada?: string };
   const db = getDb();
   const today = todayIn(workspace.timezone);
@@ -54,8 +55,7 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
           <div className="s">{FREQ[r.frequency]}{r.dayOfMonth ? ` · día ${r.dayOfMonth}` : ""}{r.variableAmount ? " · importe variable" : ""}{next ? ` · próxima: ${fmtDate(next)}` : ""}{r.endDate ? ` · ${active ? "hasta" : "terminó el"} ${fmtDate(r.endDate)}` : " · sin fecha de fin"}</div>
         </div>
         <b className={`num ${r.direction === "RECEIVABLE" ? "pos" : ""}`}>{formatMoney(r.direction === "RECEIVABLE" ? r.amount : r.amount.neg(), r.currency, { sign: true })}</b>
-        <details className="more" style={{ width: "100%" }}>
-          <summary className="recurring-options">{active ? "Editar y otras opciones" : "Opciones"}</summary>
+        <div className="recurring-edit-action"><EditPanel title={r.description} label={active ? "Editar" : "Opciones"}>
           <div className="rule-opts">
             {active && (
               <>
@@ -85,23 +85,22 @@ export default async function Rules({ searchParams }: { searchParams: Promise<{ 
                 </section>
               </>
             )}
-            <section>
-              <h4>Borrar</h4>
+            <details className="more edit-danger"><summary>Borrar esta regla</summary>
               <p className="sub">Se borra la regla y sus próximos pendientes. Lo que ya pagaste o cobraste queda en tus movimientos.</p>
               <form action={deleteRuleAction}><input type="hidden" name="id" value={r.id} /><ConfirmSubmit className="btn sm danger" question={`¿Borrar "${r.description}" y sus próximos pendientes?`} yes="Sí, borrar">Borrar "{r.description}"</ConfirmSubmit></form>
-            </section>
-            <div className="rule-close">{active && <button className="btn pri sm" type="submit" form={`rule-${r.id}`}>Guardar cambios</button>}<CloseDetails /></div>
+            </details>
+            <div className="rule-close">{active && <button className="btn pri sm" type="submit" form={`rule-${r.id}`}>Guardar cambios</button>}</div>
           </div>
-        </details>
+        </EditPanel></div>
       </div>
     );
   };
 
   return (
     <>
-      <PageHead crumb="Configuración" title="Pagos que se repiten" desc="Sueldos, servicios, cuotas y cosechas que se repiten solos. Son los que el flujo de caja proyecta a futuro. Las suscripciones que pagás con tarjeta (Netflix, gimnasio) se cargan en la tarjeta." />
+      <PageHead crumb="Configuración" title="Pagos y cobros que se repiten" desc="Programá tus compromisos habituales. Se proyectan a futuro y los confirmás cuando ocurren." />
       <SettingsTabs current="recurrentes" />
-      <p className="sub"><Link className="lnk" href="/app/recurrentes/costos">Ver el costo anual orientativo de mis servicios · Pro</Link></p>
+      <div className="acts"><Link className="btn" href="/app/recurrentes/costos">Costo de mis servicios {!hasCosts && <span className="pill">Pro</span>}</Link></div>
       {sp.borrada && <p className="notice g" role="status">Listo, se borró. Lo ya pagado o cobrado quedó en tus movimientos.</p>}
       {sp.guardada && <p className="notice g" role="status">Listo, se guardaron los cambios. Lo anterior quedó como estaba.</p>}
       {sp.terminada && <p className="notice g" role="status">Listo, dejó de repetirse desde hoy. La ves abajo, en Terminadas.</p>}

@@ -6,6 +6,7 @@ import { ActionForm, Submit } from "@/components/forms";
 import { createCategoryAction, deleteCategoryAction } from "@/app/actions/app";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { CategoryEdit } from "./category-edit";
+import { EditPanel } from "@/components/edit-panel";
 import { ListSearch } from "@/components/list-search";
 import { searchText } from "@/lib/search-text";
 
@@ -41,12 +42,10 @@ export default async function Categories({ searchParams }: { searchParams: Promi
               </div>
               {subs.length > 0 && <div className="chips">{subs.map((s) => <span className="tag" key={s.id}>{s.name}</span>)}</div>}
               <div className="cat-acts">
-              <details className="cat-del cat-edit">
-                <summary><span className="sm-o">Editar</span><span className="sm-c">Cerrar ✕</span></summary>
+              <EditPanel title={`Editar ${p.name}`}>
                 <CategoryEdit items={[{ id: p.id, name: p.name, parentId: null, hasChildren: subs.length > 0 }, ...subs.map((x) => ({ id: x.id, name: x.name, parentId: x.parentId, hasChildren: false }))]} parents={parents.map((x) => ({ id: x.id, name: x.name }))} />
-              </details>
-              <details className="cat-del">
-                <summary><span className="sm-o">Borrar</span><span className="sm-c">Cerrar ✕</span></summary>
+              </EditPanel>
+              <EditPanel title={`Borrar categoría: ${p.name}`} label="Borrar…">
                 <ActionForm action={deleteCategoryAction} style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 10 }}>
                   <input type="hidden" name="kind" value={kind} />
                   <label className="field">Qué querés borrar<select name="id" defaultValue={p.id}>
@@ -61,7 +60,7 @@ export default async function Categories({ searchParams }: { searchParams: Promi
                   <p className="sub" style={{ margin: 0 }}>Nada se pierde: los movimientos, pagos y presupuestos de esta categoría quedan en la que elijas.</p>
                   <div><ConfirmSubmit className="btn danger" question={`¿Borrar ${p.name}?`} yes="Sí, borrar">Borrar</ConfirmSubmit></div>
                 </ActionForm>
-              </details>
+              </EditPanel>
               </div>
             </div>
           );

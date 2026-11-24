@@ -9,6 +9,7 @@ const viewedThisSession = new Set<string>();
 
 function FirstUseGuide({ route, tour }: { route: string; tour: ProductTour }) {
   const [open, setOpen] = useState(false);
+  const [firstVisit, setFirstVisit] = useState(false);
   const [step, setStep] = useState(0);
   const contentId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -22,7 +23,7 @@ function FirstUseGuide({ route, tour }: { route: string; tour: ProductTour }) {
       if (localStorage.getItem(key) === "vista") return;
       localStorage.setItem(key, "vista");
     } catch { /* The guide still works if device storage is unavailable. */ }
-    setOpen(true);
+    setFirstVisit(true);
   }, [key]);
 
   function move(next: number) {
@@ -36,7 +37,7 @@ function FirstUseGuide({ route, tour }: { route: string; tour: ProductTour }) {
 
   return <section className="product-guide first-use-guide" aria-label={tour.title}>
     <button ref={toggle} type="button" className="guide-toggle" aria-expanded={open} aria-controls={contentId}
-      onClick={() => { setStep(0); setOpen(!open); }}>Guía paso a paso <span aria-hidden="true">{open ? "−" : "+"}</span></button>
+      onClick={() => { setStep(0); setFirstVisit(false); setOpen(!open); }}>{firstVisit ? "¿Primera vez? Ver guía paso a paso" : "Guía paso a paso"} <span aria-hidden="true">{open ? "−" : "+"}</span></button>
     {open && <div id={contentId} className="guide-content">
       <div className="guide-top"><span>{tour.title}</span><span>Paso {step + 1} de {tour.steps.length}</span></div>
       <h2 ref={heading} tabIndex={-1}>{tour.steps[step].title}</h2>

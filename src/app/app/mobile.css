@@ -1,4 +1,47 @@
 /* Ritmo y controles de la app privada en pantallas pequeñas. */
+.app .view .page-intro{display:flex;flex-direction:column;gap:10px;min-width:0}
+.app .view .page-intro>.ph{align-items:flex-start}
+.app .view .page-intro .product-guide{margin-top:0;width:100%;max-width:72ch}
+.app .view .page-intro .guide-toggle{width:auto;gap:14px;min-height:40px;padding:4px 0;font-size:13px;color:var(--muted)}
+.app .view .budget-period{display:flex;align-items:center;gap:14px;margin-top:8px;width:fit-content;max-width:100%}
+.app .view .budget-period .btn{flex:0 0 44px;min-width:44px;min-height:44px}
+.app .view .budget-period strong{min-width:140px;text-align:center;font-size:16px;font-weight:500}
+.app .view .budget-options .product-form>div+div{border-top:1px solid var(--line);padding-top:18px}
+.app .view .budget-options p{margin:8px 0 14px;max-width:70ch}
+.settings-sections{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.settings-sections a{display:flex;align-items:center;min-height:44px;padding:8px 12px;border-radius:10px;color:var(--muted);line-height:1.4;text-decoration:none}
+.settings-sections a:hover{background:var(--surface-2);color:var(--fg)}
+.settings-sections a[aria-current=page]{background:var(--ink-soft);color:var(--ink-txt);font-weight:600}
+.settings-sections a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media(max-width:900px){.settings-desktop.settings-sections{display:none}}
+.edit-panel{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--fg);padding:0;width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 32px);box-shadow:var(--shadow,0 12px 48px #0003)}
+.edit-panel[open]{display:flex;flex-direction:column}
+.edit-panel::backdrop{background:#0006}
+.edit-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line)}
+.edit-panel-head h2{font-size:20px;line-height:1.4;font-weight:500;margin:0;overflow-wrap:anywhere}
+.edit-panel-content{padding:22px;overflow:auto;min-height:0;overscroll-behavior:contain}
+.edit-panel-footer{display:flex;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--line)}
+.edit-panel .btn{min-height:44px;white-space:normal}
+.edit-panel .field{min-width:0}
+.edit-panel .field :is(input,select,textarea){max-width:100%;min-width:0}
+.edit-panel .form-msg{margin-top:16px}
+.edit-panel .edit-danger{border-top:1px solid var(--line);padding-top:14px}
+.edit-panel .edit-danger summary{color:var(--red)}
+.recurring-edit-action{flex-basis:100%;padding-top:8px}
+.app .view .upcoming-filter-options{flex:2 1 280px;min-width:0}
+.app .view .upcoming-filter-options summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:10px;font-weight:500}
+.upcoming-filter-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding-top:10px}
+.app .view .upcoming-filter-actions{display:flex;gap:10px;flex:0 1 auto;flex-wrap:wrap}
+.app .view .upcoming-filter-actions .btn{width:auto;flex:1 1 auto}
+.faq-groups{display:flex;flex-direction:column;gap:12px}
+.faq-group{border:1px solid var(--line);border-radius:12px;padding:4px 14px}
+.faq-group>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;min-height:48px;font-weight:500}
+.faq-group .list{padding-bottom:10px}
+.help-quick-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.help-quick-actions .btn{white-space:normal;line-height:1.4}
+@media(max-width:1100px){.help-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.app .view .upcoming-filter-options{flex-basis:100%}.edit-panel-content{padding:18px}.edit-panel-head,.edit-panel-footer{padding:14px 18px}.edit-panel .field :is(input,select,textarea){font-size:16px;min-height:44px}.app .view .budget-period{width:100%;justify-content:space-between}.app .view .budget-period .btn{flex:0 0 44px}}
+@media(max-width:480px){.upcoming-filter-fields{grid-template-columns:1fr}.edit-panel .frow{grid-template-columns:minmax(0,1fr)}.edit-panel .rule-close .btn{width:100%}.help-quick-actions .btn{padding:10px 8px}}
 .app .mobile-menu,.app .account-mobile-preferences{display:none}
 .app .qa-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}
 .app .qa-heading b{font-size:16px;font-weight:500}

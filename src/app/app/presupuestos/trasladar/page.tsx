@@ -17,7 +17,7 @@ export default async function Carry({ searchParams }: { searchParams: Promise<{ 
   if (allowed) try { preview = await previewBudgetCarry(getDb(), workspace.id, from, cur, today); } catch (e) { if (!(e instanceof UserError)) throw e; error = e.message; }
   const occupied = preview ? await getDb().budgetLine.count({where:{budget:{workspaceId:workspace.id,period:preview.to}}})>0 : false;
   const fm = (s: string) => formatMoney(s, cur);
-  return <div className="narrow wide"><PageHead crumb="Presupuestos" title="Trasladar margen" desc="Copiá los límites de un mes terminado y sumá su margen positivo al siguiente. Revisalo antes de confirmar." />
+  return <div className="narrow wide"><PageHead crumb="Presupuestos" title="Copiar y sumar margen" guide={allowed} desc="Revisá los límites y el margen del mes anterior antes de llevarlos al siguiente." />
     {!allowed && <p className="notice">Esta opción es parte de Pro. Copiar los mismos límites sigue disponible en Gratis. <Link className="lnk" href="/app/configuracion?tab=plan">Ver mi plan</Link></p>}
     {error && <p className="notice" role="status">{error}</p>}
     {occupied && preview && <p className="notice a">{fmtPeriod(preview.to)} ya tiene límites. El desglose de abajo es orientativo; no se reemplaza ni se suma nada sobre ese presupuesto. <Link className="lnk" href={`/app/presupuestos?mes=${preview.to}`}>Revisar el destino</Link></p>}

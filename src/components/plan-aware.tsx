@@ -12,7 +12,7 @@ export function PlanAware({ children }: { children: React.ReactNode }) {
   return (
     <div className="plan-aware" data-plan={state || undefined} data-upgrade-annual={me?.canUpgradeAnnual ? "true" : undefined}>
       {children}
-      {state === "pro" && <div className="pa-go"><a className="ws-btn pri" href="/app">Ir a la app</a></div>}
+      {state === "pro" && <div className="pa-go"><a className="ws-btn pri" href="/app">Mi espacio</a></div>}
     </div>
   );
 }

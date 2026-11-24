@@ -87,10 +87,11 @@ export default async function Upcoming({ searchParams }: { searchParams: Promise
         {ver && <input type="hidden" name="ver" value={ver} />}
         {meses && <input type="hidden" name="meses" value={meses} />}
         <label className="field">Buscar concepto<input type="search" name="q" defaultValue={q ?? ""} placeholder="Ej.: Bancor, alquiler…" maxLength={150} /></label>
+        <details className="upcoming-filter-options" open={alphabetical || coincidencias === "1"}><summary>Filtros y orden {Number(alphabetical) + Number(coincidencias === "1") > 0 && <span className="pill">{Number(alphabetical) + Number(coincidencias === "1")} {Number(alphabetical) + Number(coincidencias === "1") === 1 ? "activo" : "activos"}</span>}</summary><div className="upcoming-filter-fields">
         <label className="field">Ordenar por<select name="orden" defaultValue={alphabetical ? "nombre" : "fecha"}><option value="fecha">Fecha de vencimiento</option><option value="nombre">Nombre (A–Z)</option></select></label>
         <label className="field">Mostrar<select name="coincidencias" defaultValue={coincidencias === "1" ? "1" : ""}><option value="">Todos</option><option value="1">Solo posibles repetidos</option></select></label>
-        <button className="btn" type="submit">Aplicar</button>
-        <Link className="btn ghost" href={href({ q: undefined, orden: undefined, coincidencias: undefined })}>Limpiar</Link>
+        </div></details><div className="upcoming-filter-actions"><button className="btn" type="submit">Aplicar</button>
+        <Link className="btn ghost" href={href({ q: undefined, orden: undefined, coincidencias: undefined })}>Limpiar</Link></div>
       </form>
       {matches.size > 0 && <p className="sub" role="status">Hay {matches.size} registros con el mismo concepto, fecha, importe original y moneda. Revisalos antes de cancelar: pueden ser operaciones distintas. Los pagos de meses diferentes no se consideran coincidencias.</p>}
       <div className="acts" style={{ justifyContent: "flex-end", marginBottom: -6 }}>
@@ -127,7 +128,7 @@ export default async function Upcoming({ searchParams }: { searchParams: Promise
         const n = net(list);
         return (
           // Lo urgente queda abierto; cada mes que viene se despliega al tocarlo.
-          <details className="card grp" key={title} open={alphabetical || ["Atrasado", "Esta semana", "Resto del mes"].includes(title)}>
+          <details className="card grp" id={title === "Atrasado" ? "atrasados" : undefined} key={title} open={alphabetical || ["Atrasado", "Esta semana", "Resto del mes"].includes(title)}>
             <summary className="chead grp-sum"><span className="grp-t"><h3>{title}</h3><small>{list.length} {list.length === 1 ? "pago o cobro" : "pagos y cobros"}</small></span><span className={`num ${n.isNegative() ? "neg" : "pos"}`}>{formatMoney(n, cur, { sign: true })}</span><span className="grp-chev" aria-hidden="true">›</span></summary>
             <div className="list">{list.map((o) => {
               const rec = o.direction === "RECEIVABLE";
