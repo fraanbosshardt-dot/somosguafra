@@ -26,10 +26,9 @@ El acceso general desde la landing se llama «Mi espacio», para no sugerir una 
 - Regresión nueva: 7 pruebas correctas, con base PostgreSQL ficticia en memoria. Cubren conservación del ciclo, elegibilidad del trial, permisos, siguiente tarea, conteo de recurrencias y filtro de movimientos.
 - Pruebas existentes dirigidas de planes públicos y chatbot: 48 correctas.
 - Navegación local en Brave con datos ficticios: ingreso, presupuesto existente, guía abierta/cerrada, escritorio y emulación de 440 × 956 y 375 × 667. Mes independiente de la guía y resumen legible.
-- El navegador integrado no completó la hidratación del ingreso local; no se toma como evidencia de funcionamiento. La sesión sí se completó en Brave. El servidor ficticio perdió una conexión durante la revisión de categorías; se reinició el entorno. No se atribuye ese error aislado a producción.
-- La ejecución local completa de tests fue interrumpida sin resultado; la publicación requiere CI completo, build y comprobación del despliegue del mismo commit.
-
-## Límites y reversión
+- La primera prueba local en modo desarrollo entró en recargas y perdió una conexión de la base ficticia. Se detuvo y se construyó una versión de producción local aislada. En esa versión el navegador integrado ingresó y navegó correctamente, sin recargas en vivo. No se considera demostrada la causa de la falla del entorno de desarrollo.
+- En la versión estable local se verificaron: presupuesto existente y mes sin límites; creación de una recurrencia ficticia y guardado de edición; modal móvil; borrador conservado al cerrar y reabrir; confirmación de borrado visible sobre el modal y Escape que la cancela conservando el panel. No se confirmó ningún borrado. Búsqueda de Ayuda y filtro alfabético de Próximos correctos. La revisión detectó la navegación de Ajustes duplicada en móvil por cascada CSS; se corrigió su visibilidad.
+- Primer CI del PR: 82 archivos / 581 pruebas correctas, TypeScript, build y check-build correctos. Las adiciones posteriores requieren nuevamente CI en su commit exacto antes de integrar.
 
 ## Incidente comunicado durante la entrega
 
@@ -38,6 +37,8 @@ El usuario aportó un aviso de UptimeRobot del 24/11/2026: 503 confirmado por va
 Railway CLI permitió consultar el servicio Postgres: último deployment exitoso del 07/11/2026; sin mensajes de reinicio, caída o recuperación en el intervalo 09:23–09:35 UTC consultado. Ausencia de registros no descarta un problema. El conector Railway requiere reconexión; no se cambió configuración ni se reinició producción.
 
 Se incorpora `reportError("health.database", error)` en el catch del healthcheck: registra solo tipo y código técnico permitidos. Conserva el 503, la respuesta pública mínima y la política no-store. Dos pruebas validan respuesta sana y falla sin filtrar credenciales ni metadatos.
+
+## Límites y reversión
 
 La emulación no verifica Safari ni teclado virtual en un celular físico. No se hicieron cobros, cancelaciones, reembolsos ni cambios financieros reales. La comprobación visual no certifica todas las variantes Pro ni ausencia total de errores. No cambian finalidades de datos personales ni condiciones comerciales; no se modifica documentación legal sin una razón material.
 

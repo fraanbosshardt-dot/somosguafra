@@ -87,7 +87,7 @@ export default async function Upcoming({ searchParams }: { searchParams: Promise
         {ver && <input type="hidden" name="ver" value={ver} />}
         {meses && <input type="hidden" name="meses" value={meses} />}
         <label className="field">Buscar concepto<input type="search" name="q" defaultValue={q ?? ""} placeholder="Ej.: Bancor, alquiler…" maxLength={150} /></label>
-        <details className="upcoming-filter-options" open={alphabetical || coincidencias === "1"}><summary>Filtros y orden {Number(alphabetical) + Number(coincidencias === "1") > 0 && <span className="pill">{Number(alphabetical) + Number(coincidencias === "1")} activos</span>}</summary><div className="upcoming-filter-fields">
+        <details className="upcoming-filter-options" open={alphabetical || coincidencias === "1"}><summary>Filtros y orden {Number(alphabetical) + Number(coincidencias === "1") > 0 && <span className="pill">{Number(alphabetical) + Number(coincidencias === "1")} {Number(alphabetical) + Number(coincidencias === "1") === 1 ? "activo" : "activos"}</span>}</summary><div className="upcoming-filter-fields">
         <label className="field">Ordenar por<select name="orden" defaultValue={alphabetical ? "nombre" : "fecha"}><option value="fecha">Fecha de vencimiento</option><option value="nombre">Nombre (A–Z)</option></select></label>
         <label className="field">Mostrar<select name="coincidencias" defaultValue={coincidencias === "1" ? "1" : ""}><option value="">Todos</option><option value="1">Solo posibles repetidos</option></select></label>
         </div></details><div className="upcoming-filter-actions"><button className="btn" type="submit">Aplicar</button>
