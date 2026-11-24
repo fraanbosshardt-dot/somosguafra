@@ -478,7 +478,7 @@ export function GuafraChat({
                   </p>
                   <div className={styles.topics}>
                     {CHAT_TOPICS.filter((t) =>
-                      (source === "app" ? ["start", "moves", "budget-projection", "flow-explanation", "pending", "verify"] : ["start", "plans", "trial", "pending", "cancel", "moves"]).includes(t.id),
+                      (source === "app" ? ["start", "moves", "budgets", "flow-explanation", "pending", "verify"] : ["start", "plans", "trial", "pending", "cancel", "moves"]).includes(t.id),
                     ).map((t) => (
                       <button
                         type="button"
